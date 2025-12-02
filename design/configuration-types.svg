@@ -1,0 +1,492 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1050">
+  <defs>
+    <style>
+      .title { font: bold 26px 'Segoe UI', Arial, sans-serif; fill: #1e293b; }
+      .subtitle { font: 14px 'Segoe UI', Arial, sans-serif; fill: #64748b; }
+      .section-title { font: bold 14px 'Segoe UI', Arial, sans-serif; fill: white; }
+      .layer-title { font: bold 13px 'Segoe UI', Arial, sans-serif; fill: #1e293b; }
+      .type-name { font: bold 12px 'Consolas', monospace; fill: #6366f1; }
+      .prop-name { font: 11px 'Consolas', monospace; fill: #1e293b; }
+      .prop-type { font: 10px 'Consolas', monospace; fill: #059669; }
+      .default-val { font: 10px 'Consolas', monospace; fill: #f59e0b; }
+      .label { font: 11px 'Segoe UI', Arial, sans-serif; fill: #475569; }
+      .code-text { font: 10px 'Consolas', monospace; fill: #64748b; }
+      .layer-num { font: bold 16px 'Segoe UI', Arial, sans-serif; fill: white; }
+    </style>
+
+    <linearGradient id="configGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#8b5cf6"/>
+      <stop offset="100%" style="stop-color:#7c3aed"/>
+    </linearGradient>
+
+    <linearGradient id="typesGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#3b82f6"/>
+      <stop offset="100%" style="stop-color:#1d4ed8"/>
+    </linearGradient>
+
+    <linearGradient id="cliGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#10b981"/>
+      <stop offset="100%" style="stop-color:#059669"/>
+    </linearGradient>
+
+    <linearGradient id="cookieGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#06b6d4"/>
+      <stop offset="100%" style="stop-color:#0891b2"/>
+    </linearGradient>
+
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="115%">
+      <feDropShadow dx="2" dy="3" stdDeviation="3" flood-opacity="0.1"/>
+    </filter>
+
+    <marker id="layerArrow" markerWidth="12" markerHeight="8" refX="11" refY="4" orient="auto">
+      <path d="M0,1 L10,4 L0,7" fill="none" stroke="#8b5cf6" stroke-width="2"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1400" height="1050" fill="#f8fafc"/>
+
+  <!-- Header -->
+  <rect x="0" y="0" width="1400" height="70" fill="#1e293b"/>
+  <text x="700" y="38" class="title" text-anchor="middle" fill="white">Browser Agent - Configuration &amp; Type System</text>
+  <text x="700" y="58" class="subtitle" text-anchor="middle" fill="#94a3b8">Configuration Hierarchy and TypeScript Interfaces</text>
+
+  <!-- ==================== CONFIGURATION LAYERS ==================== -->
+  <g transform="translate(50, 90)">
+    <rect width="600" height="610" rx="12" fill="white" stroke="#e2e8f0" stroke-width="2" filter="url(#shadow)"/>
+    <rect width="600" height="40" rx="12" fill="url(#configGrad)"/>
+    <rect x="0" y="28" width="600" height="12" fill="url(#configGrad)"/>
+    <text x="300" y="28" class="section-title" text-anchor="middle">CONFIGURATION HIERARCHY</text>
+
+    <!-- Layer 1: Defaults -->
+    <g transform="translate(30, 60)">
+      <rect width="540" height="130" rx="8" fill="#fef3c7" stroke="#fcd34d" stroke-width="2"/>
+      <circle cx="25" cy="25" r="18" fill="#f59e0b"/>
+      <text x="25" y="31" class="layer-num" text-anchor="middle">1</text>
+      <text x="55" y="28" class="layer-title">DEFAULTS (Hardcoded)</text>
+      <text x="55" y="45" class="code-text">Lowest priority - built into source code</text>
+
+      <g transform="translate(20, 60)">
+        <text x="0" y="12" class="prop-name">headless:</text>
+        <text x="70" y="12" class="default-val">false</text>
+        <text x="120" y="12" class="prop-name">timeout:</text>
+        <text x="175" y="12" class="default-val">60000</text>
+        <text x="230" y="12" class="prop-name">browserType:</text>
+        <text x="315" y="12" class="default-val">'chromium'</text>
+      </g>
+      <g transform="translate(20, 80)">
+        <text x="0" y="12" class="prop-name">waitUntil:</text>
+        <text x="70" y="12" class="default-val">'load'</text>
+        <text x="120" y="12" class="prop-name">postLoadWait:</text>
+        <text x="210" y="12" class="default-val">5000</text>
+        <text x="260" y="12" class="prop-name">dismissCookieConsent:</text>
+        <text x="395" y="12" class="default-val">true</text>
+      </g>
+      <g transform="translate(20, 100)">
+        <text x="0" y="12" class="prop-name">model:</text>
+        <text x="50" y="12" class="default-val">'gpt-4o-mini'</text>
+        <text x="155" y="12" class="prop-name">maxTokens:</text>
+        <text x="230" y="12" class="default-val">1000</text>
+        <text x="280" y="12" class="prop-name">temperature:</text>
+        <text x="365" y="12" class="default-val">0.3</text>
+        <text x="410" y="12" class="prop-name">verbose:</text>
+        <text x="465" y="12" class="default-val">false</text>
+      </g>
+    </g>
+
+    <!-- Arrow down -->
+    <path d="M300,195 L300,215" stroke="#8b5cf6" stroke-width="3" marker-end="url(#layerArrow)"/>
+    <text x="320" y="208" class="code-text">overrides</text>
+
+    <!-- Layer 2: Constructor -->
+    <g transform="translate(30, 225)">
+      <rect width="540" height="90" rx="8" fill="#eff6ff" stroke="#3b82f6" stroke-width="2"/>
+      <circle cx="25" cy="25" r="18" fill="#3b82f6"/>
+      <text x="25" y="31" class="layer-num" text-anchor="middle">2</text>
+      <text x="55" y="28" class="layer-title">CONSTRUCTOR CONFIG (Code-level)</text>
+      <text x="55" y="45" class="code-text">Passed when creating BrowserAgent instance</text>
+
+      <rect x="20" y="55" width="500" height="25" rx="4" fill="#1e293b"/>
+      <text x="30" y="72" fill="#10b981" font-family="Consolas" font-size="10">new BrowserAgent({ browser: { headless: true, postLoadWait: 10000 } })</text>
+    </g>
+
+    <!-- Arrow down -->
+    <path d="M300,320 L300,340" stroke="#8b5cf6" stroke-width="3" marker-end="url(#layerArrow)"/>
+    <text x="320" y="333" class="code-text">overrides</text>
+
+    <!-- Layer 3: CLI Arguments -->
+    <g transform="translate(30, 350)">
+      <rect width="540" height="140" rx="8" fill="#ecfdf5" stroke="#10b981" stroke-width="2"/>
+      <circle cx="25" cy="25" r="18" fill="#10b981"/>
+      <text x="25" y="31" class="layer-num" text-anchor="middle">3</text>
+      <text x="55" y="28" class="layer-title">CLI ARGUMENTS (Runtime)</text>
+      <text x="55" y="45" class="code-text">Command-line flags override all code config</text>
+
+      <g transform="translate(20, 55)">
+        <rect width="110" height="30" rx="4" fill="#d1fae5" stroke="#6ee7b7"/>
+        <text x="55" y="13" class="prop-name" text-anchor="middle">--headless</text>
+        <text x="55" y="25" class="code-text" text-anchor="middle">-h</text>
+      </g>
+      <g transform="translate(140, 55)">
+        <rect width="110" height="30" rx="4" fill="#d1fae5" stroke="#6ee7b7"/>
+        <text x="55" y="13" class="prop-name" text-anchor="middle">--timeout &lt;ms&gt;</text>
+        <text x="55" y="25" class="code-text" text-anchor="middle">milliseconds</text>
+      </g>
+      <g transform="translate(260, 55)">
+        <rect width="130" height="30" rx="4" fill="#d1fae5" stroke="#6ee7b7"/>
+        <text x="65" y="13" class="prop-name" text-anchor="middle">--wait-until</text>
+        <text x="65" y="25" class="code-text" text-anchor="middle">load/networkidle</text>
+      </g>
+      <g transform="translate(400, 55)">
+        <rect width="120" height="30" rx="4" fill="#d1fae5" stroke="#6ee7b7"/>
+        <text x="60" y="13" class="prop-name" text-anchor="middle">--post-load-wait</text>
+        <text x="60" y="25" class="code-text" text-anchor="middle">ms (default 5000)</text>
+      </g>
+      <g transform="translate(20, 95)">
+        <rect width="130" height="30" rx="4" fill="#ecfeff" stroke="#a5f3fc"/>
+        <text x="65" y="13" class="prop-name" text-anchor="middle">--no-cookie-dismiss</text>
+        <text x="65" y="25" class="code-text" text-anchor="middle">Disable popup</text>
+      </g>
+      <g transform="translate(160, 95)">
+        <rect width="100" height="30" rx="4" fill="#d1fae5" stroke="#6ee7b7"/>
+        <text x="50" y="13" class="prop-name" text-anchor="middle">--verbose</text>
+        <text x="50" y="25" class="code-text" text-anchor="middle">-v</text>
+      </g>
+      <g transform="translate(270, 95)">
+        <rect width="90" height="30" rx="4" fill="#d1fae5" stroke="#6ee7b7"/>
+        <text x="45" y="13" class="prop-name" text-anchor="middle">--help</text>
+        <text x="45" y="25" class="code-text" text-anchor="middle">Show usage</text>
+      </g>
+    </g>
+
+    <!-- Arrow down -->
+    <path d="M300,495 L300,515" stroke="#8b5cf6" stroke-width="3" marker-end="url(#layerArrow)"/>
+    <text x="320" y="508" class="code-text">requires</text>
+
+    <!-- Layer 4: Environment -->
+    <g transform="translate(30, 525)">
+      <rect width="540" height="70" rx="8" fill="#fef2f2" stroke="#ef4444" stroke-width="2"/>
+      <circle cx="25" cy="25" r="18" fill="#ef4444"/>
+      <text x="25" y="31" class="layer-num" text-anchor="middle">4</text>
+      <text x="55" y="28" class="layer-title">ENVIRONMENT VARIABLES (.env)</text>
+      <text x="55" y="45" class="code-text">Required secrets - loaded from .env file</text>
+
+      <rect x="20" y="50" width="300" height="15" rx="2" fill="#1e293b"/>
+      <text x="30" y="61" fill="#ef4444" font-family="Consolas" font-size="10">OPENAI_API_KEY=sk-proj-...</text>
+      <text x="340" y="61" class="code-text" fill="#ef4444">REQUIRED - No default!</text>
+    </g>
+  </g>
+
+  <!-- ==================== CLI USAGE ==================== -->
+  <g transform="translate(50, 720)">
+    <rect width="600" height="310" rx="12" fill="white" stroke="#e2e8f0" stroke-width="2" filter="url(#shadow)"/>
+    <rect width="600" height="40" rx="12" fill="url(#cliGrad)"/>
+    <rect x="0" y="28" width="600" height="12" fill="url(#cliGrad)"/>
+    <text x="300" y="28" class="section-title" text-anchor="middle">CLI USAGE EXAMPLES</text>
+
+    <!-- Terminal window -->
+    <g transform="translate(20, 55)">
+      <rect width="560" height="240" rx="6" fill="#1e293b"/>
+
+      <!-- Terminal header -->
+      <rect width="560" height="25" rx="6" fill="#374151"/>
+      <circle cx="15" cy="12" r="5" fill="#ef4444"/>
+      <circle cx="32" cy="12" r="5" fill="#f59e0b"/>
+      <circle cx="49" cy="12" r="5" fill="#10b981"/>
+      <text x="280" y="17" fill="#94a3b8" font-size="10" text-anchor="middle">Terminal</text>
+
+      <!-- Commands -->
+      <text x="15" y="50" fill="#94a3b8" font-family="Consolas" font-size="11"># Single URL</text>
+      <text x="15" y="68" fill="#10b981" font-family="Consolas" font-size="11">$ npm run start -- https://example.com</text>
+
+      <text x="15" y="95" fill="#94a3b8" font-family="Consolas" font-size="11"># Multiple URLs (batch)</text>
+      <text x="15" y="113" fill="#10b981" font-family="Consolas" font-size="11">$ npm run start -- https://site1.com https://site2.com</text>
+
+      <text x="15" y="140" fill="#94a3b8" font-family="Consolas" font-size="11"># With wait strategy options</text>
+      <text x="15" y="158" fill="#10b981" font-family="Consolas" font-size="11">$ npm run start -- --wait-until networkidle --post-load-wait 10000 https://example.com</text>
+
+      <text x="15" y="185" fill="#94a3b8" font-family="Consolas" font-size="11"># Disable cookie dismissal</text>
+      <text x="15" y="203" fill="#10b981" font-family="Consolas" font-size="11">$ npm run start -- --no-cookie-dismiss https://example.com</text>
+
+      <text x="15" y="230" fill="#94a3b8" font-family="Consolas" font-size="11"># Combined options</text>
+      <text x="15" y="248" fill="#10b981" font-family="Consolas" font-size="10">$ npm run start -- --headless --verbose --timeout 30000 --no-cookie-dismiss https://example.com</text>
+    </g>
+  </g>
+
+  <!-- ==================== TYPE DEFINITIONS ==================== -->
+  <g transform="translate(680, 90)">
+    <rect width="670" height="940" rx="12" fill="white" stroke="#e2e8f0" stroke-width="2" filter="url(#shadow)"/>
+    <rect width="670" height="40" rx="12" fill="url(#typesGrad)"/>
+    <rect x="0" y="28" width="670" height="12" fill="url(#typesGrad)"/>
+    <text x="335" y="28" class="section-title" text-anchor="middle">TYPESCRIPT TYPE DEFINITIONS</text>
+
+    <!-- Heading Type -->
+    <g transform="translate(20, 55)">
+      <rect width="200" height="95" rx="6" fill="#eff6ff" stroke="#bfdbfe"/>
+      <text x="100" y="20" class="type-name" text-anchor="middle">interface Heading</text>
+      <line x1="10" y1="30" x2="190" y2="30" stroke="#bfdbfe"/>
+      <text x="15" y="50" class="prop-name">level:</text>
+      <text x="60" y="50" class="prop-type">1 | 2 | 3 | 4 | 5 | 6</text>
+      <text x="15" y="67" class="prop-name">text:</text>
+      <text x="50" y="67" class="prop-type">string</text>
+      <text x="15" y="84" class="prop-name">index:</text>
+      <text x="55" y="84" class="prop-type">number</text>
+    </g>
+
+    <!-- ExtractionResult Type -->
+    <g transform="translate(235, 55)">
+      <rect width="210" height="95" rx="6" fill="#eff6ff" stroke="#bfdbfe"/>
+      <text x="105" y="20" class="type-name" text-anchor="middle">interface ExtractionResult</text>
+      <line x1="10" y1="30" x2="200" y2="30" stroke="#bfdbfe"/>
+      <text x="15" y="50" class="prop-name">headings:</text>
+      <text x="75" y="50" class="prop-type">Heading[]</text>
+      <text x="15" y="67" class="prop-name">totalCount:</text>
+      <text x="90" y="67" class="prop-type">number</text>
+      <text x="15" y="84" class="prop-name">countByLevel:</text>
+      <text x="105" y="84" class="prop-type">Record&lt;number, number&gt;</text>
+    </g>
+
+    <!-- WaitUntilStrategy Type -->
+    <g transform="translate(460, 55)">
+      <rect width="190" height="95" rx="6" fill="#ecfeff" stroke="#a5f3fc"/>
+      <text x="95" y="20" class="type-name" text-anchor="middle">type WaitUntilStrategy</text>
+      <line x1="10" y1="30" x2="180" y2="30" stroke="#a5f3fc"/>
+      <text x="15" y="50" class="prop-type">'load'</text>
+      <text x="15" y="67" class="prop-type">'domcontentloaded'</text>
+      <text x="15" y="84" class="prop-type">'networkidle'</text>
+    </g>
+
+    <!-- BrowserConfig Type -->
+    <g transform="translate(20, 165)">
+      <rect width="200" height="140" rx="6" fill="#fef3c7" stroke="#fcd34d"/>
+      <text x="100" y="20" class="type-name" text-anchor="middle">interface BrowserConfig</text>
+      <line x1="10" y1="30" x2="190" y2="30" stroke="#fcd34d"/>
+      <text x="15" y="50" class="prop-name">headless:</text>
+      <text x="70" y="50" class="prop-type">boolean</text>
+      <text x="130" y="50" class="default-val">// false</text>
+      <text x="15" y="67" class="prop-name">timeout:</text>
+      <text x="65" y="67" class="prop-type">number</text>
+      <text x="115" y="67" class="default-val">// 60000</text>
+      <text x="15" y="84" class="prop-name">waitUntil:</text>
+      <text x="75" y="84" class="prop-type">WaitUntilStrategy</text>
+      <text x="15" y="101" class="prop-name">postLoadWait:</text>
+      <text x="105" y="101" class="prop-type">number</text>
+      <text x="15" y="118" class="prop-name">dismissCookieConsent:</text>
+      <text x="155" y="118" class="prop-type">boolean</text>
+      <text x="15" y="133" class="default-val">// waitUntil='load', postLoadWait=5000</text>
+    </g>
+
+    <!-- ProcessingConfig Type -->
+    <g transform="translate(235, 165)">
+      <rect width="210" height="110" rx="6" fill="#f5f3ff" stroke="#c4b5fd"/>
+      <text x="105" y="20" class="type-name" text-anchor="middle">interface ProcessingConfig</text>
+      <line x1="10" y1="30" x2="200" y2="30" stroke="#c4b5fd"/>
+      <text x="15" y="50" class="prop-name">model:</text>
+      <text x="55" y="50" class="prop-type">string</text>
+      <text x="100" y="50" class="default-val">// 'gpt-4o-mini'</text>
+      <text x="15" y="67" class="prop-name">maxTokens:</text>
+      <text x="85" y="67" class="prop-type">number</text>
+      <text x="130" y="67" class="default-val">// 1000</text>
+      <text x="15" y="84" class="prop-name">temperature:</text>
+      <text x="95" y="84" class="prop-type">number</text>
+      <text x="140" y="84" class="default-val">// 0.3</text>
+    </g>
+
+    <!-- AgentConfig Type -->
+    <g transform="translate(460, 165)">
+      <rect width="190" height="110" rx="6" fill="#fdf2f8" stroke="#fbcfe8"/>
+      <text x="95" y="20" class="type-name" text-anchor="middle">interface AgentConfig</text>
+      <line x1="10" y1="30" x2="180" y2="30" stroke="#fbcfe8"/>
+      <text x="15" y="50" class="prop-name">browser:</text>
+      <text x="65" y="50" class="prop-type">BrowserConfig</text>
+      <text x="15" y="67" class="prop-name">processing:</text>
+      <text x="80" y="67" class="prop-type">ProcessingConfig</text>
+      <text x="15" y="84" class="prop-name">verbose:</text>
+      <text x="65" y="84" class="prop-type">boolean</text>
+      <text x="115" y="84" class="default-val">// false</text>
+    </g>
+
+    <!-- CookieConsentResult Type -->
+    <g transform="translate(20, 320)">
+      <rect width="305" height="110" rx="6" fill="#ecfeff" stroke="#a5f3fc"/>
+      <text x="152" y="20" class="type-name" text-anchor="middle">interface CookieConsentResult</text>
+      <line x1="10" y1="30" x2="295" y2="30" stroke="#a5f3fc"/>
+      <text x="15" y="50" class="prop-name">dismissed:</text>
+      <text x="80" y="50" class="prop-type">boolean</text>
+      <text x="130" y="50" class="code-text">// Was popup dismissed?</text>
+      <text x="15" y="67" class="prop-name">mode:</text>
+      <text x="50" y="67" class="prop-type">'cmp' | 'heuristic' | 'none'</text>
+      <text x="15" y="84" class="prop-name">cmpId?:</text>
+      <text x="60" y="84" class="prop-type">string</text>
+      <text x="100" y="84" class="code-text">// e.g. 'onetrust', 'cookiebot'</text>
+      <text x="15" y="101" class="prop-name">buttonText?:</text>
+      <text x="90" y="101" class="prop-type">string</text>
+      <text x="140" y="101" class="code-text">// Clicked button text</text>
+    </g>
+
+    <!-- PageLoadResult Type -->
+    <g transform="translate(340, 320)">
+      <rect width="310" height="110" rx="6" fill="#f0fdf4" stroke="#bbf7d0"/>
+      <text x="155" y="20" class="type-name" text-anchor="middle">interface PageLoadResult</text>
+      <line x1="10" y1="30" x2="300" y2="30" stroke="#bbf7d0"/>
+      <text x="15" y="50" class="prop-name">success:</text>
+      <text x="65" y="50" class="prop-type">boolean</text>
+      <text x="120" y="50" class="prop-name">url:</text>
+      <text x="145" y="50" class="prop-type">string</text>
+      <text x="190" y="50" class="prop-name">title?:</text>
+      <text x="235" y="50" class="prop-type">string</text>
+      <text x="15" y="67" class="prop-name">loadTimeMs?:</text>
+      <text x="100" y="67" class="prop-type">number</text>
+      <text x="150" y="67" class="prop-name">error?:</text>
+      <text x="195" y="67" class="prop-type">string</text>
+      <text x="15" y="84" class="prop-name">cookieConsent?:</text>
+      <text x="115" y="84" class="prop-type">CookieConsentResult</text>
+    </g>
+
+    <!-- ProcessingResult Type -->
+    <g transform="translate(20, 445)">
+      <rect width="305" height="110" rx="6" fill="#f5f3ff" stroke="#c4b5fd"/>
+      <text x="152" y="20" class="type-name" text-anchor="middle">interface ProcessingResult</text>
+      <line x1="10" y1="30" x2="295" y2="30" stroke="#c4b5fd"/>
+      <text x="15" y="50" class="prop-name">summary:</text>
+      <text x="70" y="50" class="prop-type">string</text>
+      <text x="120" y="50" class="code-text">// AI-generated summary</text>
+      <text x="15" y="67" class="prop-name">categories:</text>
+      <text x="85" y="67" class="prop-type">string[]</text>
+      <text x="140" y="67" class="code-text">// Topic categories</text>
+      <text x="15" y="84" class="prop-name">insights:</text>
+      <text x="70" y="84" class="prop-type">string[]</text>
+      <text x="125" y="84" class="code-text">// Analysis insights</text>
+      <text x="15" y="101" class="prop-name">rawResponse?:</text>
+      <text x="100" y="101" class="prop-type">string</text>
+      <text x="145" y="101" class="code-text">// Debug: raw LLM output</text>
+    </g>
+
+    <!-- AgentResult Type (Main Result) -->
+    <g transform="translate(340, 445)">
+      <rect width="310" height="170" rx="6" fill="#ecfdf5" stroke="#6ee7b7" stroke-width="2"/>
+      <text x="155" y="20" class="type-name" text-anchor="middle">interface AgentResult</text>
+      <text x="155" y="35" class="code-text" text-anchor="middle">(Complete Single URL Result)</text>
+      <line x1="10" y1="42" x2="300" y2="42" stroke="#6ee7b7"/>
+
+      <text x="15" y="60" class="prop-name">url:</text>
+      <text x="40" y="60" class="prop-type">string</text>
+      <text x="15" y="77" class="prop-name">pageLoad:</text>
+      <text x="75" y="77" class="prop-type">PageLoadResult</text>
+      <text x="15" y="94" class="prop-name">extraction:</text>
+      <text x="80" y="94" class="prop-type">ExtractionResult | null</text>
+      <text x="15" y="111" class="prop-name">processing:</text>
+      <text x="80" y="111" class="prop-type">ProcessingResult | null</text>
+      <text x="15" y="128" class="prop-name">success:</text>
+      <text x="65" y="128" class="prop-type">boolean</text>
+      <text x="15" y="145" class="prop-name">error?:</text>
+      <text x="55" y="145" class="prop-type">string</text>
+      <text x="15" y="162" class="prop-name">errorStage?:</text>
+      <text x="90" y="162" class="prop-type">'load' | 'extract' | 'process'</text>
+    </g>
+
+    <!-- BatchResult Type -->
+    <g transform="translate(20, 570)">
+      <rect width="305" height="100" rx="6" fill="#fef3c7" stroke="#fcd34d"/>
+      <text x="152" y="20" class="type-name" text-anchor="middle">interface BatchResult</text>
+      <text x="152" y="35" class="code-text" text-anchor="middle">(Multiple URLs Result)</text>
+      <line x1="10" y1="42" x2="295" y2="42" stroke="#fcd34d"/>
+
+      <text x="15" y="60" class="prop-name">results:</text>
+      <text x="65" y="60" class="prop-type">AgentResult[]</text>
+      <text x="15" y="77" class="prop-name">successCount:</text>
+      <text x="100" y="77" class="prop-type">number</text>
+      <text x="160" y="77" class="prop-name">failureCount:</text>
+      <text x="245" y="77" class="prop-type">number</text>
+      <text x="15" y="94" class="prop-name">totalTimeMs:</text>
+      <text x="95" y="94" class="prop-type">number</text>
+    </g>
+
+    <!-- CookieConsentPattern Type -->
+    <g transform="translate(340, 630)">
+      <rect width="310" height="100" rx="6" fill="#ecfeff" stroke="#a5f3fc"/>
+      <text x="155" y="20" class="type-name" text-anchor="middle">interface CookieConsentPattern</text>
+      <text x="155" y="35" class="code-text" text-anchor="middle">(CMP Detection Pattern)</text>
+      <line x1="10" y1="42" x2="300" y2="42" stroke="#a5f3fc"/>
+
+      <text x="15" y="60" class="prop-name">id:</text>
+      <text x="35" y="60" class="prop-type">string</text>
+      <text x="80" y="60" class="code-text">// 'onetrust', 'cookiebot', etc.</text>
+      <text x="15" y="77" class="prop-name">detectSelector:</text>
+      <text x="110" y="77" class="prop-type">string</text>
+      <text x="160" y="77" class="code-text">// CSS selector</text>
+      <text x="15" y="94" class="prop-name">acceptSelector:</text>
+      <text x="115" y="94" class="prop-type">string</text>
+      <text x="165" y="94" class="code-text">// Accept button</text>
+    </g>
+
+    <!-- Type Relationships Diagram -->
+    <g transform="translate(20, 745)">
+      <rect width="630" height="180" rx="6" fill="#f8fafc" stroke="#e2e8f0"/>
+      <text x="315" y="22" class="layer-title" text-anchor="middle">Type Relationships</text>
+      <line x1="10" y1="32" x2="620" y2="32" stroke="#e2e8f0"/>
+
+      <!-- AgentConfig composition -->
+      <g transform="translate(15, 45)">
+        <rect width="120" height="30" rx="4" fill="#fdf2f8" stroke="#ec4899"/>
+        <text x="60" y="20" class="prop-name" text-anchor="middle">AgentConfig</text>
+
+        <line x1="60" y1="30" x2="60" y2="50" stroke="#94a3b8" stroke-width="1.5"/>
+        <line x1="60" y1="50" x2="20" y2="50" stroke="#94a3b8" stroke-width="1.5"/>
+        <line x1="60" y1="50" x2="100" y2="50" stroke="#94a3b8" stroke-width="1.5"/>
+        <line x1="20" y1="50" x2="20" y2="60" stroke="#94a3b8" stroke-width="1.5"/>
+        <line x1="100" y1="50" x2="100" y2="60" stroke="#94a3b8" stroke-width="1.5"/>
+
+        <rect x="-30" y="60" width="100" height="25" rx="3" fill="#fef3c7" stroke="#fcd34d"/>
+        <text x="20" y="77" class="code-text" text-anchor="middle">BrowserConfig</text>
+
+        <rect x="50" y="60" width="100" height="25" rx="3" fill="#f5f3ff" stroke="#c4b5fd"/>
+        <text x="100" y="77" class="code-text" text-anchor="middle">ProcessingConfig</text>
+      </g>
+
+      <!-- AgentResult composition -->
+      <g transform="translate(200, 45)">
+        <rect width="120" height="30" rx="4" fill="#ecfdf5" stroke="#10b981"/>
+        <text x="60" y="20" class="prop-name" text-anchor="middle">AgentResult</text>
+
+        <line x1="60" y1="30" x2="60" y2="50" stroke="#94a3b8" stroke-width="1.5"/>
+        <line x1="60" y1="50" x2="0" y2="50" stroke="#94a3b8" stroke-width="1.5"/>
+        <line x1="60" y1="50" x2="120" y2="50" stroke="#94a3b8" stroke-width="1.5"/>
+        <line x1="0" y1="50" x2="0" y2="60" stroke="#94a3b8" stroke-width="1.5"/>
+        <line x1="60" y1="50" x2="60" y2="60" stroke="#94a3b8" stroke-width="1.5"/>
+        <line x1="120" y1="50" x2="120" y2="60" stroke="#94a3b8" stroke-width="1.5"/>
+
+        <rect x="-45" y="60" width="90" height="25" rx="3" fill="#f0fdf4" stroke="#bbf7d0"/>
+        <text x="0" y="77" class="code-text" text-anchor="middle">PageLoadResult</text>
+
+        <rect x="15" y="60" width="90" height="25" rx="3" fill="#eff6ff" stroke="#bfdbfe"/>
+        <text x="60" y="77" class="code-text" text-anchor="middle">ExtractionResult</text>
+
+        <rect x="75" y="60" width="90" height="25" rx="3" fill="#f5f3ff" stroke="#c4b5fd"/>
+        <text x="120" y="77" class="code-text" text-anchor="middle">ProcessingResult</text>
+      </g>
+
+      <!-- PageLoadResult -> CookieConsentResult -->
+      <g transform="translate(440, 45)">
+        <rect width="120" height="30" rx="4" fill="#f0fdf4" stroke="#10b981"/>
+        <text x="60" y="20" class="prop-name" text-anchor="middle">PageLoadResult</text>
+
+        <line x1="60" y1="30" x2="60" y2="60" stroke="#94a3b8" stroke-width="1.5"/>
+
+        <rect x="5" y="60" width="110" height="25" rx="3" fill="#ecfeff" stroke="#a5f3fc"/>
+        <text x="60" y="77" class="code-text" text-anchor="middle">CookieConsentResult</text>
+      </g>
+
+      <!-- BatchResult -->
+      <g transform="translate(480, 110)">
+        <rect width="110" height="30" rx="4" fill="#fef3c7" stroke="#f59e0b"/>
+        <text x="55" y="20" class="prop-name" text-anchor="middle">BatchResult</text>
+
+        <line x1="55" y1="30" x2="55" y2="50" stroke="#94a3b8" stroke-width="1.5"/>
+
+        <rect x="5" y="50" width="100" height="25" rx="3" fill="#ecfdf5" stroke="#6ee7b7"/>
+        <text x="55" y="67" class="code-text" text-anchor="middle">AgentResult[]</text>
+      </g>
+    </g>
+  </g>
+</svg>

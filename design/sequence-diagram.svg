@@ -1,0 +1,328 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1350">
+  <defs>
+    <style>
+      .title { font: bold 24px Arial, sans-serif; fill: #1a1a2e; }
+      .subtitle { font: 14px Arial, sans-serif; fill: #666; }
+      .actor-box { fill: #4a90d9; stroke: #2563eb; stroke-width: 2; rx: 8; }
+      .actor-text { font: bold 12px Arial, sans-serif; fill: white; text-anchor: middle; }
+      .lifeline { stroke: #94a3b8; stroke-width: 2; stroke-dasharray: 8,4; }
+      .activation { fill: #e0e7ff; stroke: #6366f1; stroke-width: 2; }
+      .activation-cookie { fill: #cffafe; stroke: #06b6d4; stroke-width: 2; }
+      .message { stroke: #1e293b; stroke-width: 2; }
+      .message-async { stroke: #1e293b; stroke-width: 2; stroke-dasharray: 6,3; }
+      .message-return { stroke: #64748b; stroke-width: 1.5; stroke-dasharray: 4,4; }
+      .message-text { font: 11px Arial, sans-serif; fill: #1e293b; }
+      .message-text-bold { font: bold 11px Arial, sans-serif; fill: #1e293b; }
+      .note { fill: #fef3c7; stroke: #f59e0b; stroke-width: 1; }
+      .note-cookie { fill: #cffafe; stroke: #06b6d4; stroke-width: 1; }
+      .note-text { font: 11px Arial, sans-serif; fill: #92400e; }
+      .note-text-cookie { font: 11px Arial, sans-serif; fill: #0e7490; }
+      .section { fill: #f1f5f9; stroke: #cbd5e1; stroke-width: 1; }
+      .section-cookie { fill: #ecfeff; stroke: #06b6d4; stroke-width: 1; }
+      .section-label { font: bold 12px Arial, sans-serif; fill: #475569; }
+      .section-label-cookie { font: bold 12px Arial, sans-serif; fill: #0e7490; }
+      .external { fill: #fecaca; stroke: #ef4444; stroke-width: 2; rx: 8; }
+      .external-text { font: bold 12px Arial, sans-serif; fill: #991b1b; text-anchor: middle; }
+      .cookie-box { fill: #06b6d4; stroke: #0891b2; stroke-width: 2; rx: 8; }
+      .cookie-text { font: bold 11px Arial, sans-serif; fill: white; text-anchor: middle; }
+      .arrow { fill: #1e293b; }
+      .arrow-return { fill: #64748b; }
+    </style>
+    <!-- Arrow markers -->
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" class="arrow"/>
+    </marker>
+    <marker id="arrowhead-return" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" class="arrow-return"/>
+    </marker>
+    <marker id="arrowhead-open" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polyline points="0 0, 10 3.5, 0 7" fill="none" stroke="#1e293b" stroke-width="2"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1400" height="1350" fill="#ffffff"/>
+
+  <!-- Title -->
+  <text x="700" y="35" class="title" text-anchor="middle">Browser Agent - Sequence Diagram</text>
+  <text x="700" y="55" class="subtitle" text-anchor="middle">Single URL Processing Flow (with Cookie Consent Handling)</text>
+
+  <!-- Actor boxes at top -->
+  <!-- User/CLI -->
+  <rect x="40" y="75" width="70" height="40" class="actor-box"/>
+  <text x="75" y="100" class="actor-text">User/CLI</text>
+
+  <!-- BrowserAgent -->
+  <rect x="145" y="75" width="90" height="40" class="actor-box"/>
+  <text x="190" y="100" class="actor-text">BrowserAgent</text>
+
+  <!-- Validator -->
+  <rect x="265" y="75" width="70" height="40" class="actor-box"/>
+  <text x="300" y="100" class="actor-text">Validator</text>
+
+  <!-- BrowserManager -->
+  <rect x="365" y="75" width="100" height="40" class="actor-box"/>
+  <text x="415" y="100" class="actor-text">BrowserManager</text>
+
+  <!-- PageLoader -->
+  <rect x="495" y="75" width="80" height="40" class="actor-box"/>
+  <text x="535" y="100" class="actor-text">PageLoader</text>
+
+  <!-- CookieConsentHandler (NEW) -->
+  <rect x="600" y="75" width="110" height="40" class="cookie-box"/>
+  <text x="655" y="93" class="cookie-text">CookieConsent</text>
+  <text x="655" y="106" class="cookie-text">Handler</text>
+
+  <!-- HeadingExtractor -->
+  <rect x="735" y="75" width="100" height="40" class="actor-box"/>
+  <text x="785" y="100" class="actor-text">HeadingExtractor</text>
+
+  <!-- LangChainProcessor -->
+  <rect x="865" y="75" width="110" height="40" class="actor-box"/>
+  <text x="920" y="100" class="actor-text">LangChainProc</text>
+
+  <!-- OpenAI API (External) -->
+  <rect x="1005" y="75" width="80" height="40" class="external"/>
+  <text x="1045" y="100" class="external-text">OpenAI API</text>
+
+  <!-- ResultFormatter -->
+  <rect x="1115" y="75" width="100" height="40" class="actor-box"/>
+  <text x="1165" y="100" class="actor-text">ResultFormatter</text>
+
+  <!-- Lifelines -->
+  <line x1="75" y1="115" x2="75" y2="1300" class="lifeline"/>
+  <line x1="190" y1="115" x2="190" y2="1300" class="lifeline"/>
+  <line x1="300" y1="115" x2="300" y2="1300" class="lifeline"/>
+  <line x1="415" y1="115" x2="415" y2="1300" class="lifeline"/>
+  <line x1="535" y1="115" x2="535" y2="1300" class="lifeline"/>
+  <line x1="655" y1="115" x2="655" y2="1300" class="lifeline"/>
+  <line x1="785" y1="115" x2="785" y2="1300" class="lifeline"/>
+  <line x1="920" y1="115" x2="920" y2="1300" class="lifeline"/>
+  <line x1="1045" y1="115" x2="1045" y2="1300" class="lifeline"/>
+  <line x1="1165" y1="115" x2="1165" y2="1300" class="lifeline"/>
+
+  <!-- Section 1: Initialization -->
+  <rect x="30" y="130" width="1200" height="120" class="section" rx="5"/>
+  <text x="45" y="148" class="section-label">1. INITIALIZATION</text>
+
+  <!-- Activation bars for Section 1 -->
+  <rect x="70" y="155" width="10" height="85" class="activation"/>
+  <rect x="185" y="165" width="10" height="70" class="activation"/>
+  <rect x="295" y="180" width="10" height="40" class="activation"/>
+
+  <!-- Message 1: processUrl -->
+  <line x1="80" y1="170" x2="185" y2="170" class="message" marker-end="url(#arrowhead)"/>
+  <text x="110" y="163" class="message-text-bold">processUrl(url)</text>
+
+  <!-- Message 2: validateUrl -->
+  <line x1="195" y1="190" x2="295" y2="190" class="message" marker-end="url(#arrowhead)"/>
+  <text x="220" y="183" class="message-text">validateUrl(url)</text>
+
+  <!-- Message 3: return valid -->
+  <line x1="295" y1="210" x2="195" y2="210" class="message-return" marker-end="url(#arrowhead-return)"/>
+  <text x="210" y="225" class="message-text">{ isValid: true, normalizedUrl }</text>
+
+  <!-- Section 2: Browser Setup -->
+  <rect x="30" y="260" width="1200" height="180" class="section" rx="5"/>
+  <text x="45" y="278" class="section-label">2. BROWSER SETUP &amp; PAGE LOAD</text>
+
+  <!-- Activation bars for Section 2 -->
+  <rect x="185" y="290" width="10" height="140" class="activation"/>
+  <rect x="410" y="300" width="10" height="80" class="activation"/>
+  <rect x="530" y="395" width="10" height="35" class="activation"/>
+
+  <!-- Message 4: launch -->
+  <line x1="195" y1="310" x2="410" y2="310" class="message" marker-end="url(#arrowhead)"/>
+  <text x="280" y="303" class="message-text">launch()</text>
+
+  <!-- Note: Browser launch -->
+  <rect x="425" y="315" width="150" height="35" class="note" rx="3"/>
+  <text x="435" y="330" class="note-text">Launch Chromium</text>
+  <text x="435" y="343" class="note-text">ignoreHTTPSErrors: true</text>
+
+  <!-- Message 5: return browser -->
+  <line x1="410" y1="365" x2="195" y2="365" class="message-return" marker-end="url(#arrowhead-return)"/>
+  <text x="270" y="380" class="message-text">Browser instance ready</text>
+
+  <!-- Message 6: load page -->
+  <line x1="195" y1="405" x2="530" y2="405" class="message" marker-end="url(#arrowhead)"/>
+  <text x="330" y="398" class="message-text">load(page, url, config)</text>
+
+  <!-- Message 7: return PageLoadResult -->
+  <line x1="530" y1="425" x2="195" y2="425" class="message-return" marker-end="url(#arrowhead-return)"/>
+  <text x="300" y="418" class="message-text">PageLoadResult { success, title, loadTimeMs }</text>
+
+  <!-- Section 2B: Cookie Consent (NEW) -->
+  <rect x="30" y="450" width="1200" height="130" class="section-cookie" rx="5"/>
+  <text x="45" y="468" class="section-label-cookie">2B. COOKIE CONSENT DISMISSAL (Best-effort, never fails)</text>
+
+  <!-- Activation bars for Section 2B -->
+  <rect x="185" y="480" width="10" height="90" class="activation"/>
+  <rect x="530" y="490" width="10" height="70" class="activation-cookie"/>
+  <rect x="650" y="505" width="10" height="45" class="activation-cookie"/>
+
+  <!-- Message: PageLoader calls CookieConsentHandler -->
+  <line x1="195" y1="500" x2="530" y2="500" class="message" marker-end="url(#arrowhead)"/>
+  <text x="320" y="493" class="message-text">dismissCookieConsent(page)</text>
+
+  <!-- Message: PageLoader delegates to CookieConsentHandler -->
+  <line x1="540" y1="515" x2="650" y2="515" class="message" marker-end="url(#arrowhead)"/>
+  <text x="570" y="508" class="message-text">dismiss(page)</text>
+
+  <!-- Note: Cookie detection -->
+  <rect x="665" y="520" width="150" height="45" class="note-cookie" rx="3"/>
+  <text x="675" y="535" class="note-text-cookie">1. Try 8 CMP patterns</text>
+  <text x="675" y="548" class="note-text-cookie">2. Fallback: heuristic</text>
+  <text x="675" y="561" class="note-text-cookie">3. 3s timeout, best-effort</text>
+
+  <!-- Message: return CookieConsentResult -->
+  <line x1="650" y1="545" x2="540" y2="545" class="message-return" marker-end="url(#arrowhead-return)"/>
+  <text x="565" y="540" class="message-text">CookieConsentResult</text>
+
+  <!-- Message: return to BrowserAgent -->
+  <line x1="530" y1="560" x2="195" y2="560" class="message-return" marker-end="url(#arrowhead-return)"/>
+  <text x="300" y="555" class="message-text">{ dismissed, mode, selector, error? }</text>
+
+  <!-- Section 3: Data Extraction -->
+  <rect x="30" y="590" width="1200" height="140" class="section" rx="5"/>
+  <text x="45" y="608" class="section-label">3. DATA EXTRACTION</text>
+
+  <!-- Activation bars for Section 3 -->
+  <rect x="185" y="620" width="10" height="100" class="activation"/>
+  <rect x="780" y="635" width="10" height="70" class="activation"/>
+
+  <!-- Message 8: extract -->
+  <line x1="195" y1="645" x2="780" y2="645" class="message" marker-end="url(#arrowhead)"/>
+  <text x="460" y="638" class="message-text">extract(page)</text>
+
+  <!-- Note: Extraction -->
+  <rect x="795" y="650" width="130" height="35" class="note" rx="3"/>
+  <text x="805" y="665" class="note-text">Query h1-h6 elements</text>
+  <text x="805" y="678" class="note-text">Normalize text content</text>
+
+  <!-- Message 9: return ExtractionResult -->
+  <line x1="780" y1="700" x2="195" y2="700" class="message-return" marker-end="url(#arrowhead-return)"/>
+  <text x="420" y="715" class="message-text">ExtractionResult { headings[], totalCount, countByLevel }</text>
+
+  <!-- Section 4: AI Processing -->
+  <rect x="30" y="740" width="1200" height="220" class="section" rx="5"/>
+  <text x="45" y="758" class="section-label">4. AI PROCESSING (LangChain + OpenAI)</text>
+
+  <!-- Activation bars for Section 4 -->
+  <rect x="185" y="770" width="10" height="180" class="activation"/>
+  <rect x="915" y="785" width="10" height="130" class="activation"/>
+  <rect x="1040" y="835" width="10" height="60" class="activation"/>
+
+  <!-- Message 10: analyze -->
+  <line x1="195" y1="800" x2="915" y2="800" class="message" marker-end="url(#arrowhead)"/>
+  <text x="520" y="793" class="message-text">analyze(extractionResult)</text>
+
+  <!-- Note: Build prompt -->
+  <rect x="930" y="805" width="120" height="25" class="note" rx="3"/>
+  <text x="940" y="822" class="note-text">Build analysis prompt</text>
+
+  <!-- Message 11: ChatOpenAI invoke -->
+  <line x1="925" y1="845" x2="1040" y2="845" class="message" marker-end="url(#arrowhead)"/>
+  <text x="960" y="838" class="message-text">invoke(messages)</text>
+
+  <!-- Note: API call -->
+  <rect x="1055" y="850" width="100" height="35" class="note" rx="3"/>
+  <text x="1065" y="865" class="note-text">GPT-4o-mini API</text>
+  <text x="1065" y="878" class="note-text">maxTokens: 1000</text>
+
+  <!-- Message 12: return AI response -->
+  <line x1="1040" y1="895" x2="925" y2="895" class="message-return" marker-end="url(#arrowhead-return)"/>
+  <text x="960" y="910" class="message-text">AI Response (JSON)</text>
+
+  <!-- Note: Parse response -->
+  <rect x="930" y="900" width="120" height="25" class="note" rx="3"/>
+  <text x="940" y="917" class="note-text">Parse &amp; validate (Zod)</text>
+
+  <!-- Message 13: return ProcessingResult -->
+  <line x1="915" y1="940" x2="195" y2="940" class="message-return" marker-end="url(#arrowhead-return)"/>
+  <text x="490" y="933" class="message-text">ProcessingResult { summary, categories[], insights[] }</text>
+
+  <!-- Section 5: Output Formatting -->
+  <rect x="30" y="970" width="1200" height="140" class="section" rx="5"/>
+  <text x="45" y="988" class="section-label">5. OUTPUT FORMATTING</text>
+
+  <!-- Activation bars for Section 5 -->
+  <rect x="185" y="1000" width="10" height="100" class="activation"/>
+  <rect x="1160" y="1015" width="10" height="55" class="activation"/>
+
+  <!-- Message 14: formatResult -->
+  <line x1="195" y1="1030" x2="1160" y2="1030" class="message" marker-end="url(#arrowhead)"/>
+  <text x="640" y="1023" class="message-text">formatResult(agentResult)</text>
+
+  <!-- Note: Format -->
+  <rect x="1175" y="1035" width="110" height="25" class="note" rx="3"/>
+  <text x="1185" y="1052" class="note-text">Build console output</text>
+
+  <!-- Message 15: return formatted -->
+  <line x1="1160" y1="1070" x2="195" y2="1070" class="message-return" marker-end="url(#arrowhead-return)"/>
+  <text x="640" y="1085" class="message-text">Formatted string (Unicode box)</text>
+
+  <!-- Section 6: Response -->
+  <rect x="30" y="1120" width="1200" height="100" class="section" rx="5"/>
+  <text x="45" y="1138" class="section-label">6. RESPONSE TO USER</text>
+
+  <!-- Activation bars for Section 6 -->
+  <rect x="185" y="1150" width="10" height="55" class="activation"/>
+  <rect x="70" y="1175" width="10" height="35" class="activation"/>
+
+  <!-- Message 16: return AgentResult -->
+  <line x1="185" y1="1190" x2="80" y2="1190" class="message-return" marker-end="url(#arrowhead-return)"/>
+  <text x="110" y="1183" class="message-text-bold">AgentResult</text>
+
+  <!-- Note: Final output -->
+  <rect x="85" y="1195" width="180" height="25" class="note" rx="3"/>
+  <text x="95" y="1212" class="note-text">Display formatted results to console</text>
+
+  <!-- Actor boxes at bottom (duplicated for clarity) -->
+  <rect x="40" y="1240" width="70" height="40" class="actor-box"/>
+  <text x="75" y="1265" class="actor-text">User/CLI</text>
+
+  <rect x="145" y="1240" width="90" height="40" class="actor-box"/>
+  <text x="190" y="1265" class="actor-text">BrowserAgent</text>
+
+  <rect x="265" y="1240" width="70" height="40" class="actor-box"/>
+  <text x="300" y="1265" class="actor-text">Validator</text>
+
+  <rect x="365" y="1240" width="100" height="40" class="actor-box"/>
+  <text x="415" y="1265" class="actor-text">BrowserManager</text>
+
+  <rect x="495" y="1240" width="80" height="40" class="actor-box"/>
+  <text x="535" y="1265" class="actor-text">PageLoader</text>
+
+  <rect x="600" y="1240" width="110" height="40" class="cookie-box"/>
+  <text x="655" y="1258" class="cookie-text">CookieConsent</text>
+  <text x="655" y="1271" class="cookie-text">Handler</text>
+
+  <rect x="735" y="1240" width="100" height="40" class="actor-box"/>
+  <text x="785" y="1265" class="actor-text">HeadingExtractor</text>
+
+  <rect x="865" y="1240" width="110" height="40" class="actor-box"/>
+  <text x="920" y="1265" class="actor-text">LangChainProc</text>
+
+  <rect x="1005" y="1240" width="80" height="40" class="external"/>
+  <text x="1045" y="1265" class="external-text">OpenAI API</text>
+
+  <rect x="1115" y="1240" width="100" height="40" class="actor-box"/>
+  <text x="1165" y="1265" class="actor-text">ResultFormatter</text>
+
+  <!-- Legend -->
+  <rect x="30" y="1295" width="600" height="45" fill="none" stroke="#cbd5e1" stroke-width="1" rx="5"/>
+  <text x="45" y="1315" class="message-text-bold">Legend:</text>
+  <line x1="100" y1="1312" x2="140" y2="1312" class="message" marker-end="url(#arrowhead)"/>
+  <text x="145" y="1316" class="message-text">Sync call</text>
+  <line x1="200" y1="1312" x2="240" y2="1312" class="message-return" marker-end="url(#arrowhead-return)"/>
+  <text x="245" y="1316" class="message-text">Return</text>
+  <rect x="295" y="1303" width="20" height="18" class="activation"/>
+  <text x="320" y="1316" class="message-text">Active</text>
+  <rect x="360" y="1303" width="20" height="18" class="note" rx="2"/>
+  <text x="385" y="1316" class="message-text">Note</text>
+  <rect x="420" y="1303" width="20" height="18" class="activation-cookie"/>
+  <text x="445" y="1316" class="message-text">Cookie Handler</text>
+  <rect x="540" y="1303" width="20" height="18" class="note-cookie" rx="2"/>
+  <text x="565" y="1316" class="message-text">Cookie Note</text>
+</svg>

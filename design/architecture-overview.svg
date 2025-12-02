@@ -1,0 +1,426 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 950">
+  <defs>
+    <style>
+      .title { font: bold 28px 'Segoe UI', Arial, sans-serif; fill: #1e293b; }
+      .subtitle { font: 16px 'Segoe UI', Arial, sans-serif; fill: #64748b; }
+      .section-title { font: bold 16px 'Segoe UI', Arial, sans-serif; fill: #1e293b; }
+      .component-title { font: bold 13px 'Segoe UI', Arial, sans-serif; fill: white; }
+      .component-subtitle { font: 11px 'Segoe UI', Arial, sans-serif; fill: rgba(255,255,255,0.9); }
+      .label { font: 12px 'Segoe UI', Arial, sans-serif; fill: #475569; }
+      .label-bold { font: bold 12px 'Segoe UI', Arial, sans-serif; fill: #1e293b; }
+      .small-text { font: 10px 'Segoe UI', Arial, sans-serif; fill: #64748b; }
+      .tech-label { font: bold 10px 'Segoe UI', Arial, sans-serif; fill: #6366f1; }
+    </style>
+
+    <!-- Gradients -->
+    <linearGradient id="headerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#4f46e5"/>
+      <stop offset="100%" style="stop-color:#7c3aed"/>
+    </linearGradient>
+
+    <linearGradient id="orchestratorGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#3b82f6"/>
+      <stop offset="100%" style="stop-color:#1d4ed8"/>
+    </linearGradient>
+
+    <linearGradient id="browserGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#10b981"/>
+      <stop offset="100%" style="stop-color:#059669"/>
+    </linearGradient>
+
+    <linearGradient id="extractGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#f59e0b"/>
+      <stop offset="100%" style="stop-color:#d97706"/>
+    </linearGradient>
+
+    <linearGradient id="aiGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#8b5cf6"/>
+      <stop offset="100%" style="stop-color:#7c3aed"/>
+    </linearGradient>
+
+    <linearGradient id="outputGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ec4899"/>
+      <stop offset="100%" style="stop-color:#db2777"/>
+    </linearGradient>
+
+    <linearGradient id="utilsGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#64748b"/>
+      <stop offset="100%" style="stop-color:#475569"/>
+    </linearGradient>
+
+    <linearGradient id="externalGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ef4444"/>
+      <stop offset="100%" style="stop-color:#dc2626"/>
+    </linearGradient>
+
+    <linearGradient id="cookieGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#06b6d4"/>
+      <stop offset="100%" style="stop-color:#0891b2"/>
+    </linearGradient>
+
+    <!-- Shadow filter -->
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="2" dy="4" stdDeviation="4" flood-opacity="0.15"/>
+    </filter>
+
+    <!-- Arrow marker -->
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#94a3b8"/>
+    </marker>
+
+    <marker id="arrow-blue" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#3b82f6"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="950" fill="#f8fafc"/>
+
+  <!-- Header -->
+  <rect x="0" y="0" width="1200" height="80" fill="url(#headerGrad)"/>
+  <text x="600" y="40" class="title" text-anchor="middle" fill="white">Browser Agent - System Architecture</text>
+  <text x="600" y="62" class="subtitle" text-anchor="middle" fill="rgba(255,255,255,0.8)">Web Data Extraction &amp; AI Analysis Pipeline</text>
+
+  <!-- User/CLI Input -->
+  <g transform="translate(50, 110)">
+    <rect width="120" height="70" rx="10" fill="white" stroke="#e2e8f0" stroke-width="2" filter="url(#shadow)"/>
+    <rect width="120" height="25" rx="10" fill="#1e293b"/>
+    <rect x="0" y="15" width="120" height="10" fill="#1e293b"/>
+    <text x="60" y="17" class="component-title" text-anchor="middle">USER / CLI</text>
+    <text x="60" y="48" class="label" text-anchor="middle">npm run start</text>
+    <text x="60" y="62" class="small-text" text-anchor="middle">--url --headless</text>
+  </g>
+
+  <!-- Arrow from User to BrowserAgent -->
+  <line x1="170" y1="145" x2="230" y2="145" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="200" y="138" class="small-text" text-anchor="middle">URLs</text>
+
+  <!-- Main Orchestrator - BrowserAgent -->
+  <g transform="translate(240, 100)">
+    <rect width="200" height="100" rx="12" fill="url(#orchestratorGrad)" filter="url(#shadow)"/>
+    <text x="100" y="30" class="component-title" text-anchor="middle">BROWSER AGENT</text>
+    <text x="100" y="48" class="component-subtitle" text-anchor="middle">Main Orchestrator</text>
+    <line x1="20" y1="58" x2="180" y2="58" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+    <text x="100" y="75" class="component-subtitle" text-anchor="middle">index.ts</text>
+    <text x="100" y="90" class="component-subtitle" text-anchor="middle">processUrl() | processBatch()</text>
+  </g>
+
+  <!-- Five main modules -->
+
+  <!-- Browser Module -->
+  <g transform="translate(50, 260)">
+    <rect width="200" height="150" rx="12" fill="url(#browserGrad)" filter="url(#shadow)"/>
+    <text x="100" y="28" class="component-title" text-anchor="middle">BROWSER MODULE</text>
+    <line x1="15" y1="38" x2="185" y2="38" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+    <text x="100" y="58" class="component-subtitle" text-anchor="middle">BrowserManager</text>
+    <text x="100" y="73" class="component-subtitle" text-anchor="middle">PageLoader (hybrid wait)</text>
+    <text x="100" y="88" class="component-subtitle" text-anchor="middle">CookieConsentHandler</text>
+    <line x1="15" y1="100" x2="185" y2="100" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+    <text x="100" y="118" class="component-subtitle" text-anchor="middle">Chromium | ignoreHTTPS</text>
+    <text x="100" y="133" class="component-subtitle" text-anchor="middle">8 CMP patterns + heuristic</text>
+  </g>
+
+  <!-- Extraction Module -->
+  <g transform="translate(280, 260)">
+    <rect width="180" height="130" rx="12" fill="url(#extractGrad)" filter="url(#shadow)"/>
+    <text x="90" y="28" class="component-title" text-anchor="middle">EXTRACTION MODULE</text>
+    <line x1="15" y1="38" x2="165" y2="38" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+    <text x="90" y="58" class="component-subtitle" text-anchor="middle">HeadingExtractor</text>
+    <line x1="15" y1="70" x2="165" y2="70" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+    <text x="90" y="88" class="component-subtitle" text-anchor="middle">Extracts H1-H6</text>
+    <text x="90" y="103" class="component-subtitle" text-anchor="middle">Normalizes text</text>
+    <text x="90" y="118" class="component-subtitle" text-anchor="middle">Counts by level</text>
+  </g>
+
+  <!-- LangChain Module -->
+  <g transform="translate(490, 260)">
+    <rect width="180" height="130" rx="12" fill="url(#aiGrad)" filter="url(#shadow)"/>
+    <text x="90" y="28" class="component-title" text-anchor="middle">LANGCHAIN MODULE</text>
+    <line x1="15" y1="38" x2="165" y2="38" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+    <text x="90" y="58" class="component-subtitle" text-anchor="middle">LangChainProcessor</text>
+    <line x1="15" y1="70" x2="165" y2="70" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+    <text x="90" y="88" class="component-subtitle" text-anchor="middle">GPT-4o-mini</text>
+    <text x="90" y="103" class="component-subtitle" text-anchor="middle">Prompt building</text>
+    <text x="90" y="118" class="component-subtitle" text-anchor="middle">Zod validation</text>
+  </g>
+
+  <!-- Output Module -->
+  <g transform="translate(700, 260)">
+    <rect width="180" height="130" rx="12" fill="url(#outputGrad)" filter="url(#shadow)"/>
+    <text x="90" y="28" class="component-title" text-anchor="middle">OUTPUT MODULE</text>
+    <line x1="15" y1="38" x2="165" y2="38" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+    <text x="90" y="58" class="component-subtitle" text-anchor="middle">ResultFormatter</text>
+    <line x1="15" y1="70" x2="165" y2="70" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+    <text x="90" y="88" class="component-subtitle" text-anchor="middle">Console output</text>
+    <text x="90" y="103" class="component-subtitle" text-anchor="middle">Unicode box drawing</text>
+    <text x="90" y="118" class="component-subtitle" text-anchor="middle">Batch formatting</text>
+  </g>
+
+  <!-- Arrows from Orchestrator to modules -->
+  <path d="M340,200 L340,230 L150,230 L150,260" stroke="#3b82f6" stroke-width="2" fill="none" marker-end="url(#arrow-blue)"/>
+  <path d="M340,200 L340,230 L370,230 L370,260" stroke="#3b82f6" stroke-width="2" fill="none" marker-end="url(#arrow-blue)"/>
+  <path d="M340,200 L340,230 L580,230 L580,260" stroke="#3b82f6" stroke-width="2" fill="none" marker-end="url(#arrow-blue)"/>
+  <path d="M340,200 L340,230 L790,230 L790,260" stroke="#3b82f6" stroke-width="2" fill="none" marker-end="url(#arrow-blue)"/>
+
+  <!-- External Dependencies -->
+
+  <!-- Playwright -->
+  <g transform="translate(50, 445)">
+    <rect width="200" height="60" rx="8" fill="white" stroke="#10b981" stroke-width="2" filter="url(#shadow)"/>
+    <text x="100" y="28" class="label-bold" text-anchor="middle" fill="#059669">Playwright</text>
+    <text x="100" y="45" class="small-text" text-anchor="middle">Browser automation</text>
+  </g>
+  <line x1="150" y1="410" x2="150" y2="445" stroke="#10b981" stroke-width="2" stroke-dasharray="4,4"/>
+
+  <!-- OpenAI API -->
+  <g transform="translate(490, 430)">
+    <rect width="180" height="60" rx="8" fill="url(#externalGrad)" filter="url(#shadow)"/>
+    <text x="90" y="28" class="component-title" text-anchor="middle">OpenAI API</text>
+    <text x="90" y="45" class="component-subtitle" text-anchor="middle">GPT-4o-mini model</text>
+  </g>
+  <line x1="580" y1="390" x2="580" y2="430" stroke="#8b5cf6" stroke-width="2" stroke-dasharray="4,4"/>
+
+  <!-- Console Output -->
+  <g transform="translate(700, 430)">
+    <rect width="180" height="60" rx="8" fill="white" stroke="#ec4899" stroke-width="2" filter="url(#shadow)"/>
+    <text x="90" y="28" class="label-bold" text-anchor="middle" fill="#db2777">Console</text>
+    <text x="90" y="45" class="small-text" text-anchor="middle">Terminal output</text>
+  </g>
+  <line x1="790" y1="390" x2="790" y2="430" stroke="#ec4899" stroke-width="2" stroke-dasharray="4,4"/>
+
+  <!-- Utils Section -->
+  <g transform="translate(910, 110)">
+    <rect width="250" height="200" rx="12" fill="white" stroke="#e2e8f0" stroke-width="2" filter="url(#shadow)"/>
+    <rect width="250" height="35" rx="12" fill="url(#utilsGrad)"/>
+    <rect x="0" y="23" width="250" height="12" fill="url(#utilsGrad)"/>
+    <text x="125" y="25" class="component-title" text-anchor="middle">UTILITIES</text>
+
+    <!-- Logger -->
+    <g transform="translate(15, 50)">
+      <rect width="100" height="55" rx="6" fill="#f1f5f9" stroke="#cbd5e1"/>
+      <text x="50" y="20" class="label-bold" text-anchor="middle">Logger</text>
+      <text x="50" y="35" class="small-text" text-anchor="middle">JSON structured</text>
+      <text x="50" y="47" class="small-text" text-anchor="middle">debug/info/warn</text>
+    </g>
+
+    <!-- Validator -->
+    <g transform="translate(130, 50)">
+      <rect width="105" height="55" rx="6" fill="#f1f5f9" stroke="#cbd5e1"/>
+      <text x="52" y="20" class="label-bold" text-anchor="middle">Validator</text>
+      <text x="52" y="35" class="small-text" text-anchor="middle">URL validation</text>
+      <text x="52" y="47" class="small-text" text-anchor="middle">Env checking</text>
+    </g>
+
+    <!-- Types -->
+    <g transform="translate(15, 115)">
+      <rect width="220" height="70" rx="6" fill="#f1f5f9" stroke="#cbd5e1"/>
+      <text x="110" y="18" class="label-bold" text-anchor="middle">TypeScript Types</text>
+      <text x="110" y="33" class="small-text" text-anchor="middle">Heading | ExtractionResult | ProcessingResult</text>
+      <text x="110" y="48" class="small-text" text-anchor="middle">AgentConfig | AgentResult | BatchResult</text>
+      <text x="110" y="63" class="small-text" text-anchor="middle">CookieConsentPattern | WaitUntilStrategy</text>
+    </g>
+  </g>
+
+  <!-- Dashed line from orchestrator to utils -->
+  <line x1="440" y1="150" x2="910" y2="200" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="6,4"/>
+
+  <!-- Data Flow Section -->
+  <g transform="translate(50, 530)">
+    <rect width="1100" height="390" rx="12" fill="white" stroke="#e2e8f0" stroke-width="2" filter="url(#shadow)"/>
+    <rect width="1100" height="40" rx="12" fill="#1e293b"/>
+    <rect x="0" y="28" width="1100" height="12" fill="#1e293b"/>
+    <text x="550" y="28" class="component-title" text-anchor="middle">DATA FLOW PIPELINE</text>
+  </g>
+
+  <!-- Pipeline stages -->
+  <!-- Stage 1: Input -->
+  <g transform="translate(70, 590)">
+    <rect width="130" height="80" rx="10" fill="#f1f5f9" stroke="#3b82f6" stroke-width="2"/>
+    <circle cx="65" cy="-10" r="18" fill="#3b82f6"/>
+    <text x="65" y="-5" fill="white" font-size="12" font-weight="bold" text-anchor="middle">1</text>
+    <text x="65" y="30" class="label-bold" text-anchor="middle">INPUT</text>
+    <text x="65" y="48" class="small-text" text-anchor="middle">CLI Arguments</text>
+    <text x="65" y="62" class="small-text" text-anchor="middle">URL(s) + Options</text>
+  </g>
+
+  <!-- Stage 2: Validate -->
+  <g transform="translate(220, 590)">
+    <rect width="130" height="80" rx="10" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+    <circle cx="65" cy="-10" r="18" fill="#64748b"/>
+    <text x="65" y="-5" fill="white" font-size="12" font-weight="bold" text-anchor="middle">2</text>
+    <text x="65" y="30" class="label-bold" text-anchor="middle">VALIDATE</text>
+    <text x="65" y="48" class="small-text" text-anchor="middle">URL Format</text>
+    <text x="65" y="62" class="small-text" text-anchor="middle">Environment</text>
+  </g>
+
+  <!-- Stage 3: Load -->
+  <g transform="translate(370, 590)">
+    <rect width="130" height="80" rx="10" fill="#f1f5f9" stroke="#10b981" stroke-width="2"/>
+    <circle cx="65" cy="-10" r="18" fill="#10b981"/>
+    <text x="65" y="-5" fill="white" font-size="12" font-weight="bold" text-anchor="middle">3</text>
+    <text x="65" y="30" class="label-bold" text-anchor="middle">LOAD PAGE</text>
+    <text x="65" y="48" class="small-text" text-anchor="middle">Navigate URL</text>
+    <text x="65" y="62" class="small-text" text-anchor="middle">Hybrid wait strategy</text>
+  </g>
+
+  <!-- Stage 4: Cookie -->
+  <g transform="translate(520, 590)">
+    <rect width="130" height="80" rx="10" fill="#f1f5f9" stroke="#06b6d4" stroke-width="2"/>
+    <circle cx="65" cy="-10" r="18" fill="#06b6d4"/>
+    <text x="65" y="-5" fill="white" font-size="12" font-weight="bold" text-anchor="middle">4</text>
+    <text x="65" y="30" class="label-bold" text-anchor="middle">COOKIE</text>
+    <text x="65" y="48" class="small-text" text-anchor="middle">Dismiss popups</text>
+    <text x="65" y="62" class="small-text" text-anchor="middle">8 CMPs + heuristic</text>
+  </g>
+
+  <!-- Stage 5: Extract -->
+  <g transform="translate(670, 590)">
+    <rect width="130" height="80" rx="10" fill="#f1f5f9" stroke="#f59e0b" stroke-width="2"/>
+    <circle cx="65" cy="-10" r="18" fill="#f59e0b"/>
+    <text x="65" y="-5" fill="white" font-size="12" font-weight="bold" text-anchor="middle">5</text>
+    <text x="65" y="30" class="label-bold" text-anchor="middle">EXTRACT</text>
+    <text x="65" y="48" class="small-text" text-anchor="middle">Query H1-H6</text>
+    <text x="65" y="62" class="small-text" text-anchor="middle">Normalize text</text>
+  </g>
+
+  <!-- Stage 6: Process -->
+  <g transform="translate(820, 590)">
+    <rect width="130" height="80" rx="10" fill="#f1f5f9" stroke="#8b5cf6" stroke-width="2"/>
+    <circle cx="65" cy="-10" r="18" fill="#8b5cf6"/>
+    <text x="65" y="-5" fill="white" font-size="12" font-weight="bold" text-anchor="middle">6</text>
+    <text x="65" y="30" class="label-bold" text-anchor="middle">AI PROCESS</text>
+    <text x="65" y="48" class="small-text" text-anchor="middle">LangChain</text>
+    <text x="65" y="62" class="small-text" text-anchor="middle">GPT-4o Analysis</text>
+  </g>
+
+  <!-- Stage 7: Output -->
+  <g transform="translate(970, 590)">
+    <rect width="130" height="80" rx="10" fill="#f1f5f9" stroke="#ec4899" stroke-width="2"/>
+    <circle cx="65" cy="-10" r="18" fill="#ec4899"/>
+    <text x="65" y="-5" fill="white" font-size="12" font-weight="bold" text-anchor="middle">7</text>
+    <text x="65" y="30" class="label-bold" text-anchor="middle">OUTPUT</text>
+    <text x="65" y="48" class="small-text" text-anchor="middle">Format results</text>
+    <text x="65" y="62" class="small-text" text-anchor="middle">Display console</text>
+  </g>
+
+  <!-- Arrows between stages -->
+  <line x1="200" y1="630" x2="220" y2="630" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="350" y1="630" x2="370" y2="630" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="500" y1="630" x2="520" y2="630" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="650" y1="630" x2="670" y2="630" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="800" y1="630" x2="820" y2="630" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="950" y1="630" x2="970" y2="630" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Data types passed -->
+  <g transform="translate(70, 700)">
+    <rect width="130" height="40" rx="6" fill="#eff6ff" stroke="#bfdbfe"/>
+    <text x="65" y="17" class="small-text" text-anchor="middle" fill="#1d4ed8">string[]</text>
+    <text x="65" y="32" class="small-text" text-anchor="middle" fill="#64748b">URL list</text>
+  </g>
+
+  <g transform="translate(220, 700)">
+    <rect width="130" height="40" rx="6" fill="#f0fdf4" stroke="#bbf7d0"/>
+    <text x="65" y="17" class="small-text" text-anchor="middle" fill="#15803d">ValidationResult</text>
+    <text x="65" y="32" class="small-text" text-anchor="middle" fill="#64748b">isValid, normalizedUrl</text>
+  </g>
+
+  <g transform="translate(370, 700)">
+    <rect width="130" height="40" rx="6" fill="#f0fdf4" stroke="#bbf7d0"/>
+    <text x="65" y="17" class="small-text" text-anchor="middle" fill="#15803d">PageLoadResult</text>
+    <text x="65" y="32" class="small-text" text-anchor="middle" fill="#64748b">success, title, time</text>
+  </g>
+
+  <g transform="translate(520, 700)">
+    <rect width="130" height="40" rx="6" fill="#ecfeff" stroke="#a5f3fc"/>
+    <text x="65" y="17" class="small-text" text-anchor="middle" fill="#0891b2">CookieConsentResult</text>
+    <text x="65" y="32" class="small-text" text-anchor="middle" fill="#64748b">dismissed, mode</text>
+  </g>
+
+  <g transform="translate(670, 700)">
+    <rect width="130" height="40" rx="6" fill="#fffbeb" stroke="#fde68a"/>
+    <text x="65" y="17" class="small-text" text-anchor="middle" fill="#b45309">ExtractionResult</text>
+    <text x="65" y="32" class="small-text" text-anchor="middle" fill="#64748b">headings[], counts</text>
+  </g>
+
+  <g transform="translate(820, 700)">
+    <rect width="130" height="40" rx="6" fill="#f5f3ff" stroke="#ddd6fe"/>
+    <text x="65" y="17" class="small-text" text-anchor="middle" fill="#7c3aed">ProcessingResult</text>
+    <text x="65" y="32" class="small-text" text-anchor="middle" fill="#64748b">summary, insights</text>
+  </g>
+
+  <g transform="translate(970, 700)">
+    <rect width="130" height="40" rx="6" fill="#fdf2f8" stroke="#fbcfe8"/>
+    <text x="65" y="17" class="small-text" text-anchor="middle" fill="#db2777">AgentResult</text>
+    <text x="65" y="32" class="small-text" text-anchor="middle" fill="#64748b">Complete result</text>
+  </g>
+
+  <!-- Tech Stack Footer -->
+  <g transform="translate(70, 770)">
+    <rect width="1030" height="115" rx="8" fill="#f8fafc" stroke="#e2e8f0"/>
+    <text x="515" y="22" class="section-title" text-anchor="middle">Technology Stack</text>
+
+    <g transform="translate(20, 35)">
+      <rect width="80" height="30" rx="4" fill="#3178c6"/>
+      <text x="40" y="20" fill="white" font-size="11" font-weight="bold" text-anchor="middle">TypeScript</text>
+    </g>
+
+    <g transform="translate(110, 35)">
+      <rect width="80" height="30" rx="4" fill="#339933"/>
+      <text x="40" y="20" fill="white" font-size="11" font-weight="bold" text-anchor="middle">Node.js 20+</text>
+    </g>
+
+    <g transform="translate(200, 35)">
+      <rect width="80" height="30" rx="4" fill="#2ecc71"/>
+      <text x="40" y="20" fill="white" font-size="11" font-weight="bold" text-anchor="middle">Playwright</text>
+    </g>
+
+    <g transform="translate(290, 35)">
+      <rect width="80" height="30" rx="4" fill="#1c3c3c"/>
+      <text x="40" y="20" fill="white" font-size="11" font-weight="bold" text-anchor="middle">LangChain</text>
+    </g>
+
+    <g transform="translate(380, 35)">
+      <rect width="80" height="30" rx="4" fill="#412991"/>
+      <text x="40" y="20" fill="white" font-size="11" font-weight="bold" text-anchor="middle">OpenAI</text>
+    </g>
+
+    <g transform="translate(470, 35)">
+      <rect width="60" height="30" rx="4" fill="#3178c6"/>
+      <text x="30" y="20" fill="white" font-size="11" font-weight="bold" text-anchor="middle">Zod</text>
+    </g>
+
+    <g transform="translate(540, 35)">
+      <rect width="60" height="30" rx="4" fill="#729b1b"/>
+      <text x="30" y="20" fill="white" font-size="11" font-weight="bold" text-anchor="middle">Vitest</text>
+    </g>
+
+    <g transform="translate(610, 35)">
+      <rect width="60" height="30" rx="4" fill="#4b32c3"/>
+      <text x="30" y="20" fill="white" font-size="11" font-weight="bold" text-anchor="middle">ESLint</text>
+    </g>
+
+    <g transform="translate(680, 35)">
+      <rect width="70" height="30" rx="4" fill="#f7b93e"/>
+      <text x="35" y="20" fill="#1a1a1a" font-size="11" font-weight="bold" text-anchor="middle">Prettier</text>
+    </g>
+
+    <g transform="translate(760, 35)">
+      <rect width="55" height="30" rx="4" fill="#1a1a1a"/>
+      <text x="27" y="20" fill="white" font-size="11" font-weight="bold" text-anchor="middle">dotenv</text>
+    </g>
+
+    <g transform="translate(825, 35)">
+      <rect width="55" height="30" rx="4" fill="#007acc"/>
+      <text x="27" y="20" fill="white" font-size="11" font-weight="bold" text-anchor="middle">tsx</text>
+    </g>
+
+    <g transform="translate(890, 35)">
+      <rect width="100" height="30" rx="4" fill="#cb3837"/>
+      <text x="50" y="20" fill="white" font-size="11" font-weight="bold" text-anchor="middle">npm scripts</text>
+    </g>
+
+    <!-- CLI Flags -->
+    <text x="20" y="82" class="small-text" fill="#64748b">CLI Flags:</text>
+    <text x="80" y="82" class="small-text" fill="#1e293b">--headless | --timeout | --wait-until | --post-load-wait | --no-cookie-dismiss | --verbose</text>
+  </g>
+</svg>

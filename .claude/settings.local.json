@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npx vitest:*)",
+      "Bash(npm run typecheck:*)",
+      "Bash(cat:*)",
+      "Bash(npm run lint)",
+      "Bash(npm run start:*)",
+      "Bash(npm run test:e2e:*)",
+      "Bash(npm test:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

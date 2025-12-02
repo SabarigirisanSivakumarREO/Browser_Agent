@@ -1,0 +1,510 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1200">
+  <defs>
+    <style>
+      .title { font: bold 26px 'Segoe UI', Arial, sans-serif; fill: #1e293b; }
+      .subtitle { font: 14px 'Segoe UI', Arial, sans-serif; fill: #64748b; }
+      .module-title { font: bold 14px 'Segoe UI', Arial, sans-serif; fill: white; }
+      .class-name { font: bold 13px 'Consolas', monospace; fill: #1e293b; }
+      .method-name { font: 11px 'Consolas', monospace; fill: #6366f1; }
+      .param-text { font: 10px 'Consolas', monospace; fill: #64748b; }
+      .return-text { font: 10px 'Consolas', monospace; fill: #059669; }
+      .label { font: 11px 'Segoe UI', Arial, sans-serif; fill: #475569; }
+      .label-bold { font: bold 11px 'Segoe UI', Arial, sans-serif; fill: #1e293b; }
+      .file-path { font: 10px 'Consolas', monospace; fill: #94a3b8; }
+    </style>
+
+    <linearGradient id="browserModGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#10b981"/>
+      <stop offset="100%" style="stop-color:#059669"/>
+    </linearGradient>
+
+    <linearGradient id="extractModGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#f59e0b"/>
+      <stop offset="100%" style="stop-color:#d97706"/>
+    </linearGradient>
+
+    <linearGradient id="langchainModGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#8b5cf6"/>
+      <stop offset="100%" style="stop-color:#7c3aed"/>
+    </linearGradient>
+
+    <linearGradient id="outputModGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#ec4899"/>
+      <stop offset="100%" style="stop-color:#db2777"/>
+    </linearGradient>
+
+    <linearGradient id="utilsModGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#64748b"/>
+      <stop offset="100%" style="stop-color:#475569"/>
+    </linearGradient>
+
+    <linearGradient id="orchestratorGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#3b82f6"/>
+      <stop offset="100%" style="stop-color:#1d4ed8"/>
+    </linearGradient>
+
+    <linearGradient id="cookieModGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#06b6d4"/>
+      <stop offset="100%" style="stop-color:#0891b2"/>
+    </linearGradient>
+
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="115%">
+      <feDropShadow dx="2" dy="3" stdDeviation="3" flood-opacity="0.1"/>
+    </filter>
+
+    <marker id="depArrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1400" height="1200" fill="#f8fafc"/>
+
+  <!-- Header -->
+  <rect x="0" y="0" width="1400" height="70" fill="#1e293b"/>
+  <text x="700" y="38" class="title" text-anchor="middle" fill="white">Browser Agent - Component Details</text>
+  <text x="700" y="58" class="subtitle" text-anchor="middle" fill="#94a3b8">Classes, Methods, and Dependencies</text>
+
+  <!-- ==================== BROWSER AGENT (Orchestrator) ==================== -->
+  <g transform="translate(50, 90)">
+    <rect width="620" height="230" rx="10" fill="white" stroke="#e2e8f0" stroke-width="2" filter="url(#shadow)"/>
+    <rect width="620" height="35" rx="10" fill="url(#orchestratorGrad)"/>
+    <rect x="0" y="25" width="620" height="10" fill="url(#orchestratorGrad)"/>
+    <text x="310" y="25" class="module-title" text-anchor="middle">BROWSER AGENT (Orchestrator)</text>
+    <text x="310" y="55" class="file-path" text-anchor="middle">src/index.ts</text>
+
+    <!-- Class box -->
+    <g transform="translate(20, 70)">
+      <rect width="280" height="145" rx="6" fill="#eff6ff" stroke="#bfdbfe"/>
+      <text x="140" y="20" class="class-name" text-anchor="middle">class BrowserAgent</text>
+      <line x1="10" y1="30" x2="270" y2="30" stroke="#bfdbfe"/>
+
+      <!-- Properties -->
+      <text x="15" y="48" class="label-bold">Properties:</text>
+      <text x="15" y="63" class="param-text">- config: AgentConfig</text>
+      <text x="15" y="76" class="param-text">- browserManager: BrowserManager</text>
+      <text x="15" y="89" class="param-text">- langchainProcessor: LangChainProcessor</text>
+      <text x="15" y="102" class="param-text">- headingExtractor: HeadingExtractor</text>
+      <text x="15" y="115" class="param-text">- formatter: ResultFormatter</text>
+      <text x="15" y="128" class="param-text">- logger: Logger</text>
+    </g>
+
+    <!-- Methods box -->
+    <g transform="translate(320, 70)">
+      <rect width="280" height="145" rx="6" fill="#f0fdf4" stroke="#bbf7d0"/>
+      <text x="140" y="20" class="label-bold" text-anchor="middle">Public Methods</text>
+      <line x1="10" y1="30" x2="270" y2="30" stroke="#bbf7d0"/>
+
+      <text x="15" y="48" class="method-name">constructor(config?: Partial&lt;AgentConfig&gt;)</text>
+      <text x="15" y="65" class="method-name">validateEnvironment(): void</text>
+      <text x="15" y="82" class="method-name">processUrl(url: string)</text>
+      <text x="180" y="82" class="return-text">: Promise&lt;AgentResult&gt;</text>
+      <text x="15" y="99" class="method-name">processBatch(urls: string[])</text>
+      <text x="180" y="99" class="return-text">: Promise&lt;BatchResult&gt;</text>
+      <text x="15" y="116" class="method-name">formatResult(result)</text>
+      <text x="150" y="116" class="return-text">: string</text>
+      <text x="15" y="133" class="method-name">close()</text>
+      <text x="70" y="133" class="return-text">: Promise&lt;void&gt;</text>
+    </g>
+  </g>
+
+  <!-- ==================== BROWSER MODULE ==================== -->
+  <g transform="translate(50, 340)">
+    <rect width="450" height="440" rx="10" fill="white" stroke="#e2e8f0" stroke-width="2" filter="url(#shadow)"/>
+    <rect width="450" height="35" rx="10" fill="url(#browserModGrad)"/>
+    <rect x="0" y="25" width="450" height="10" fill="url(#browserModGrad)"/>
+    <text x="225" y="25" class="module-title" text-anchor="middle">BROWSER MODULE</text>
+    <text x="225" y="55" class="file-path" text-anchor="middle">src/browser/</text>
+
+    <!-- BrowserManager class -->
+    <g transform="translate(15, 70)">
+      <rect width="420" height="100" rx="6" fill="#ecfdf5" stroke="#a7f3d0"/>
+      <text x="210" y="20" class="class-name" text-anchor="middle">class BrowserManager</text>
+      <text x="210" y="35" class="file-path" text-anchor="middle">browser-manager.ts</text>
+      <line x1="10" y1="42" x2="410" y2="42" stroke="#a7f3d0"/>
+
+      <text x="15" y="60" class="method-name">launch(): Promise&lt;void&gt;</text>
+      <text x="15" y="77" class="method-name">getPage(): Promise&lt;Page&gt;</text>
+      <text x="15" y="94" class="method-name">close(): Promise&lt;void&gt;</text>
+      <text x="220" y="60" class="param-text">// Launch Chromium (ignoreHTTPSErrors)</text>
+      <text x="220" y="77" class="param-text">// Create new page instance</text>
+      <text x="220" y="94" class="param-text">// Cleanup resources</text>
+    </g>
+
+    <!-- PageLoader class -->
+    <g transform="translate(15, 180)">
+      <rect width="420" height="120" rx="6" fill="#ecfdf5" stroke="#a7f3d0"/>
+      <text x="210" y="20" class="class-name" text-anchor="middle">class PageLoader</text>
+      <text x="210" y="35" class="file-path" text-anchor="middle">page-loader.ts</text>
+      <line x1="10" y1="42" x2="410" y2="42" stroke="#a7f3d0"/>
+
+      <text x="15" y="60" class="method-name">load(page: Page, url: string)</text>
+      <text x="230" y="60" class="return-text">: Promise&lt;PageLoadResult&gt;</text>
+      <text x="15" y="80" class="param-text">- Validates URL format</text>
+      <text x="15" y="95" class="param-text">- Hybrid wait: waitUntil + postLoadWait (5s default)</text>
+      <text x="15" y="110" class="param-text">- Captures title, load time, cookie consent result</text>
+    </g>
+
+    <!-- CookieConsentHandler class -->
+    <g transform="translate(15, 310)">
+      <rect width="420" height="115" rx="6" fill="#ecfeff" stroke="#a5f3fc"/>
+      <text x="210" y="20" class="class-name" text-anchor="middle">class CookieConsentHandler</text>
+      <text x="210" y="35" class="file-path" text-anchor="middle">cookie-handler.ts + cookie-patterns.ts</text>
+      <line x1="10" y1="42" x2="410" y2="42" stroke="#a5f3fc"/>
+
+      <text x="15" y="60" class="method-name">dismiss(page: Page)</text>
+      <text x="160" y="60" class="return-text">: Promise&lt;CookieConsentResult&gt;</text>
+      <text x="15" y="80" class="param-text">- Tries 8 known CMPs (OneTrust, Cookiebot, etc.)</text>
+      <text x="15" y="95" class="param-text">- Fallback: heuristic (accept/allow/agree/ok)</text>
+      <text x="15" y="110" class="param-text">- Best-effort: failures logged, never blocks loading</text>
+    </g>
+  </g>
+
+  <!-- ==================== EXTRACTION MODULE ==================== -->
+  <g transform="translate(520, 340)">
+    <rect width="400" height="200" rx="10" fill="white" stroke="#e2e8f0" stroke-width="2" filter="url(#shadow)"/>
+    <rect width="400" height="35" rx="10" fill="url(#extractModGrad)"/>
+    <rect x="0" y="25" width="400" height="10" fill="url(#extractModGrad)"/>
+    <text x="200" y="25" class="module-title" text-anchor="middle">EXTRACTION MODULE</text>
+    <text x="200" y="55" class="file-path" text-anchor="middle">src/extraction/</text>
+
+    <!-- HeadingExtractor class -->
+    <g transform="translate(15, 70)">
+      <rect width="370" height="115" rx="6" fill="#fef3c7" stroke="#fcd34d"/>
+      <text x="185" y="20" class="class-name" text-anchor="middle">class HeadingExtractor</text>
+      <text x="185" y="35" class="file-path" text-anchor="middle">heading-extractor.ts</text>
+      <line x1="10" y1="42" x2="360" y2="42" stroke="#fcd34d"/>
+
+      <text x="15" y="60" class="method-name">extract(page: Page)</text>
+      <text x="150" y="60" class="return-text">: Promise&lt;ExtractionResult&gt;</text>
+      <text x="15" y="80" class="param-text">- Query: page.locator('h1, h2, h3, h4, h5, h6')</text>
+      <text x="15" y="95" class="param-text">- Returns: { headings[], totalCount, countByLevel }</text>
+      <text x="15" y="110" class="param-text">- Normalizes whitespace, skips empty elements</text>
+    </g>
+  </g>
+
+  <!-- ==================== LANGCHAIN MODULE ==================== -->
+  <g transform="translate(520, 560)">
+    <rect width="400" height="220" rx="10" fill="white" stroke="#e2e8f0" stroke-width="2" filter="url(#shadow)"/>
+    <rect width="400" height="35" rx="10" fill="url(#langchainModGrad)"/>
+    <rect x="0" y="25" width="400" height="10" fill="url(#langchainModGrad)"/>
+    <text x="200" y="25" class="module-title" text-anchor="middle">LANGCHAIN MODULE</text>
+    <text x="200" y="55" class="file-path" text-anchor="middle">src/langchain/</text>
+
+    <!-- LangChainProcessor class -->
+    <g transform="translate(15, 70)">
+      <rect width="370" height="135" rx="6" fill="#f5f3ff" stroke="#c4b5fd"/>
+      <text x="185" y="20" class="class-name" text-anchor="middle">class LangChainProcessor</text>
+      <text x="185" y="35" class="file-path" text-anchor="middle">processor.ts</text>
+      <line x1="10" y1="42" x2="360" y2="42" stroke="#c4b5fd"/>
+
+      <text x="15" y="60" class="method-name">constructor(config?: ProcessingConfig)</text>
+      <text x="15" y="77" class="method-name">analyze(data: ExtractionResult)</text>
+      <text x="220" y="77" class="return-text">: Promise&lt;ProcessingResult&gt;</text>
+      <text x="15" y="97" class="param-text">Model: gpt-4o-mini | maxTokens: 1000 | temp: 0.3</text>
+      <text x="15" y="112" class="param-text">Uses: @langchain/openai (ChatOpenAI)</text>
+      <text x="15" y="127" class="param-text">Validates response with Zod schema</text>
+    </g>
+  </g>
+
+  <!-- ==================== OUTPUT MODULE ==================== -->
+  <g transform="translate(940, 340)">
+    <rect width="410" height="200" rx="10" fill="white" stroke="#e2e8f0" stroke-width="2" filter="url(#shadow)"/>
+    <rect width="410" height="35" rx="10" fill="url(#outputModGrad)"/>
+    <rect x="0" y="25" width="410" height="10" fill="url(#outputModGrad)"/>
+    <text x="205" y="25" class="module-title" text-anchor="middle">OUTPUT MODULE</text>
+    <text x="205" y="55" class="file-path" text-anchor="middle">src/output/</text>
+
+    <!-- ResultFormatter class -->
+    <g transform="translate(15, 70)">
+      <rect width="380" height="115" rx="6" fill="#fdf2f8" stroke="#fbcfe8"/>
+      <text x="190" y="20" class="class-name" text-anchor="middle">class ResultFormatter</text>
+      <text x="190" y="35" class="file-path" text-anchor="middle">formatter.ts</text>
+      <line x1="10" y1="42" x2="370" y2="42" stroke="#fbcfe8"/>
+
+      <text x="15" y="60" class="method-name">formatResult(result: AgentResult)</text>
+      <text x="250" y="60" class="return-text">: string</text>
+      <text x="15" y="77" class="method-name">formatBatch(batch: BatchResult)</text>
+      <text x="250" y="77" class="return-text">: string</text>
+      <text x="15" y="97" class="param-text">- Unicode box drawing characters</text>
+      <text x="15" y="112" class="param-text">- Text truncation, centering, padding</text>
+    </g>
+  </g>
+
+  <!-- ==================== UTILS MODULE ==================== -->
+  <g transform="translate(940, 560)">
+    <rect width="410" height="220" rx="10" fill="white" stroke="#e2e8f0" stroke-width="2" filter="url(#shadow)"/>
+    <rect width="410" height="35" rx="10" fill="url(#utilsModGrad)"/>
+    <rect x="0" y="25" width="410" height="10" fill="url(#utilsModGrad)"/>
+    <text x="205" y="25" class="module-title" text-anchor="middle">UTILS MODULE</text>
+    <text x="205" y="55" class="file-path" text-anchor="middle">src/utils/</text>
+
+    <!-- Logger -->
+    <g transform="translate(15, 70)">
+      <rect width="185" height="85" rx="6" fill="#f1f5f9" stroke="#cbd5e1"/>
+      <text x="92" y="18" class="class-name" text-anchor="middle">Logger</text>
+      <text x="92" y="33" class="file-path" text-anchor="middle">logger.ts</text>
+      <line x1="10" y1="40" x2="175" y2="40" stroke="#cbd5e1"/>
+      <text x="15" y="55" class="method-name">debug(msg, ctx?)</text>
+      <text x="15" y="68" class="method-name">info(msg, ctx?)</text>
+      <text x="15" y="81" class="method-name">warn(msg, ctx?)</text>
+    </g>
+
+    <!-- Validator -->
+    <g transform="translate(210, 70)">
+      <rect width="185" height="85" rx="6" fill="#f1f5f9" stroke="#cbd5e1"/>
+      <text x="92" y="18" class="class-name" text-anchor="middle">Validator</text>
+      <text x="92" y="33" class="file-path" text-anchor="middle">validator.ts</text>
+      <line x1="10" y1="40" x2="175" y2="40" stroke="#cbd5e1"/>
+      <text x="15" y="55" class="method-name">validateUrl(url)</text>
+      <text x="15" y="68" class="method-name">validateEnvironment()</text>
+      <text x="15" y="81" class="method-name">isApiKeyConfigured()</text>
+    </g>
+
+    <!-- Logger output format -->
+    <g transform="translate(15, 165)">
+      <rect width="380" height="40" rx="4" fill="#1e293b"/>
+      <text x="190" y="15" fill="#94a3b8" font-size="9" text-anchor="middle">JSON LOG OUTPUT</text>
+      <text x="10" y="32" fill="#10b981" font-family="Consolas" font-size="9">{"timestamp":"...","level":"info","module":"Browser","message":"..."}</text>
+    </g>
+  </g>
+
+  <!-- ==================== TYPES MODULE ==================== -->
+  <g transform="translate(700, 90)">
+    <rect width="650" height="230" rx="10" fill="white" stroke="#e2e8f0" stroke-width="2" filter="url(#shadow)"/>
+    <rect width="650" height="35" rx="10" fill="#1e293b"/>
+    <rect x="0" y="25" width="650" height="10" fill="#1e293b"/>
+    <text x="325" y="25" class="module-title" text-anchor="middle">TYPES MODULE</text>
+    <text x="325" y="55" class="file-path" text-anchor="middle">src/types/index.ts</text>
+
+    <!-- Core types -->
+    <g transform="translate(15, 65)">
+      <rect width="200" height="150" rx="6" fill="#eff6ff" stroke="#bfdbfe"/>
+      <text x="100" y="18" class="label-bold" text-anchor="middle">Core Types</text>
+      <line x1="10" y1="25" x2="190" y2="25" stroke="#bfdbfe"/>
+      <text x="15" y="45" class="method-name">Heading</text>
+      <text x="15" y="60" class="param-text">  level: 1-6</text>
+      <text x="15" y="73" class="param-text">  text: string</text>
+      <text x="15" y="86" class="param-text">  index: number</text>
+      <text x="15" y="105" class="method-name">ExtractionResult</text>
+      <text x="15" y="120" class="param-text">  headings: Heading[]</text>
+      <text x="15" y="133" class="param-text">  totalCount: number</text>
+      <text x="15" y="146" class="param-text">  countByLevel: Record</text>
+    </g>
+
+    <!-- Config types -->
+    <g transform="translate(230, 65)">
+      <rect width="200" height="150" rx="6" fill="#f0fdf4" stroke="#bbf7d0"/>
+      <text x="100" y="18" class="label-bold" text-anchor="middle">Config Types</text>
+      <line x1="10" y1="25" x2="190" y2="25" stroke="#bbf7d0"/>
+      <text x="15" y="45" class="method-name">BrowserConfig</text>
+      <text x="15" y="60" class="param-text">  headless: boolean</text>
+      <text x="15" y="73" class="param-text">  timeout: number</text>
+      <text x="15" y="86" class="param-text">  waitUntil: WaitStrategy</text>
+      <text x="15" y="99" class="param-text">  postLoadWait: number</text>
+      <text x="15" y="112" class="param-text">  dismissCookieConsent</text>
+      <text x="15" y="130" class="method-name">ProcessingConfig</text>
+      <text x="15" y="145" class="param-text">  model, maxTokens, temp</text>
+    </g>
+
+    <!-- Result types -->
+    <g transform="translate(445, 65)">
+      <rect width="190" height="150" rx="6" fill="#fef3c7" stroke="#fcd34d"/>
+      <text x="95" y="18" class="label-bold" text-anchor="middle">Result Types</text>
+      <line x1="10" y1="25" x2="180" y2="25" stroke="#fcd34d"/>
+      <text x="15" y="45" class="method-name">PageLoadResult</text>
+      <text x="15" y="60" class="param-text">  success, url, title</text>
+      <text x="15" y="73" class="param-text">  cookieConsent?</text>
+      <text x="15" y="91" class="method-name">CookieConsentResult</text>
+      <text x="15" y="106" class="param-text">  dismissed, mode, cmpId</text>
+      <text x="15" y="124" class="method-name">AgentResult</text>
+      <text x="15" y="139" class="param-text">  Complete result obj</text>
+    </g>
+  </g>
+
+  <!-- ==================== DEPENDENCY ARROWS ==================== -->
+  <!-- From Orchestrator to Browser Module -->
+  <path d="M360,320 L360,340" stroke="#94a3b8" stroke-width="2" marker-end="url(#depArrow)" stroke-dasharray="4,2"/>
+
+  <!-- From Orchestrator to Extraction Module -->
+  <path d="M500,320 L720,340" stroke="#94a3b8" stroke-width="2" marker-end="url(#depArrow)" stroke-dasharray="4,2"/>
+
+  <!-- ==================== FILE STRUCTURE ==================== -->
+  <g transform="translate(50, 800)">
+    <rect width="450" height="380" rx="10" fill="white" stroke="#e2e8f0" stroke-width="2" filter="url(#shadow)"/>
+    <rect width="450" height="35" rx="10" fill="#1e293b"/>
+    <rect x="0" y="25" width="450" height="10" fill="#1e293b"/>
+    <text x="225" y="25" class="module-title" text-anchor="middle">PROJECT FILE STRUCTURE</text>
+
+    <g transform="translate(20, 55)">
+      <text y="0" class="method-name" fill="#f59e0b">browser-agent/</text>
+      <text y="18" class="param-text">+-- src/</text>
+      <text y="33" class="param-text">|   +-- index.ts</text>
+      <text y="33" class="file-path" x="160">Main orchestrator</text>
+      <text y="48" class="param-text">|   +-- cli.ts</text>
+      <text y="48" class="file-path" x="160">CLI entry point</text>
+      <text y="63" class="param-text">|   +-- browser/</text>
+      <text y="63" class="file-path" x="160" fill="#10b981">Browser module</text>
+      <text y="78" class="param-text">|   |   +-- browser-manager.ts</text>
+      <text y="93" class="param-text">|   |   +-- page-loader.ts</text>
+      <text y="108" class="param-text">|   |   +-- cookie-handler.ts</text>
+      <text y="108" class="file-path" x="220" fill="#06b6d4">NEW</text>
+      <text y="123" class="param-text">|   |   +-- cookie-patterns.ts</text>
+      <text y="123" class="file-path" x="220" fill="#06b6d4">8 CMPs</text>
+      <text y="138" class="param-text">|   +-- extraction/</text>
+      <text y="138" class="file-path" x="160" fill="#f59e0b">Extract module</text>
+      <text y="153" class="param-text">|   |   +-- heading-extractor.ts</text>
+      <text y="168" class="param-text">|   +-- langchain/</text>
+      <text y="168" class="file-path" x="160" fill="#8b5cf6">AI module</text>
+      <text y="183" class="param-text">|   |   +-- processor.ts</text>
+      <text y="198" class="param-text">|   +-- output/</text>
+      <text y="198" class="file-path" x="160" fill="#ec4899">Output module</text>
+      <text y="213" class="param-text">|   |   +-- formatter.ts</text>
+      <text y="228" class="param-text">|   +-- types/</text>
+      <text y="228" class="file-path" x="160">TypeScript types</text>
+      <text y="243" class="param-text">|   +-- utils/</text>
+      <text y="243" class="file-path" x="160">Utilities</text>
+      <text y="258" class="param-text">|       +-- logger.ts</text>
+      <text y="273" class="param-text">|       +-- validator.ts</text>
+      <text y="293" class="param-text">+-- tests/</text>
+      <text y="293" class="file-path" x="160">Test suites</text>
+      <text y="308" class="param-text">+-- specs/</text>
+      <text y="308" class="file-path" x="160">Specifications</text>
+      <text y="323" class="param-text">+-- package.json</text>
+      <text y="338" class="param-text">+-- tsconfig.json</text>
+      <text y="353" class="param-text">+-- .env</text>
+      <text y="353" class="file-path" x="160" fill="#ef4444">OPENAI_API_KEY</text>
+    </g>
+  </g>
+
+  <!-- ==================== EXTERNAL DEPENDENCIES ==================== -->
+  <g transform="translate(520, 800)">
+    <rect width="830" height="380" rx="10" fill="white" stroke="#e2e8f0" stroke-width="2" filter="url(#shadow)"/>
+    <rect width="830" height="35" rx="10" fill="#ef4444"/>
+    <rect x="0" y="25" width="830" height="10" fill="#ef4444"/>
+    <text x="415" y="25" class="module-title" text-anchor="middle">EXTERNAL DEPENDENCIES</text>
+
+    <!-- Playwright -->
+    <g transform="translate(20, 55)">
+      <rect width="190" height="90" rx="8" fill="#ecfdf5" stroke="#10b981" stroke-width="2"/>
+      <text x="95" y="25" class="class-name" text-anchor="middle" fill="#059669">Playwright</text>
+      <text x="95" y="45" class="param-text" text-anchor="middle">Browser automation</text>
+      <text x="95" y="60" class="param-text" text-anchor="middle">Chromium | ignoreHTTPS</text>
+      <text x="95" y="80" class="method-name" text-anchor="middle">playwright</text>
+    </g>
+
+    <!-- LangChain -->
+    <g transform="translate(230, 55)">
+      <rect width="190" height="90" rx="8" fill="#f5f3ff" stroke="#8b5cf6" stroke-width="2"/>
+      <text x="95" y="25" class="class-name" text-anchor="middle" fill="#7c3aed">LangChain</text>
+      <text x="95" y="45" class="param-text" text-anchor="middle">AI orchestration</text>
+      <text x="95" y="60" class="param-text" text-anchor="middle">ChatOpenAI integration</text>
+      <text x="95" y="80" class="method-name" text-anchor="middle">@langchain/openai</text>
+    </g>
+
+    <!-- OpenAI -->
+    <g transform="translate(440, 55)">
+      <rect width="170" height="90" rx="8" fill="#fef2f2" stroke="#ef4444" stroke-width="2"/>
+      <text x="85" y="25" class="class-name" text-anchor="middle" fill="#dc2626">OpenAI API</text>
+      <text x="85" y="45" class="param-text" text-anchor="middle">GPT-4o-mini model</text>
+      <text x="85" y="60" class="param-text" text-anchor="middle">External service</text>
+      <text x="85" y="80" class="method-name" text-anchor="middle">api.openai.com</text>
+    </g>
+
+    <!-- Zod -->
+    <g transform="translate(630, 55)">
+      <rect width="170" height="90" rx="8" fill="#eff6ff" stroke="#3b82f6" stroke-width="2"/>
+      <text x="85" y="25" class="class-name" text-anchor="middle" fill="#1d4ed8">Zod</text>
+      <text x="85" y="45" class="param-text" text-anchor="middle">Schema validation</text>
+      <text x="85" y="60" class="param-text" text-anchor="middle">Type-safe parsing</text>
+      <text x="85" y="80" class="method-name" text-anchor="middle">zod</text>
+    </g>
+
+    <!-- Cookie Consent Platforms -->
+    <g transform="translate(20, 160)">
+      <rect width="790" height="100" rx="6" fill="#ecfeff" stroke="#a5f3fc"/>
+      <text x="395" y="22" class="label-bold" text-anchor="middle" fill="#0891b2">Supported Cookie Consent Platforms (CMPs)</text>
+      <line x1="20" y1="32" x2="770" y2="32" stroke="#a5f3fc"/>
+
+      <g transform="translate(20, 45)">
+        <rect width="90" height="40" rx="4" fill="#0891b2"/>
+        <text x="45" y="25" fill="white" font-size="10" font-weight="bold" text-anchor="middle">OneTrust</text>
+      </g>
+      <g transform="translate(120, 45)">
+        <rect width="90" height="40" rx="4" fill="#0891b2"/>
+        <text x="45" y="25" fill="white" font-size="10" font-weight="bold" text-anchor="middle">Cookiebot</text>
+      </g>
+      <g transform="translate(220, 45)">
+        <rect width="90" height="40" rx="4" fill="#0891b2"/>
+        <text x="45" y="25" fill="white" font-size="10" font-weight="bold" text-anchor="middle">Usercentrics</text>
+      </g>
+      <g transform="translate(320, 45)">
+        <rect width="90" height="40" rx="4" fill="#0891b2"/>
+        <text x="45" y="25" fill="white" font-size="10" font-weight="bold" text-anchor="middle">TrustArc</text>
+      </g>
+      <g transform="translate(420, 45)">
+        <rect width="90" height="40" rx="4" fill="#0891b2"/>
+        <text x="45" y="25" fill="white" font-size="10" font-weight="bold" text-anchor="middle">Quantcast</text>
+      </g>
+      <g transform="translate(520, 45)">
+        <rect width="80" height="40" rx="4" fill="#0891b2"/>
+        <text x="40" y="25" fill="white" font-size="10" font-weight="bold" text-anchor="middle">Didomi</text>
+      </g>
+      <g transform="translate(610, 45)">
+        <rect width="80" height="40" rx="4" fill="#0891b2"/>
+        <text x="40" y="25" fill="white" font-size="10" font-weight="bold" text-anchor="middle">Osano</text>
+      </g>
+      <g transform="translate(700, 45)">
+        <rect width="80" height="40" rx="4" fill="#64748b"/>
+        <text x="40" y="25" fill="white" font-size="10" font-weight="bold" text-anchor="middle">Heuristic</text>
+      </g>
+    </g>
+
+    <!-- Dev Dependencies -->
+    <g transform="translate(20, 275)">
+      <rect width="790" height="90" rx="6" fill="#f8fafc" stroke="#e2e8f0"/>
+      <text x="395" y="22" class="label-bold" text-anchor="middle">Development Dependencies</text>
+      <line x1="20" y1="32" x2="770" y2="32" stroke="#e2e8f0"/>
+
+      <g transform="translate(20, 45)">
+        <rect width="100" height="35" rx="4" fill="#3178c6"/>
+        <text x="50" y="22" fill="white" font-size="11" font-weight="bold" text-anchor="middle">TypeScript</text>
+      </g>
+
+      <g transform="translate(130, 45)">
+        <rect width="70" height="35" rx="4" fill="#729b1b"/>
+        <text x="35" y="22" fill="white" font-size="11" font-weight="bold" text-anchor="middle">Vitest</text>
+      </g>
+
+      <g transform="translate(210, 45)">
+        <rect width="70" height="35" rx="4" fill="#4b32c3"/>
+        <text x="35" y="22" fill="white" font-size="11" font-weight="bold" text-anchor="middle">ESLint</text>
+      </g>
+
+      <g transform="translate(290, 45)">
+        <rect width="70" height="35" rx="4" fill="#f7b93e"/>
+        <text x="35" y="22" fill="#1a1a1a" font-size="11" font-weight="bold" text-anchor="middle">Prettier</text>
+      </g>
+
+      <g transform="translate(370, 45)">
+        <rect width="80" height="35" rx="4" fill="#007acc"/>
+        <text x="40" y="22" fill="white" font-size="11" font-weight="bold" text-anchor="middle">tsx</text>
+      </g>
+
+      <g transform="translate(460, 45)">
+        <rect width="70" height="35" rx="4" fill="#1a1a1a"/>
+        <text x="35" y="22" fill="white" font-size="11" font-weight="bold" text-anchor="middle">dotenv</text>
+      </g>
+
+      <g transform="translate(540, 45)">
+        <rect width="100" height="35" rx="4" fill="#339933"/>
+        <text x="50" y="22" fill="white" font-size="11" font-weight="bold" text-anchor="middle">Node.js 20+</text>
+      </g>
+
+      <g transform="translate(650, 45)">
+        <rect width="120" height="35" rx="4" fill="#cb3837"/>
+        <text x="60" y="22" fill="white" font-size="10" font-weight="bold" text-anchor="middle">@playwright/browser</text>
+      </g>
+    </g>
+  </g>
+</svg>
