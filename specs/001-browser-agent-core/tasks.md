@@ -191,12 +191,8 @@
 
 **Purpose**: Verify complete workflow with multiple URLs per SC-006
 
-- [x] T029 Create tests/e2e/workflow.test.ts with 5-URL test (updated)
-  - Test 1: https://www.conversion.com/ (CRO agency, expect success)
-  - Test 2: https://www.invespcro.com/ (CRO agency, expect success)
-  - Test 3: https://www.npdigital.com/ (digital marketing, expect success)
-  - Test 4: https://www.roihunt.in/conversion-rate-optimization-agency-in-india/ (CRO agency, expect success)
-  - Test 5: https://www.wearetenet.com/in/growth/conversion-rate-optimization-services (CRO services, expect success)
+- [x] T029 Create tests/e2e/workflow.test.ts with 5-URL test
+  - Test real CRO agency websites
   - Verify each result has correct success/failure status
   - Verify batch processing works with all 5 URLs
   - Verify console output is parseable
@@ -225,26 +221,11 @@
 **Purpose**: Runtime issues discovered during testing
 
 - [x] T036 Add `@playwright/browser-chromium` to package.json dependencies
-  - Ensures browser binaries are installed automatically with `npm install`
-  - Eliminates need for separate `npx playwright install` step
-  - **Note**: Updated T002 to reflect this addition
 - [x] T037 Add `ignoreHTTPSErrors: true` to browser context in browser-manager.ts
-  - Fixes SSL certificate errors (ERR_CERT_COMMON_NAME_INVALID) on some websites
-  - Required for sites with misconfigured or self-signed certificates
 - [x] T038 Add dotenv config import to vitest.config.ts
-  - Loads `.env` file during test execution
-  - Fixes "Missing OPENAI_API_KEY" errors in e2e tests
-  - **Note**: `dotenv` added to production dependencies, updated T002
 - [x] T039 Update e2e test URLs to use real CRO agency websites
-  - Replaced example.com and httpstat.us with production URLs
-  - Tests now validate against real-world dynamic websites
 
-**Additional Infrastructure Updates** (not originally tracked):
-- Added `tsx` to dev dependencies (replaces ts-node for ESM support)
-- Added `@typescript-eslint/parser` to dev dependencies (required for ESLint)
-- Updated all dependency versions to latest compatible versions (see plan.md)
-
-**Checkpoint**: All 7 e2e tests pass, application works with real websites
+**Checkpoint**: All e2e tests pass, application works with real websites
 
 ---
 
@@ -253,24 +234,12 @@
 **Purpose**: Fix timeout issues and improve dynamic content extraction
 
 - [x] T040 Change default wait strategy from `networkidle` to `load`
-  - Prevents timeouts on sites with persistent network activity (analytics, websockets)
-  - `load` event fires reliably on all sites
 - [x] T041 Add `--wait-until` CLI flag for user override
-  - Options: `load` (default), `domcontentloaded`, `networkidle`
-  - Allows users to choose strategy per site
 - [x] T042 Implement hybrid wait strategy in PageLoader
-  - Primary: Use configured `waitUntil` strategy for initial load
-  - Secondary: Wait for `networkidle` with short timeout for JS rendering
-  - Fallback: If networkidle times out, continue with extraction
 - [x] T043 Add `--post-load-wait` CLI flag for JS rendering wait
-  - Default: 5000ms (5 seconds)
-  - Set to 0 to disable hybrid waiting
-  - Configurable for heavy JS sites
 - [x] T044 Add `postLoadWait` to BrowserConfig type and defaults
-  - Updated `src/types/index.ts` with new config option
-  - Wired through BrowserAgent to PageLoader
 
-**Checkpoint**: mrandmrssmith.com extracts all 50 headings (was 43 before)
+**Checkpoint**: Dynamic content sites extract all headings correctly
 
 ---
 
@@ -278,158 +247,252 @@
 
 **Purpose**: Auto-dismiss cookie consent popups before extraction
 
-### Types & Configuration
-
-- [x] T045 [US5] Add `dismissCookieConsent` to BrowserConfig in `src/types/index.ts`
-  - Type: `boolean`, default: `true`
-  - Add to `DEFAULT_BROWSER_CONFIG`
-  - Added `CookieConsentPattern` and `CookieConsentResult` interfaces
-- [x] T046 [US5] Add `--no-cookie-dismiss` CLI flag to `src/cli.ts`
-  - When present, sets `dismissCookieConsent: false`
-  - Update help text
-
-### CMP Patterns
-
-- [x] T047 [US5] Create `src/browser/cookie-patterns.ts` with CMP selector patterns
-  - TypeScript const array (not JSON file)
-  - Include: OneTrust, Cookiebot, Usercentrics, TrustArc, Quantcast, Didomi, Osano, Consent Manager
-  - Interface: `{ id, detectSelector, acceptSelector, frameHint? }`
-
-### Cookie Handler Implementation
-
-- [x] T048 [US5] Create `src/browser/cookie-handler.ts` with CookieConsentHandler class
-  - `dismiss(page: Page): Promise<CookieConsentResult>`
-  - `tryKnownCMPs(page: Page)`: Loop patterns, check iframe if `frameHint` present
-  - `tryHeuristic(page: Page)`: Find buttons with "accept", "allow", "agree", "ok" text
-  - Max 3 attempts, 1s timeout per selector (satisfies CR-009: ≤3s total timeout)
-  - Structured logging: `{ type, url, mode, cmpId, buttonText, success }`
-- [x] T049 [US5] Update `src/browser/index.ts` to export CookieConsentHandler
-
-### Integration
-
+- [x] T045 [US5] Add `dismissCookieConsent` to BrowserConfig in src/types/index.ts
+- [x] T046 [US5] Add `--no-cookie-dismiss` CLI flag to src/cli.ts
+- [x] T047 [US5] Create src/browser/cookie-patterns.ts with CMP selector patterns
+- [x] T048 [US5] Create src/browser/cookie-handler.ts with CookieConsentHandler class
+- [x] T049 [US5] Update src/browser/index.ts to export CookieConsentHandler
 - [x] T050 [US5] Integrate CookieConsentHandler into PageLoader
-  - Call after hybrid wait, before returning `PageLoadResult`
-  - Only if `dismissCookieConsent` is true
-  - Add `cookieConsent` field to `PageLoadResult`
 - [x] T051 [US5] Wire `dismissCookieConsent` config through BrowserAgent to PageLoader
-
-### Tests
-
-- [x] T052 [P] [US5] Create `tests/integration/cookie-handler.test.ts`
-  - Test with known CMP patterns (OneTrust, Cookiebot)
-  - Test heuristic fallback with various button texts
-  - Test sites without popups (no delay)
-  - 7 test cases covering all acceptance scenarios
+- [x] T052 [P] [US5] Create tests/integration/cookie-handler.test.ts
 - [x] T053 [US5] Update e2e tests to verify cookie popups don't block extraction
-  - Added cookie consent verification tests
-  - Test with dismissal enabled and disabled
-  - Verify extraction works regardless of popup
 
-**Checkpoint**: Sites with cookie popups have them dismissed before extraction ✅ COMPLETE
+**Checkpoint**: Sites with cookie popups have them dismissed before extraction
 
 ---
 
-## Dependencies & Execution Order
+## Phase 13a: Core Models (US6, US7)
 
-### Phase Dependencies
+**Purpose**: Define foundational TypeScript interfaces for CRO Agent
 
-```
-Phase 1 (Setup) → Phase 2 (Foundational) → Phases 3-6 (User Stories) → Phase 7 (Orchestrator) → Phase 8 (E2E) → Phase 9 (Polish)
-  ↓
-Phase 10 (Bug Fixes) → Phase 11 (Wait Strategy) → Phase 12 (Cookie Consent)
-```
+- [x] T054 [US6] Create src/models/dom-tree.ts
+  - Export: BoundingBox, CROType, CROClassification, DOMNode, DOMTree
+- [x] T055 [US6] Create src/models/page-state.ts
+  - Export: ViewportInfo, ScrollPosition, PageState
+- [x] T056 [US7] Create src/models/cro-insight.ts
+  - Export: Severity, Evidence, InsightCategory, CROInsight, CROInsightSchema (Zod)
+- [x] T060 [US6] Create src/models/tool-definition.ts
+  - Export: ToolResult, ToolDefinition, CROActionNames, CROActionName
+- [x] T063a [US6] Create src/models/index.ts with all Phase 13a exports
+- [x] T064a [P] [US6] Create tests/unit/models.test.ts (24 tests)
 
-**Post-MVP phases** (10-12) depend on Phase 9 completion but are independent of each other.
-
-### Within Phases
-
-- Phase 1: T001 → T002 → (T003, T004, T005, T006 in parallel) → T007 → T008
-- Phase 2: T009 → (T010, T011 in parallel)
-- Phase 3: (T012, T013 in parallel) → T014 → T015 → T016
-- Phase 4: T017 → T018 → T019
-- Phase 5: T020 → T021 → T022
-- Phase 6: T023 → T024 → T025
-- Phase 7: T026 → T027 → T028
-- Phase 8: T029 (depends on Phase 7)
-- Phase 9: All tasks can run in parallel
-- Phase 10: T036 → T037 → T038 → T039
-- Phase 11: T040 → T041 → T042 → T043 → T044
-- Phase 12: T045 → T046 → T047 → T048 → T049 → (T050, T051 in parallel) → T052 → T053
-
-### User Story Independence
-
-After Phase 2 completes:
-- US1 (Phase 3) can start immediately
-- US2 (Phase 4) depends on US1 (needs loaded page)
-- US3 (Phase 5) depends on US2 (needs extracted headings)
-- US4 (Phase 6) can start after US1 (only needs result types)
-- US5 (Phase 12) depends on US1 (needs PageLoader integration)
-
-### Parallel Opportunities
-
-```bash
-# Phase 1 parallel tasks:
-T003, T004, T005, T006
-
-# Phase 2 parallel tasks:
-T010, T011
-
-# Test tasks can run parallel within each phase:
-T012, T013 (Phase 3)
-T017 (Phase 4)
-T020 (Phase 5)
-T023 (Phase 6)
-
-# Phase 9 parallel tasks:
-T030, T031, T032
-
-# Phase 12 parallel tasks:
-T050, T051 (integration tasks)
-```
+**Checkpoint**: All models compile, Zod schemas validate correctly
 
 ---
 
-## Implementation Strategy
+## Phase 13b: Agent Models (US6, US7)
 
-### MVP First (US1 Only)
+**Purpose**: Agent state, memory, and output parsing
 
-1. Complete Phase 1: Setup
-2. Complete Phase 2: Foundational
-3. Complete Phase 3: User Story 1
-4. **STOP and VALIDATE**: Test URL loading independently
-5. Continue to US2, US3, US4
+- [x] T057 [US6] Create src/models/agent-output.ts
+  - Export: CROAgentOutputSchema, CROAgentOutput, ParseResult, parseAgentOutput()
+- [x] T058 [US6] Create src/models/agent-state.ts
+  - Export: CROAgentOptions, DEFAULT_CRO_OPTIONS, AgentState, createInitialState()
+- [x] T059 [US6] Create src/models/cro-memory.ts
+  - Export: StepRecord, CROMemory, createInitialMemory()
+- [x] T063b [US6] Update src/models/index.ts with Phase 13b exports
+- [x] T064b [P] [US6] Create tests/unit/agent-models.test.ts (33 tests)
 
-### Incremental Delivery
+**Checkpoint**: Agent models compile, parser handles valid/invalid JSON
 
-1. Phase 1 + 2 → Foundation ready
-2. Add US1 → Can load URLs
-3. Add US2 → Can extract headings
-4. Add US3 → Can process with AI
-5. Add US4 → Full formatted output
-6. Phase 7 → CLI working
-7. Phase 8 → E2E validated
-8. Phase 9 → Production ready
-9. Phase 10 → Bug fixes (browser install, SSL, env loading)
-10. Phase 11 → Wait strategy improvements (hybrid wait)
-11. Phase 12 → Cookie consent handling (auto-dismiss popups)
+---
+
+## Phase 14: DOM Extraction Pipeline (US6)
+
+**Purpose**: Build DOM extraction with CRO classification
+
+- [x] T065 [US6] Create src/browser/dom/cro-selectors.ts
+  - Export: CRO_SELECTORS, INTERACTIVE_TAGS, INTERACTIVE_ROLES, SKIP_TAGS, MAX_TEXT_LENGTH
+- [x] T066 [US6] Create src/browser/dom/build-dom-tree.ts
+  - Export: RawDOMNode, RawDOMTree, generateDOMTreeScript, DOM_TREE_SCRIPT
+  - Injectable script with XPath, visibility, interactivity, CRO classification
+- [x] T067 [US6] Create src/browser/dom/extractor.ts
+  - Export: DOMExtractor, DOMExtractorOptions
+  - extract(page): Promise<DOMTree>
+- [x] T068 [US6] Create src/browser/dom/serializer.ts
+  - Export: DOMSerializer, DOMSerializerOptions, SerializationResult
+  - Token budget tracking with 60% warning (CR-013)
+- [x] T069 [US6] Create src/browser/dom/index.ts with all Phase 14 exports
+- [x] T070 [P] [US6] Create tests/unit/dom-extraction.test.ts (35 tests)
+- [x] T071 [US6] Create tests/integration/dom-extraction.test.ts (14 tests)
+
+**Checkpoint**: DOM extraction captures >90% visible interactive elements (SC-008)
+
+---
+
+## Phase 14b: CLI Integration - DOM Extraction (US6) **[COMPLETE]**
+
+**Purpose**: Wire DOM extraction into CLI for immediate testing
+
+- [x] T072a [US6] Create src/output/cro-element-formatter.ts
+  - formatCROElements(domTree: DOMTree): string
+  - Group by CRO type (CTAs, forms, trust, value_prop, navigation)
+  - Show element count, text preview, xpath
+- [x] T072b [US6] Update src/cli.ts with --cro-extract flag
+  - When flag present: run DOMExtractor instead of HeadingExtractor
+  - Output CRO elements via new formatter
+- [x] T072c [US6] Test DOM extraction on real sites via CLI
+
+**Checkpoint**: `npm run start -- --cro-extract https://carwale.com` shows CRO elements ✅
+
+**Test command**: `npm run start -- --cro-extract https://www.carwale.com/`
+
+---
+
+## Phase 15: Tool System (US6)
+
+**Purpose**: Tool registry and execution framework
+
+- [ ] T073 [US6] Create src/agent/tools/base-tool.ts - BaseTool abstract class
+- [ ] T074 [US6] Create src/agent/tools/tool-registry.ts - ToolRegistry class
+- [ ] T075 [US6] Create src/agent/tools/tool-executor.ts - ToolExecutor class
+- [ ] T076 [US6] Create src/agent/tools/index.ts - Module exports
+- [ ] T077 [P] [US6] Create tests/unit/tool-system.test.ts
+
+**Checkpoint**: Tool registry accepts and executes tool definitions
+
+---
+
+## Phase 15b: CLI Integration - Tool Execution (US6) **[NEW - INCREMENTAL]**
+
+**Purpose**: Allow manual tool execution via CLI for testing
+
+- [ ] T077a [US6] Update src/cli.ts with --tool flag
+  - `--tool analyze_ctas` executes specific tool on page
+  - Outputs tool result (insights, extracted data)
+- [ ] T077b [US6] Create src/output/tool-result-formatter.ts
+  - formatToolResult(result: ToolResult): string
+
+**Checkpoint**: `npm run start -- --cro-extract --tool analyze_ctas https://carwale.com`
+
+---
+
+## Phase 16: Agent Core (US6)
+
+**Purpose**: Main CRO agent orchestration
+
+- [ ] T078 [US6] Create src/agent/prompt-builder.ts - System prompt construction
+- [ ] T079 [US6] Create src/agent/message-manager.ts - Conversation history
+- [ ] T080 [US6] Create src/agent/state-manager.ts - Agent state transitions
+- [ ] T081 [US6] Create src/agent/cro-agent.ts - Main CROAgent class
+- [ ] T082 [US6] Create src/agent/index.ts - Module exports
+- [ ] T083 [P] [US6] Create tests/unit/prompt-builder.test.ts
+- [ ] T084 [P] [US6] Create tests/unit/message-manager.test.ts
+- [ ] T085 [P] [US6] Create tests/unit/state-manager.test.ts
+- [ ] T086 [US6] Create tests/integration/cro-agent.test.ts
+- [ ] T087 [US6] Create tests/e2e/cro-agent-workflow.test.ts
+
+**Checkpoint**: Agent completes analysis loop with mock LLM
+
+---
+
+## Phase 16b: CLI Integration - Agent Loop (US6) **[NEW - INCREMENTAL]**
+
+**Purpose**: Run CRO agent analysis via CLI
+
+- [ ] T087a [US6] Update src/cli.ts with --analyze flag (replaces --cro-extract)
+  - Runs full CROAgent.analyze() loop
+  - `--max-steps N` limits iterations (default: 10)
+- [ ] T087b [US6] Create src/output/agent-progress-formatter.ts
+  - Real-time step output during analysis
+  - Shows: step number, action taken, insights found
+
+**Checkpoint**: `npm run start -- --analyze --max-steps 5 https://carwale.com`
+
+---
+
+## Phase 17: CRO Tools (US7)
+
+**Purpose**: Implement CRO-specific analysis tools
+
+- [ ] T088 [US7] Create src/agent/tools/scroll-tool.ts
+- [ ] T089 [US7] Create src/agent/tools/click-tool.ts
+- [ ] T090 [US7] Create src/agent/tools/analyze-cta-tool.ts
+- [ ] T091 [US7] Create src/agent/tools/analyze-form-tool.ts
+- [ ] T092 [US7] Create src/agent/tools/analyze-trust-tool.ts
+- [ ] T093 [US7] Create src/agent/tools/analyze-value-prop-tool.ts
+- [ ] T094 [US7] Create src/agent/tools/record-insight-tool.ts
+- [ ] T095 [US7] Create src/agent/tools/done-tool.ts
+- [ ] T096 [P] [US7] Create tests/unit/cro-tools.test.ts
+- [ ] T097 [US7] Create tests/integration/cro-tools.test.ts
+
+**Checkpoint**: All CRO tools execute and return valid ToolResult
+
+---
+
+## Phase 18: Heuristics & Output (US7, US8)
+
+**Purpose**: Heuristic analysis and report generation
+
+- [ ] T061 [US7] Create src/heuristics/index.ts - Heuristic engine exports
+- [ ] T062a [P] [US7] Create tests/unit/heuristics.test.ts
+- [ ] T098 [US7] Create src/heuristics/cta-heuristics.ts
+- [ ] T099 [US7] Create src/heuristics/form-heuristics.ts
+- [ ] T100 [US7] Create src/heuristics/trust-heuristics.ts
+- [ ] T101 [US7] Create src/heuristics/value-prop-heuristics.ts
+- [ ] T102 [US7] Create src/heuristics/heuristic-runner.ts
+- [ ] T103 [US8] Create src/output/insight-formatter.ts
+- [ ] T104 [US8] Create src/output/report-generator.ts
+- [ ] T105 [US8] Create src/output/json-exporter.ts
+- [ ] T106 [US8] Update src/output/index.ts with new exports
+- [ ] T107 [P] [US8] Create tests/unit/report-generator.test.ts
+- [ ] T108 [US8] Create tests/integration/output.test.ts
+
+**Checkpoint**: Heuristics engine produces categorized insights
+
+---
+
+## Phase 18b: CLI Integration - Final (US6, US8) **[NEW - INCREMENTAL]**
+
+**Purpose**: Complete CLI with reports and default CRO mode
+
+- [ ] T109 [US6] Update src/cli.ts - make --analyze the default mode
+  - Remove --cro-extract (now default behavior)
+  - Add --legacy flag for old heading extraction
+  - Add --output-format (json|markdown|console)
+  - Add --output-file path
+- [ ] T110 [US6] Update src/index.ts to export CROAgent as primary
+- [ ] T111 [US6] Create tests/e2e/cro-full-workflow.test.ts
+- [ ] T112 [US6] Update documentation for CRO agent usage
+
+**Checkpoint**: `npm run start -- https://carwale.com` runs full CRO analysis
+
+**Final test**: `npm run start -- https://www.carwale.com/ --output-format markdown`
 
 ---
 
 ## Task Summary
 
-| Phase | Tasks | Purpose | Status |
-|-------|-------|---------|--------|
-| 1 | T001-T008 | Project setup | ✅ Complete |
-| 2 | T009-T011 | Utilities | ✅ Complete |
-| 3 | T012-T016 | URL loading (US1) | ✅ Complete |
-| 4 | T017-T019 | Extraction (US2) | ✅ Complete |
-| 5 | T020-T022 | LangChain (US3) | ✅ Complete |
-| 6 | T023-T025 | Output (US4) | ✅ Complete |
-| 7 | T026-T028 | Orchestrator | ✅ Complete |
-| 8 | T029 | E2E tests | ✅ Complete |
-| 9 | T030-T035 | Polish | ✅ Complete |
-| 10 | T036-T039 | Bug fixes | ✅ Complete |
-| 11 | T040-T044 | Wait strategy & dynamic content | ✅ Complete |
-| 12 | T045-T053 | Cookie consent handling (US5) | ✅ Complete |
+| Phase | Tasks | Count | Purpose | Status |
+|-------|-------|-------|---------|--------|
+| 1 | T001-T008 | 8 | Project setup | ✅ Complete |
+| 2 | T009-T011 | 3 | Utilities | ✅ Complete |
+| 3 | T012-T016 | 5 | URL loading (US1) | ✅ Complete |
+| 4 | T017-T019 | 3 | Extraction (US2) | ✅ Complete |
+| 5 | T020-T022 | 3 | LangChain (US3) | ✅ Complete |
+| 6 | T023-T025 | 3 | Output (US4) | ✅ Complete |
+| 7 | T026-T028 | 3 | Orchestrator | ✅ Complete |
+| 8 | T029 | 1 | E2E tests | ✅ Complete |
+| 9 | T030-T035 | 6 | Polish | ✅ Complete |
+| 10 | T036-T039 | 4 | Bug fixes | ✅ Complete |
+| 11 | T040-T044 | 5 | Wait strategy | ✅ Complete |
+| 12 | T045-T053 | 9 | Cookie consent (US5) | ✅ Complete |
+| 13a | T054-T056, T060, T063a, T064a | 6 | Core models | ✅ Complete |
+| 13b | T057-T059, T063b, T064b | 5 | Agent models | ✅ Complete |
+| 14 | T065-T071 | 7 | DOM extraction | ✅ Complete |
+| 14b | T072a-T072c | 3 | CLI: DOM extraction | ✅ Complete |
+| **15** | T073-T077 | 5 | **Tool system** | ⏳ **NEXT** |
+| 15b | T077a-T077b | 2 | CLI: Tool execution | ⏳ Pending |
+| 16 | T078-T087 | 10 | Agent core | ⏳ Pending |
+| 16b | T087a-T087b | 2 | CLI: Agent loop | ⏳ Pending |
+| 17 | T088-T097 | 10 | CRO tools | ⏳ Pending |
+| 18 | T061-T062a, T098-T108 | 14 | Heuristics & output | ⏳ Pending |
+| 18b | T109-T112 | 4 | CLI: Final integration | ⏳ Pending |
 
-**Total**: 53 tasks (35 original + 18 post-implementation) - **ALL COMPLETE** ✅
+**Total**: 120 tasks (74 complete, 46 pending)
+
+**Incremental CLI Milestones**:
+- Phase 14b: `npm run start -- --cro-extract <url>` → Show CRO elements
+- Phase 15b: `npm run start -- --cro-extract --tool <name> <url>` → Run specific tool
+- Phase 16b: `npm run start -- --analyze <url>` → Full agent loop
+- Phase 18b: `npm run start -- <url>` → CRO analysis as default

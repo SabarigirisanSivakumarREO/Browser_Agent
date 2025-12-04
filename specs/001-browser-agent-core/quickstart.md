@@ -1,23 +1,53 @@
 # Quickstart: Browser Agent Core
 
 **Feature**: `001-browser-agent-core`
-**Last Updated**: 2025-11-24
+**Last Updated**: 2025-12-05
 
 ---
 
-## Claude Code Session Context
+## Session Bootstrap (READ THIS FIRST)
+
+**Status**: CRO Agent Implementation In Progress
+- Infrastructure: 74 tasks across 14b phases ✅
+- Remaining: 46 tasks across 9 phases ⏳
+
+**Progress**:
+- Phase 1-12: MVP infrastructure ✅
+- Phase 13a-13b: Data models ✅
+- Phase 14: DOM extraction ✅
+- Phase 14b: CLI `--cro-extract` flag ✅
+- Phase 15-18b: CRO agent + incremental CLI ⏳
+
+**Architecture**:
+- MVP: 5 modules (browser, extraction, langchain, output, orchestrator)
+- CRO Agent: +6 modules (agent, dom, tools, heuristics, models, output extensions)
+
+**Key insight**: Restructured for incremental CLI integration - test each phase on real sites immediately
+
+**Next milestone**: Phase 15 - Tool system (BaseTool, ToolRegistry, ToolExecutor)
 
 **Instructions**: Keep it concise. Compromise on grammar. Clear, to the point. No fluff.
+
+**Context Window Management** (CRITICAL):
+- Monitor context usage throughout session
+- Optimal range: 40%-60% utilization
+- At 60%: Update SESSION-HANDOFF.md with current progress and request new session
+- Never exceed 70%: LLM performance degrades significantly
+- Always include handoff details before ending session
 
 **Excluded folders** (DO NOT analyze unless explicitly requested):
 - `browser-use/` - Reference codebase only (545 files), not part of this project
 
-**Context files to read** (in order):
-1. `specs/001-browser-agent-core/spec.md` - Requirements & user stories
-2. `specs/001-browser-agent-core/plan.md` - Architecture & modules
-3. `specs/001-browser-agent-core/tasks.md` - Implementation status & bug fixes
+### What to Read Next
 
-**Quick command**: `Read specs/001-browser-agent-core/spec.md, plan.md, tasks.md`
+| Need | Read |
+|------|------|
+| Add new feature | spec.md → plan.md → tasks.md (follow Change Workflow) |
+| Fix a bug | tasks.md (add to current phase, follow Change Workflow) |
+| Understand architecture | plan.md (Module Architecture section) |
+| Check requirements | spec.md (User Stories, Requirements) |
+| See implementation details | tasks.md (full task history with checkpoints) |
+| Investigate past decisions | tasks.md (specific phase) + this file (Change History) |
 
 ### Change Workflow (MUST FOLLOW)
 
@@ -30,7 +60,8 @@ For any feature/bug fix request:
 4. Update quickstart.md → Sync recent changes section
 5. Get user approval    → Present changes, wait for confirmation
 6. Implement            → Write code only after approval
-7. Update design/       → Update ALL design diagrams to reflect changes
+7. Run tests            → Verify all tests pass (unit, integration, e2e)
+8. Update design/       → Update ALL design diagrams to reflect changes
 ```
 
 **Rules**:
@@ -46,11 +77,12 @@ For any feature/bug fix request:
   - `sequence-diagram.svg` - Actor interactions and message flow
 - Design folder provides complete visual context of the project
 
-### What this app does
+### What this app does (Target State)
 - Browser automation via Playwright (Chromium)
-- Extracts h1-h6 headings from web pages
-- Processes headings through LangChain/GPT-4o-mini for insights
-- Outputs structured results to console
+- Extracts CRO elements: CTAs, forms, trust signals, value props, navigation
+- Iterative agent loop: observe → reason → act → repeat
+- Generates CRO insights with severity ratings
+- Outputs A/B test hypotheses and structured reports
 
 ### Key files
 | File | Purpose |
@@ -59,11 +91,12 @@ For any feature/bug fix request:
 | `src/index.ts` | BrowserAgent orchestrator |
 | `src/browser/browser-manager.ts` | Playwright lifecycle |
 | `src/browser/page-loader.ts` | URL navigation, hybrid wait strategy |
-| `src/extraction/heading-extractor.ts` | DOM h1-h6 extraction |
+| `src/browser/dom/extractor.ts` | CRO DOM extraction |
+| `src/browser/dom/serializer.ts` | DOM to LLM format with token budget |
+| `src/models/` | Zod schemas for agent state, insights, output |
 | `src/langchain/processor.ts` | GPT-4o-mini processing |
 | `src/output/formatter.ts` | Console output formatting |
 | `src/browser/cookie-handler.ts` | Cookie consent popup dismissal |
-| `src/browser/cookie-patterns.ts` | CMP selector patterns |
 
 ### Design documentation
 | File | Purpose |
@@ -75,35 +108,64 @@ For any feature/bug fix request:
 | `design/data-flow-pipeline.svg` | 6-stage data processing pipeline |
 | `design/sequence-diagram.svg` | UML sequence diagram for URL processing |
 
-### Recent changes (Design Documentation Update) - ✅ COMPLETE
-- Updated all design folder SVG diagrams to reflect Phase 11-12 implementation:
-  - `design/APPLICATION_FLOW.md` - Complete rewrite with cookie consent handling, hybrid wait strategy
-  - `design/architecture-overview.svg` - Added cookie stage, updated browser module, new CLI flags
-  - `design/component-details.svg` - Added CookieConsentHandler class, 8 CMP patterns
-  - `design/configuration-types.svg` - Added WaitUntilStrategy, CookieConsentResult, CookieConsentPattern types
-  - `design/data-flow-pipeline.svg` - Added Stage 3 Cookie Consent Dismissal
-  - `design/sequence-diagram.svg` - Added CookieConsentHandler actor, Section 2B cookie handling flow
+### Recent Changes (keep last 3)
 
-### Previous changes (Phase 12) - ✅ COMPLETE
-- T045-T053: Cookie consent popup auto-dismissal before extraction
-  - Supports 8 common CMPs: OneTrust, Cookiebot, Usercentrics, TrustArc, Quantcast, Didomi, Osano, Consent Manager
-  - Fallback text-based heuristic for custom banners (accept, allow, agree, ok, got it, continue)
-  - iframe support for CMPs rendered in iframes
-  - Enabled by default, disable with `--no-cookie-dismiss`
-  - Best-effort approach: never fails page load if popup cannot be dismissed
-  - Max 3-second timeout (1s per selector attempt) per CR-009
+**1. Phase 14b: CLI DOM Extraction** - ✅ COMPLETE (2025-12-05)
+- Added `--cro-extract` CLI flag for DOM extraction without LangChain
+- Created CROElementFormatter for CRO element display
+- Tested on carwale.com - extracts CTAs, forms, trust, value props, navigation
+- See: src/cli.ts, src/output/cro-element-formatter.ts
 
-### Previous changes (Phase 11)
-- T040: Changed default wait strategy from `networkidle` to `load` - prevents timeouts
-- T041: Added `--wait-until` CLI flag - user can override wait strategy
-- T042: Implemented hybrid wait: `load` + short `networkidle` for JS rendering
-- T043: Added `--post-load-wait` CLI flag - configurable JS wait time (default: 5s)
+**2. Incremental CLI Integration Restructure** - ✅ COMPLETE (2025-12-05)
+- Restructured Phases 14-18 for incremental CLI integration
+- Added Phase 14b, 15b, 16b, 18b with CLI milestones
+- Each phase now has testable CLI output
+- See: tasks.md Phase 14b-18b
 
-### Previous bug fixes (Phase 10)
-- T036: Added `@playwright/browser-chromium` - auto-installs browser with npm
-- T037: Added `ignoreHTTPSErrors: true` - fixes SSL cert errors
-- T038: Added dotenv to vitest.config.ts - loads .env in tests
-- T039: Updated e2e tests with 5 real CRO agency URLs
+**3. Phase 13-14: Models & DOM Extraction** - ✅ COMPLETE (2025-12-05)
+- Phase 13a: Core models (DOMTree, CROInsight, PageState, ToolDefinition)
+- Phase 13b: Agent models (CROMemory, AgentState, AgentOutput)
+- Phase 14: DOM extraction pipeline with CRO classification
+- 111 unit tests, 14 integration tests passing
+- See: tasks.md Phase 13-14, src/models/, src/browser/dom/
+
+---
+
+### Change History (trimmed entries - cross-reference)
+
+| Change | Phase | Tasks | CLI Milestone | Status |
+|--------|-------|-------|---------------|--------|
+| **CLI: Final integration** | 18b | T109-T112 | `npm run start -- <url>` (CRO default) | ⏳ |
+| Heuristics & Output | 18 | T061-T108 | - | ⏳ |
+| CRO Analysis Tools | 17 | T088-T097 | - | ⏳ |
+| **CLI: Agent loop** | 16b | T087a-T087b | `--analyze --max-steps N` | ⏳ |
+| Agent Core | 16 | T078-T087 | - | ⏳ |
+| **CLI: Tool execution** | 15b | T077a-T077b | `--tool <name>` | ⏳ |
+| **Tool System** | 15 | T073-T077 | - | ⏳ **NEXT** |
+| CLI: DOM extraction | 14b | T072a-T072c | `--cro-extract` | ✅ |
+| DOM Extraction | 14 | T065-T071 | - | ✅ |
+| Agent Models | 13b | T057-T059, T063b, T064b | - | ✅ |
+| Core Models | 13a | T054-T056, T060, T063a, T064a | - | ✅ |
+| Cookie consent | 12 | T045-T053 | `--no-cookie-dismiss` | ✅ |
+| Hybrid wait | 11 | T040-T044 | `--post-load-wait` | ✅ |
+| Bug fixes | 10 | T036-T039 | - | ✅ |
+| Polish | 9 | T030-T035 | - | ✅ |
+| E2E tests | 8 | T029 | - | ✅ |
+| Orchestrator & CLI | 7 | T026-T028 | `npm run start -- <url>` | ✅ |
+| Output (US4) | 6 | T023-T025 | - | ✅ |
+| LangChain (US3) | 5 | T020-T022 | - | ✅ |
+| Extraction (US2) | 4 | T017-T019 | - | ✅ |
+| URL loading (US1) | 3 | T012-T016 | - | ✅ |
+| Utilities | 2 | T009-T011 | - | ✅ |
+| Setup | 1 | T001-T008 | - | ✅ |
+
+**Incremental CLI Milestones**:
+```
+Phase 14b: npm run start -- --cro-extract https://carwale.com
+Phase 15b: npm run start -- --cro-extract --tool analyze_ctas https://carwale.com
+Phase 16b: npm run start -- --analyze --max-steps 5 https://carwale.com
+Phase 18b: npm run start -- https://carwale.com  (CRO analysis as default)
+```
 
 ---
 

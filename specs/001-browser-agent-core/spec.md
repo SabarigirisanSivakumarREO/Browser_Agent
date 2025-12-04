@@ -140,6 +140,22 @@ As a user, I want the browser agent to automatically dismiss cookie consent popu
 - **Heading**: Represents a single heading with level (1-6), text content, and optional metadata
 - **CookieConsentHandler**: Detects and dismisses cookie consent popups using CMP patterns and heuristics
 
+### Key Entities (CRO Agent)
+
+- **CROAgent**: Main agent class with step loop, tool execution, and state management
+- **DOMExtractor**: Injects buildCroDomTree.js, extracts and classifies CRO elements
+- **ToolRegistry**: Registers tools with Zod schemas, executes by name with validation
+- **MessageBuilder**: Assembles LLM context from page state and memory
+- **OutputParser**: Validates LLM output against CROAgentOutput Zod schema
+- **HeuristicEngine**: Rule-based checks against CRO best practices
+- **HypothesisGenerator**: Transforms high-severity insights into A/B test specs
+- **MarkdownReporter**: Generates structured analysis reports
+- **CROMemory**: Tracks step history, findings, and analysis context
+- **PageState**: Current DOM tree, URL, title, and element states
+- **DOMTree**: Hierarchical tree of DOM nodes with CRO classifications
+- **CROInsight**: Individual finding with type, severity, element, issue, recommendation, evidence
+- **Hypothesis**: A/B test spec with control, treatment, metric, and expected impact
+
 ## Success Criteria *(mandatory)*
 
 ### Measurable Outcomes
@@ -151,3 +167,144 @@ As a user, I want the browser agent to automatically dismiss cookie consent popu
 - **SC-005**: Console output is parseable and includes all extracted data plus LangChain insights
 - **SC-006**: End-to-end test with 3 different URLs completes successfully with accurate results
 - **SC-007**: Cookie consent popups dismissed successfully on 80%+ of sites with common CMPs
+
+---
+
+### User Story 6 - DOM Extraction & Classification (Priority: P1)
+
+As a CRO analyst, I want to extract all interactive and CRO-relevant elements from a page with proper classification, so that the agent can systematically analyze conversion optimization opportunities.
+
+**Why this priority**: DOM extraction is the foundation for CRO analysis. Without accurate element detection and classification, no CRO insights can be generated.
+
+**Independent Test**: Load a page with known CTAs, forms, and trust signals. Verify all elements extracted with correct classifications.
+
+**Acceptance Scenarios**:
+
+1. **Given** a page is loaded, **When** DOM extraction runs, **Then** all visible interactive elements (buttons, links, inputs) are captured with bounding boxes
+2. **Given** a page with CRO elements, **When** extraction runs, **Then** elements are classified as: cta|form|trust|value_prop|navigation
+3. **Given** elements are extracted, **When** serialized for LLM, **Then** output uses indexed text format `[index]<tag>text</tag>` within token budget
+4. **Given** visibility detection runs, **When** element is hidden via CSS or clipped, **Then** element is excluded from extraction
+
+---
+
+### User Story 7 - Agent Loop & Tool Execution (Priority: P1)
+
+As a CRO analyst, I want the agent to iteratively analyze a page using tools based on LLM decisions, so that analysis is thorough and adaptive to page content.
+
+**Why this priority**: The agent loop is the core runtime that enables intelligent, multi-step analysis rather than single-pass extraction.
+
+**Independent Test**: Run agent on test page, verify it completes within max steps, executes multiple tools, and produces structured insights.
+
+**Acceptance Scenarios**:
+
+1. **Given** agent starts analysis, **When** step loop runs, **Then** each step follows observe→reason→act pattern
+2. **Given** agent invokes a tool, **When** tool execution fails, **Then** failure counter increments and agent retries
+3. **Given** 3 consecutive failures occur, **When** next step runs, **Then** agent forces completion (done)
+4. **Given** agent completes analysis, **When** LLM returns done action, **Then** agent exits loop with collected insights
+5. **Given** agent is running, **When** max steps reached, **Then** agent exits with current findings
+
+---
+
+### User Story 8 - CRO Analysis Tools (Priority: P2)
+
+As a CRO analyst, I want specialized tools for analyzing CTAs, forms, trust signals, value props, and navigation, so that I get domain-specific insights.
+
+**Why this priority**: CRO tools provide the actual analysis capabilities. They depend on DOM extraction (US6) and agent loop (US7).
+
+**Independent Test**: Invoke each tool with mock page state, verify tool returns relevant CRO insights.
+
+**Acceptance Scenarios**:
+
+1. **Given** CTAs are present, **When** cta-analyzer runs, **Then** returns insights on text clarity, placement, prominence
+2. **Given** forms are present, **When** form-analyzer runs, **Then** returns field count, label quality, validation issues
+3. **Given** trust signals exist, **When** trust-detector runs, **Then** identifies badges, reviews, guarantees, certifications
+4. **Given** hero section exists, **When** value-prop tool runs, **Then** assesses headline clarity, benefit communication
+5. **Given** navigation present, **When** navigation-analyzer runs, **Then** checks menu structure, breadcrumbs, search presence
+6. **Given** any page, **When** friction-finder runs, **Then** identifies general friction points across all CRO categories
+
+---
+
+### User Story 9 - Heuristic Analysis (Priority: P2)
+
+As a CRO analyst, I want rule-based checks against CRO best practices, so that I catch common issues without relying solely on LLM judgment.
+
+**Why this priority**: Heuristics provide deterministic, fast checks that complement LLM analysis. They ensure consistent detection of known issues.
+
+**Independent Test**: Run heuristic engine on page with known violations, verify all violations detected with correct severity.
+
+**Acceptance Scenarios**:
+
+1. **Given** a page with CTAs, **When** heuristics run, **Then** vague CTA text is flagged as medium severity
+2. **Given** a form with >5 fields, **When** heuristics run, **Then** form is flagged as high friction
+3. **Given** no trust signals above fold, **When** heuristics run, **Then** missing trust is flagged
+4. **Given** business type detected, **When** heuristics run, **Then** industry-specific rules apply
+5. **Given** heuristic check passes, **When** results compiled, **Then** no false positive is generated
+
+---
+
+### User Story 10 - Hypothesis Generation & Reporting (Priority: P3)
+
+As a CRO analyst, I want insights transformed into A/B test hypotheses and structured reports, so that I can act on findings.
+
+**Why this priority**: Output generation is the final deliverable. It depends on all prior analysis being complete.
+
+**Independent Test**: Provide mock insights, verify hypotheses generated and report includes all sections.
+
+**Acceptance Scenarios**:
+
+1. **Given** high/critical severity insights, **When** hypothesis generator runs, **Then** A/B test specs are created with control/treatment descriptions
+2. **Given** analysis complete, **When** markdown reporter runs, **Then** report includes: Executive Summary, Critical Issues, High/Medium/Low Priority sections
+3. **Given** hypothesis generated, **When** formatted, **Then** follows template: "If {recommendation}, then {metric} will improve because {issue}"
+4. **Given** CLI --output-format markdown, **When** agent completes, **Then** report written to specified file
+5. **Given** CLI --output-format json, **When** agent completes, **Then** structured JSON exported
+
+---
+
+### Edge Cases (CRO Agent)
+
+- What happens when page has no CRO elements? Agent returns empty insights with "no CRO elements detected" message
+- What happens when DOM exceeds token budget? Selective extraction: only top CRO elements, truncate text >100 chars, warn at 60%
+- What happens when LLM returns invalid tool call? Zod validation fails, retry with error context, fallback to done after 3 failures
+- What happens when page is a SPA? Hybrid wait strategy handles JS rendering, scroll tool can trigger lazy-loaded content
+- What happens when element matches multiple CRO types? Priority order: cta > form > trust > value_prop > navigation
+
+## Requirements - CRO Agent (FR-015 to FR-030)
+
+### Functional Requirements (CRO Agent)
+
+- **FR-015**: System MUST extract all visible interactive elements with bounding boxes
+- **FR-016**: System MUST classify elements as cta|form|trust|value_prop|navigation
+- **FR-017**: System MUST serialize DOM to indexed text format for LLM consumption
+- **FR-018**: System MUST implement agent loop with configurable max steps limit
+- **FR-019**: System MUST provide tool registry with description and Zod parameter validation
+- **FR-020**: System MUST include CRO system prompt with expertise and completion criteria
+- **FR-021**: System MUST parse LLM output with Zod schema validation
+- **FR-022**: System MUST implement retry logic for empty/invalid LLM responses
+- **FR-023**: System MUST force completion after 3 consecutive tool failures
+- **FR-024**: System SHOULD wait between actions (configurable, default 500ms)
+- **FR-025**: System MUST provide 6 CRO analysis tools minimum (cta, form, trust, value-prop, navigation, friction)
+- **FR-026**: System MUST implement heuristic engine with 10 initial rules
+- **FR-027**: System SHOULD detect business type (ecommerce, saas, banking, insurance, travel, media)
+- **FR-028**: System MUST generate hypotheses from high/critical severity insights
+- **FR-029**: System MUST generate markdown reports with all required sections
+- **FR-030**: System MUST support CLI flags: --max-steps, --output-format, --output-file
+
+### Configuration Requirements (CRO Agent)
+
+- **CR-010**: Max steps MUST default to 10, configurable via CLI
+- **CR-011**: Action wait time MUST default to 500ms
+- **CR-012**: LLM timeout MUST be 60 seconds per call
+- **CR-013**: Token budget warning MUST trigger at 60% utilization
+- **CR-014**: Consecutive failure limit MUST be 3
+- **CR-015**: Element text truncation MUST be 100 characters max
+
+### Success Criteria (CRO Agent)
+
+- **SC-008**: DOM extraction captures >90% visible interactive elements on test pages
+- **SC-009**: Agent completes analysis of test page in <15 steps
+- **SC-010**: Structured LLM output validates 100% against Zod schema
+- **SC-011**: Tool execution logged with input/output for debugging
+- **SC-012**: 10 heuristic rules fire correctly on test pages
+- **SC-013**: Business type detected correctly on 80%+ of test sites
+- **SC-014**: Hypotheses generated for all high/critical severity issues
+- **SC-015**: Markdown report includes all required sections (Summary, Critical, High, Medium, Low, Tests)
