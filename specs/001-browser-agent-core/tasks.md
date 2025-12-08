@@ -339,160 +339,1099 @@
 
 ---
 
-## Phase 15: Tool System (US6)
+## Phase 15: Tool System (US6) ✅
 
-**Purpose**: Tool registry and execution framework
+**Purpose**: Tool registry and execution framework for CRO analysis
 
-- [ ] T073 [US6] Create src/agent/tools/base-tool.ts - BaseTool abstract class
-- [ ] T074 [US6] Create src/agent/tools/tool-registry.ts - ToolRegistry class
-- [ ] T075 [US6] Create src/agent/tools/tool-executor.ts - ToolExecutor class
-- [ ] T076 [US6] Create src/agent/tools/index.ts - Module exports
-- [ ] T077 [P] [US6] Create tests/unit/tool-system.test.ts
+**Design**: Interface-based tools. ToolExecutor owns validation, timing, error handling. See plan.md Section 8.
 
-**Checkpoint**: Tool registry accepts and executes tool definitions
+**Requirements**: FR-031 to FR-038, CR-016, CR-017, SC-016 to SC-018
+
+- [x] T073 [US6] Create src/agent/tools/types.ts
+  - ToolContext, Tool, ToolDefinitionForLLM interfaces
+  - Re-export ToolResult from models
+- [x] T074 [US6] Create src/agent/tools/tool-registry.ts
+  - ToolRegistry class with register, get, has, getAll, getToolDefinitions, clear
+  - Uses native Zod v4 `z.toJSONSchema()` for LLM definitions
+- [x] T075 [US6] Create src/agent/tools/tool-executor.ts
+  - ToolExecutor class with execute method
+  - Validates params, tracks timing, handles errors
+- [x] T076 [US6] Create src/agent/tools/index.ts - Module exports
+- [x] T077 [US6] Create tests/unit/tool-system.test.ts (20 tests)
+
+**Checkpoint**: ✅ COMPLETE (2025-12-05)
+- 131 unit tests passing (20 new tool system tests)
+- Uses native Zod v4 `z.toJSONSchema()` (no external package needed)
 
 ---
 
-## Phase 15b: CLI Integration - Tool Execution (US6) **[NEW - INCREMENTAL]**
+## Phase 15b: CLI Integration - Tool Execution (US6) ✅
 
 **Purpose**: Allow manual tool execution via CLI for testing
 
-- [ ] T077a [US6] Update src/cli.ts with --tool flag
+- [x] T077a [US6] Update src/cli.ts with --tool flag
   - `--tool analyze_ctas` executes specific tool on page
   - Outputs tool result (insights, extracted data)
-- [ ] T077b [US6] Create src/output/tool-result-formatter.ts
+- [x] T077b [US6] Create src/output/tool-result-formatter.ts
   - formatToolResult(result: ToolResult): string
+- [x] T077c [US6] Create src/agent/tools/cro/analyze-ctas.ts (sample tool)
+- [x] T077d [US6] Create src/agent/tools/create-cro-registry.ts (factory)
+- [x] T077e [US6] Add 5 unit tests for ToolResultFormatter
 
-**Checkpoint**: `npm run start -- --cro-extract --tool analyze_ctas https://carwale.com`
-
----
-
-## Phase 16: Agent Core (US6)
-
-**Purpose**: Main CRO agent orchestration
-
-- [ ] T078 [US6] Create src/agent/prompt-builder.ts - System prompt construction
-- [ ] T079 [US6] Create src/agent/message-manager.ts - Conversation history
-- [ ] T080 [US6] Create src/agent/state-manager.ts - Agent state transitions
-- [ ] T081 [US6] Create src/agent/cro-agent.ts - Main CROAgent class
-- [ ] T082 [US6] Create src/agent/index.ts - Module exports
-- [ ] T083 [P] [US6] Create tests/unit/prompt-builder.test.ts
-- [ ] T084 [P] [US6] Create tests/unit/message-manager.test.ts
-- [ ] T085 [P] [US6] Create tests/unit/state-manager.test.ts
-- [ ] T086 [US6] Create tests/integration/cro-agent.test.ts
-- [ ] T087 [US6] Create tests/e2e/cro-agent-workflow.test.ts
-
-**Checkpoint**: Agent completes analysis loop with mock LLM
+**Checkpoint**: ✅ COMPLETE (2025-12-05)
+- `npm run start -- --cro-extract --tool analyze_ctas https://carwale.com` works
+- 136 unit tests passing (5 new formatter tests)
 
 ---
 
-## Phase 16b: CLI Integration - Agent Loop (US6) **[NEW - INCREMENTAL]**
+## Phase 16: Agent Core (US6) **[COMPLETE]**
+
+**Purpose**: Main CRO agent orchestration with observe→reason→act loop
+
+**Prerequisites**: Phase 15 ✅, Phase 14 ✅, Phase 13b ✅
+
+**Implementation Reference**: See plan.md "Phase 16: Agent Core Implementation Details" for code
+
+**Requirements**: FR-018 to FR-024, FR-039 to FR-048, CR-010 to CR-014, SC-019 to SC-026
+
+---
+
+### Phase 16a: System Prompt
+
+- [x] T078 [US6] Create src/agent/prompt-builder.ts with PromptBuilder class ✅
+  - Methods: buildSystemPrompt(), buildUserMessage(state, memory), formatToolsSection()
+  - Injects tool definitions from ToolRegistry.getToolDefinitions()
+  - Ref: FR-039, FR-040
+
+- [x] T078a [P] [US6] Create src/prompts/system-cro.md template file ✅
+  - Sections: identity, expertise, input_format, output_format, available_tools, completion_criteria
+  - Ref: FR-020
+
+---
+
+### Phase 16b: State & Memory Management
+
+- [x] T079 [US6] Create src/agent/message-manager.ts with MessageManager class ✅
+  - Uses @langchain/core/messages (HumanMessage, AIMessage, SystemMessage)
+  - Methods: addUserMessage(), addAssistantMessage(), getMessages(), clear(), trimToLimit()
+  - Ref: FR-041, FR-042
+
+- [x] T080 [US6] Create src/agent/state-manager.ts with StateManager class ✅
+  - State: step, consecutiveFailures, totalFailures, insights, isDone, memory
+  - Methods: incrementStep(), setDone(), recordFailure(), resetFailures(), shouldTerminate()
+  - Termination: step >= maxSteps OR consecutiveFailures >= 3 OR isDone
+  - Ref: FR-043, FR-044, FR-045, CR-010, CR-014
+
+---
+
+### Phase 16c: Main Agent
+
+- [x] T081 [US6] Create src/agent/cro-agent.ts with CROAgent class ✅
+  - Constructor: options merged with DEFAULT_CRO_OPTIONS
+  - Method: analyze(url) returns CROAnalysisResult
+  - Loop: observe→reason→act pattern with LLM (gpt-4o-mini)
+  - Error handling: LLM timeout, invalid JSON, tool errors, page errors
+  - Re-extracts DOM after scroll/click actions
+  - Ref: FR-046, FR-047, FR-048, CR-011, CR-012
+
+- [x] T082 [US6] Update src/agent/index.ts with Phase 16 exports ✅
+  - Export: PromptBuilder, MessageManager, StateManager, CROAgent, CROAnalysisResult
+
+---
+
+### Phase 16d: Unit Tests
+
+- [x] T083 [P] [US6] Create tests/unit/prompt-builder.test.ts (20 tests) ✅
+  - System prompt contains all 6 sections
+  - User message includes URL, title, CRO elements, memory
+  - Ref: SC-019
+
+- [x] T084 [P] [US6] Create tests/unit/message-manager.test.ts (22 tests) ✅
+  - Message ordering, types, count, clear, trimToLimit
+  - Ref: SC-020
+
+- [x] T085 [P] [US6] Create tests/unit/state-manager.test.ts (28 tests) ✅
+  - Initial state, step management, failure tracking, termination conditions, insights
+  - Ref: SC-021
+
+---
+
+### Phase 16e: Integration & E2E Tests
+
+- [x] T086 [US6] Create tests/integration/cro-agent.test.ts (18 tests) ✅
+  - Mock LLM with pre-canned responses
+  - Test: loop completion, maxSteps, failure handling, state accumulation
+  - Ref: SC-022, SC-024
+
+- [x] T087 [US6] Create tests/e2e/cro-agent-workflow.test.ts (8 tests) ✅
+  - Real browser + mock LLM responses
+  - Verify: DOM extraction, tool execution, workflow completion, proper cleanup
+  - Ref: SC-023, SC-025
+
+---
+
+**Checkpoint**: Agent completes loop with mock LLM, terminates on done/max-steps/failures ✅
+
+**Total Tests**: 96 (70 unit + 18 integration + 8 e2e)
+
+---
+
+## Phase 16-CLI: CLI Integration - Agent Loop (US6) **[COMPLETE]**
 
 **Purpose**: Run CRO agent analysis via CLI
 
-- [ ] T087a [US6] Update src/cli.ts with --analyze flag (replaces --cro-extract)
-  - Runs full CROAgent.analyze() loop
-  - `--max-steps N` limits iterations (default: 10)
-- [ ] T087b [US6] Create src/output/agent-progress-formatter.ts
-  - Real-time step output during analysis
-  - Shows: step number, action taken, insights found
+**Prerequisites**: Phase 16 (Agent Core) complete
 
-**Checkpoint**: `npm run start -- --analyze --max-steps 5 https://carwale.com`
+- [x] T088 [US6] Update src/cli.ts with --analyze flag ✅
+  - New flags: --analyze, --max-steps N, --verbose
+  - Runs CROAgent.analyze() and formats output
 
----
+- [x] T089 [US6] Create src/output/agent-progress-formatter.ts ✅
+  - Methods: formatAnalysisStart(), formatStepComplete(), formatAnalysisResult()
+  - Shows step number, action, insights, timing
 
-## Phase 17: CRO Tools (US7)
+- [x] T090 [P] [US6] Create tests/unit/agent-progress-formatter.test.ts (6 tests) ✅
+  - Tests for step formatting and result formatting
 
-**Purpose**: Implement CRO-specific analysis tools
+**Checkpoint**: `npm run start -- --analyze --max-steps 5 https://example.com` ✅
 
-- [ ] T088 [US7] Create src/agent/tools/scroll-tool.ts
-- [ ] T089 [US7] Create src/agent/tools/click-tool.ts
-- [ ] T090 [US7] Create src/agent/tools/analyze-cta-tool.ts
-- [ ] T091 [US7] Create src/agent/tools/analyze-form-tool.ts
-- [ ] T092 [US7] Create src/agent/tools/analyze-trust-tool.ts
-- [ ] T093 [US7] Create src/agent/tools/analyze-value-prop-tool.ts
-- [ ] T094 [US7] Create src/agent/tools/record-insight-tool.ts
-- [ ] T095 [US7] Create src/agent/tools/done-tool.ts
-- [ ] T096 [P] [US7] Create tests/unit/cro-tools.test.ts
-- [ ] T097 [US7] Create tests/integration/cro-tools.test.ts
-
-**Checkpoint**: All CRO tools execute and return valid ToolResult
+**Total Tests**: 6 tests (212 unit tests total)
 
 ---
 
-## Phase 18: Heuristics & Output (US7, US8)
+## Phase 17a: Navigation Tools (US7) **[COMPLETE]**
 
-**Purpose**: Heuristic analysis and report generation
+**Purpose**: Implement navigation tools (scroll, click, go_to_url) that change page state
 
-- [ ] T061 [US7] Create src/heuristics/index.ts - Heuristic engine exports
-- [ ] T062a [P] [US7] Create tests/unit/heuristics.test.ts
-- [ ] T098 [US7] Create src/heuristics/cta-heuristics.ts
-- [ ] T099 [US7] Create src/heuristics/form-heuristics.ts
-- [ ] T100 [US7] Create src/heuristics/trust-heuristics.ts
-- [ ] T101 [US7] Create src/heuristics/value-prop-heuristics.ts
-- [ ] T102 [US7] Create src/heuristics/heuristic-runner.ts
-- [ ] T103 [US8] Create src/output/insight-formatter.ts
-- [ ] T104 [US8] Create src/output/report-generator.ts
-- [ ] T105 [US8] Create src/output/json-exporter.ts
-- [ ] T106 [US8] Update src/output/index.ts with new exports
-- [ ] T107 [P] [US8] Create tests/unit/report-generator.test.ts
-- [ ] T108 [US8] Create tests/integration/output.test.ts
+**Prerequisites**:
+- Phase 16 (Agent Core) complete
+- Dependencies: PageState, DOMTree from `src/models/`
+- Pattern: Navigation tools return `insights: []` (empty array)
 
-**Checkpoint**: Heuristics engine produces categorized insights
+**CROActionNames Coverage** (Phase 17 total - must implement ALL):
+```
+Analysis:  analyze_ctas ✅, analyze_forms, detect_trust_signals, assess_value_prop, check_navigation, find_friction
+Navigation: scroll_page ✅, click ✅, go_to_url ✅  ← COMPLETE
+Control:    record_insight, done
+```
+
+**Note**: analyze_ctas exists from Phase 15b (T077c)
 
 ---
 
-## Phase 18b: CLI Integration - Final (US6, US8) **[NEW - INCREMENTAL]**
+#### T091 [US7] Create src/agent/tools/cro/scroll-tool.ts ✅
+
+**Action Name**: `scroll_page`
+
+**Parameters**:
+```typescript
+z.object({
+  direction: z.enum(['up', 'down', 'top', 'bottom']),
+  amount: z.number().positive().optional().default(500),
+})
+```
+
+**Returns**: `{ success, insights: [], extracted: { previousY, newY, atTop, atBottom } }`
+
+**Error Handling**:
+| Condition | Behavior |
+|-----------|----------|
+| Already at top + scroll up | success: true, atTop: true, newY unchanged |
+| Already at bottom + scroll down | success: true, atBottom: true, newY unchanged |
+| Page evaluation fails | success: false, error: message |
+
+**Acceptance Criteria**:
+- [ ] Scroll down increases scrollY by amount
+- [ ] Scroll up decreases scrollY by amount
+- [ ] Scroll top sets scrollY to 0
+- [ ] Scroll bottom sets scrollY to max
+- [ ] Returns atTop: true when scrollY === 0
+- [ ] Returns atBottom: true when scrollY >= maxScroll
+
+**Unit Tests** (6):
+1. scroll down from top
+2. scroll up from middle
+3. scroll to top
+4. scroll to bottom
+5. scroll at boundary (no movement)
+6. invalid direction rejected by Zod
+
+---
+
+#### T092 [US7] Create src/agent/tools/cro/click-tool.ts ✅
+
+**Action Name**: `click`
+
+**Parameters**:
+```typescript
+z.object({
+  elementIndex: z.number().int().nonnegative(),
+  waitForNavigation: z.boolean().optional().default(false),
+})
+```
+
+**Returns**: `{ success, insights: [], extracted: { clickedXpath, elementText, navigationOccurred } }`
+
+**Error Handling**:
+| Condition | Behavior |
+|-----------|----------|
+| Element index not found | success: false, error: "Element with index N not found" |
+| Element not visible | success: false, error: "Element N is not visible" |
+| Element disappeared (DOM mutation) | success: false, error: "Element no longer in DOM" |
+| Click timeout | success: false, error: "Click timed out after 5000ms" |
+
+**Acceptance Criteria**:
+- [ ] Click by valid index succeeds
+- [ ] Click by invalid index returns error (not throws)
+- [ ] Click hidden element returns error
+- [ ] waitForNavigation: true waits up to 5s
+- [ ] Returns navigationOccurred: true if URL changed
+- [ ] Returns clickedXpath and elementText in extracted
+
+**Unit Tests** (7):
+1. click valid visible element
+2. click invalid index (not found)
+3. click hidden element
+4. click with navigation wait (mock)
+5. navigation detection
+6. element xpath captured
+7. negative index rejected by Zod
+
+---
+
+#### T093 [US7] Create src/agent/tools/cro/go-to-url-tool.ts ✅
+
+**Action Name**: `go_to_url`
+
+**Parameters**:
+```typescript
+z.object({
+  url: z.string().url(),
+  waitUntil: z.enum(['load', 'domcontentloaded', 'networkidle']).optional().default('load'),
+})
+```
+
+**Returns**: `{ success, insights: [], extracted: { previousUrl, newUrl, loadTimeMs } }`
+
+**Error Handling**:
+| Condition | Behavior |
+|-----------|----------|
+| Invalid URL format | Zod validation fails |
+| Navigation timeout (60s) | success: false, error: "Navigation timed out" |
+| Network error | success: false, error: "Navigation failed: {message}" |
+
+**Acceptance Criteria**:
+- [ ] Navigates to valid URL
+- [ ] Returns previous and new URL
+- [ ] Tracks load time in ms
+- [ ] Invalid URL rejected by Zod
+- [ ] Timeout after 60s returns error
+
+**Unit Tests** (5):
+1. navigate to valid URL
+2. invalid URL rejected
+3. load time tracked
+4. previous URL captured
+5. waitUntil parameter respected
+
+---
+
+### Phase 17a Tests
+
+- [x] T093a [P] [US7] Create tests/unit/navigation-tools.test.ts (21 tests) ✅
+  | Tool | Tests |
+  |------|-------|
+  | scroll-tool | 6 |
+  | click-tool | 7 |
+  | go-to-url-tool | 5 |
+  | schema validation | 3 |
+
+---
+
+**Phase 17a Checkpoint**: ✅
+- [x] 3 navigation tools compile and export ✅
+- [x] 21 unit tests passing (233 total) ✅
+- [x] All tools return `insights: []` ✅
+- [x] Test: `npm run start -- --tool scroll_page <url>` works ✅
+
+**Phase 17a Total**: 4 tasks, 21 tests (completed 2025-12-08)
+
+---
+
+## Phase 17b: Analysis Tools (US7, US8) **[COMPLETE]**
+
+**Purpose**: Implement analysis tools that examine DOM and return CROInsight[]
+
+**Prerequisites**: Phase 17a (Navigation Tools) complete
+
+**CROActionNames Coverage**:
+```
+Analysis:  analyze_ctas ✅, analyze_forms ✅, detect_trust_signals ✅, assess_value_prop ✅, check_navigation ✅, find_friction ✅  ← THIS PHASE COMPLETE
+Navigation: scroll_page ✅, click ✅, go_to_url ✅
+Control:    record_insight, done
+```
+
+---
+
+#### T094 [US7] Create src/agent/tools/cro/analyze-forms-tool.ts ✅
+
+**Action Name**: `analyze_forms`
+
+**Parameters**:
+```typescript
+z.object({
+  formSelector: z.string().optional(),
+  includeHiddenFields: z.boolean().optional().default(false),
+})
+```
+
+**Insight Types** (6):
+| ID | Type | Severity | Condition | US8 Criteria |
+|----|------|----------|-----------|--------------|
+| F001 | `form_field_overload` | high | >5 visible fields | field count ✓ |
+| F002 | `missing_field_label` | medium | input without label/placeholder | label quality ✓ |
+| F003 | `missing_input_type` | medium | input without type attribute | validation issues ✓ |
+| F004 | `no_required_indicator` | low | required without visual indicator | validation issues ✓ |
+| F005 | `no_error_container` | low | form without error message area | validation issues ✓ |
+| F006 | `no_submit_button` | high | form without submit button | field count ✓ |
+
+**Error Handling**:
+| Condition | Behavior |
+|-----------|----------|
+| No forms found | success: true, insights: [], extracted: { totalForms: 0 } |
+| formSelector matches nothing | success: true, insights: [], extracted: { totalForms: 0 } |
+
+**Acceptance Criteria** (maps to US8):
+- [ ] Detects forms with >5 fields (field count)
+- [ ] Detects inputs without labels (label quality)
+- [ ] Detects inputs without type attribute (validation)
+- [ ] Detects required fields without indicator (validation)
+- [ ] Detects forms without submit button
+- [ ] Returns empty insights for pages with no forms
+
+**Unit Tests** (12):
+1. form with 6 fields → F001
+2. form with 4 fields → no F001
+3. input without label → F002
+4. input with placeholder → no F002
+5. input without type → F003
+6. input with type="email" → no F003
+7. required without indicator → F004
+8. form without submit → F006
+9. form with button type=submit → no F006
+10. multiple forms analyzed
+11. formSelector filters correctly
+12. empty page returns empty insights
+
+---
+
+#### T095 [US7] Create src/agent/tools/cro/analyze-trust-tool.ts ✅
+
+**Action Name**: `detect_trust_signals`
+
+**Parameters**:
+```typescript
+z.object({
+  focusArea: z.enum(['above_fold', 'full_page']).optional().default('full_page'),
+})
+```
+
+**Insight Types** (5):
+| ID | Type | Severity | Condition | US8 Criteria |
+|----|------|----------|-----------|--------------|
+| TR001 | `no_trust_above_fold` | medium | No trust elements in viewport | badges ✓ |
+| TR002 | `no_reviews` | low | No review/testimonial elements | reviews ✓ |
+| TR003 | `no_security_badge` | medium | No SSL/security/payment badges | badges ✓ |
+| TR004 | `no_guarantees` | low | No guarantee/warranty mentions | guarantees ✓ |
+| TR005 | `no_certifications` | low | No certification badges | certifications ✓ |
+
+**Detection Patterns**:
+```typescript
+const TRUST_PATTERNS = {
+  reviews: ['.review', '.testimonial', '[class*="rating"]', '.stars'],
+  badges: ['.trust-badge', '.security-seal', '[class*="secure"]', 'img[alt*="ssl"]'],
+  guarantees: ['[class*="guarantee"]', '[class*="warranty"]', '[class*="money-back"]'],
+  certifications: ['.certification', '.accredited', '[class*="certified"]'],
+};
+```
+
+**Error Handling**:
+| Condition | Behavior |
+|-----------|----------|
+| No trust elements found | success: true, insights: [TR001-TR005 as applicable] |
+
+**Acceptance Criteria** (maps to US8):
+- [ ] Detects trust badges (security seals, payment icons)
+- [ ] Finds review/testimonial sections
+- [ ] Identifies guarantee mentions
+- [ ] Recognizes certification badges
+- [ ] Distinguishes above-fold vs full-page
+
+**Unit Tests** (10):
+1. page with trust badge → no TR003
+2. page without trust badge → TR003
+3. page with reviews → no TR002
+4. page without reviews → TR002
+5. page with guarantee → no TR004
+6. above_fold filters correctly
+7. full_page includes footer
+8. multiple trust signals detected
+9. trust signal count in extracted
+10. empty page returns all applicable insights
+
+---
+
+#### T096 [US7] Create src/agent/tools/cro/analyze-value-prop-tool.ts ✅
+
+**Action Name**: `assess_value_prop`
+
+**Parameters**:
+```typescript
+z.object({
+  checkH1Only: z.boolean().optional().default(false),
+})
+```
+
+**Insight Types** (5):
+| ID | Type | Severity | Condition | US8 Criteria |
+|----|------|----------|-----------|--------------|
+| VP001 | `missing_h1` | high | No H1 on page | headline clarity ✓ |
+| VP002 | `multiple_h1` | medium | >1 H1 elements | headline clarity ✓ |
+| VP003 | `generic_headline` | medium | H1 matches generic patterns | benefit communication ✓ |
+| VP004 | `no_subheadline` | low | H1 without H2 support | benefit communication ✓ |
+| VP005 | `headline_too_long` | low | H1 >10 words | headline clarity ✓ |
+
+**Generic Patterns**:
+```typescript
+const GENERIC_PATTERNS = [
+  /^welcome$/i, /^home$/i, /^homepage$/i,
+  /^untitled$/i, /^page\s*\d*$/i, /^about$/i,
+];
+```
+
+**Error Handling**:
+| Condition | Behavior |
+|-----------|----------|
+| No value_prop elements | success: true, insights: [VP001] |
+
+**Acceptance Criteria** (maps to US8):
+- [ ] Detects missing H1 (headline clarity)
+- [ ] Detects multiple H1s (headline clarity)
+- [ ] Flags generic headlines like "Welcome" (benefit communication)
+- [ ] Checks for supporting H2 (benefit communication)
+- [ ] Flags headlines >10 words
+
+**Unit Tests** (10):
+1. page with single H1 → no VP001, VP002
+2. page with no H1 → VP001
+3. page with 2 H1s → VP002
+4. H1 = "Welcome" → VP003
+5. H1 = "Get 50% Off Your First Order" → no VP003
+6. H1 without H2 → VP004
+7. H1 with H2 → no VP004
+8. H1 with 12 words → VP005
+9. H1 with 8 words → no VP005
+10. checkH1Only: true ignores H2-H6
+
+---
+
+#### T097 [US7] Create src/agent/tools/cro/check-navigation-tool.ts ✅
+
+**Action Name**: `check_navigation`
+
+**Parameters**:
+```typescript
+z.object({
+  includeFooter: z.boolean().optional().default(true),
+})
+```
+
+**Insight Types** (5):
+| ID | Type | Severity | Condition | US8 Criteria |
+|----|------|----------|-----------|--------------|
+| NAV001 | `no_main_nav` | high | No <nav> or role="navigation" | menu structure ✓ |
+| NAV002 | `no_breadcrumbs` | low | No breadcrumb on non-home page | breadcrumbs ✓ |
+| NAV003 | `no_search` | medium | No search input/button | search presence ✓ |
+| NAV004 | `deep_nav_nesting` | low | Nav menu >3 levels deep | menu structure ✓ |
+| NAV005 | `no_home_link` | low | No link to home/root | menu structure ✓ |
+
+**Detection Patterns**:
+```typescript
+const NAV_PATTERNS = {
+  mainNav: ['nav', '[role="navigation"]', '.main-nav', '.primary-nav'],
+  breadcrumbs: ['.breadcrumb', '[aria-label*="breadcrumb"]', '.crumbs'],
+  search: ['[type="search"]', '.search', '[role="search"]', 'input[name*="search"]'],
+};
+```
+
+**Acceptance Criteria** (maps to US8):
+- [ ] Detects main navigation element
+- [ ] Finds breadcrumb on category/product pages
+- [ ] Identifies search functionality
+- [ ] Checks nav menu depth
+- [ ] Verifies home link exists
+
+**Unit Tests** (8):
+1. page with <nav> → no NAV001
+2. page without nav → NAV001
+3. product page with breadcrumbs → no NAV002
+4. product page without breadcrumbs → NAV002
+5. page with search → no NAV003
+6. page without search → NAV003
+7. deep nav (4 levels) → NAV004
+8. nav menu depth in extracted
+
+---
+
+#### T098 [US7] Create src/agent/tools/cro/find-friction-tool.ts ✅
+
+**Action Name**: `find_friction`
+
+**Parameters**:
+```typescript
+z.object({
+  categories: z.array(z.enum(['cta', 'form', 'trust', 'value_prop', 'navigation'])).optional(),
+})
+```
+
+**Purpose**: General friction point detector that runs lightweight checks across ALL CRO categories. Use when LLM wants a quick overview before diving deep.
+
+**Insight Types** (5 - one per category):
+| ID | Type | Severity | Condition |
+|----|------|----------|-----------|
+| FR001 | `friction_cta` | varies | Quick CTA issues (no CTA above fold) |
+| FR002 | `friction_form` | varies | Quick form issues (too many fields) |
+| FR003 | `friction_trust` | varies | Quick trust issues (no signals) |
+| FR004 | `friction_value` | varies | Quick value issues (no H1) |
+| FR005 | `friction_nav` | varies | Quick nav issues (no search) |
+
+**Behavior**: Runs ONE quick check per category, returns summary. For deep analysis, LLM should use specific tools.
+
+**Acceptance Criteria** (maps to US8):
+- [ ] Identifies general friction points across all categories
+- [ ] Can filter to specific categories via parameter
+- [ ] Returns at most 5 insights (one per category)
+- [ ] Provides "friction score" in extracted
+
+**Unit Tests** (6):
+1. page with issues in all categories → 5 insights
+2. clean page → 0 insights
+3. categories filter works
+4. friction score calculated
+5. each friction type has category
+6. empty categories param checks all
+
+---
+
+### Phase 17b Tests
+
+- [x] T098a [P] [US7] Create tests/unit/analysis-tools.test.ts (51 tests) ✅
+  | Tool | Tests |
+  |------|-------|
+  | analyze-forms | 12 |
+  | analyze-trust | 10 |
+  | analyze-value-prop | 10 |
+  | check-navigation | 8 |
+  | find-friction | 6 |
+  | schema validation | 5 |
+
+---
+
+**Phase 17b Checkpoint**: ✅
+- [x] 5 analysis tools compile and export ✅
+- [x] 51 unit tests passing (284 total) ✅
+- [x] All tools return valid CROInsight[] with correct schema ✅
+- [x] Total insight types: 26 (6 form + 5 trust + 5 value + 5 nav + 5 friction) ✅
+- [x] Tools registered in create-cro-registry.ts ✅
+
+**Phase 17b Total**: 6 tasks, 51 tests (completed 2025-12-08)
+
+---
+
+## Phase 17c: Control Tools & Integration (US7) **[COMPLETE]**
+
+**Purpose**: Implement control tools (record_insight, done) and finalize registry/integration
+
+**Prerequisites**: Phase 17b (Analysis Tools) complete
+
+**CROActionNames Coverage**:
+```
+Analysis:  analyze_ctas ✅, analyze_forms ✅, detect_trust_signals ✅, assess_value_prop ✅, check_navigation ✅, find_friction ✅
+Navigation: scroll_page ✅, click ✅, go_to_url ✅
+Control:    record_insight ✅, done ✅  ← COMPLETE
+```
+
+---
+
+#### T099 [US7] Create src/agent/tools/cro/record-insight-tool.ts ✅
+
+**Action Name**: `record_insight`
+
+**Purpose**: Allow LLM to manually record an observation NOT covered by automated tools. Use cases:
+1. LLM notices visual issue from DOM structure (e.g., "login button same color as background")
+2. LLM infers business context issue (e.g., "pricing unclear for enterprise tier")
+3. Cross-element pattern (e.g., "3 different CTA styles create inconsistency")
+
+**Parameters**:
+```typescript
+z.object({
+  type: z.string().min(1).max(50),
+  severity: z.enum(['critical', 'high', 'medium', 'low']),
+  element: z.string().optional(), // xpath
+  issue: z.string().min(10).max(500),
+  recommendation: z.string().min(10).max(500),
+  category: z.enum(['cta', 'form', 'trust', 'value_prop', 'navigation', 'custom']).optional().default('custom'),
+})
+```
+
+**Returns**: `{ success: true, insights: [recorded insight], extracted: { insightId } }`
+
+**Error Handling**:
+| Condition | Behavior |
+|-----------|----------|
+| Empty issue/recommendation | Zod validation fails |
+| Missing type | Zod validation fails |
+
+**Acceptance Criteria**:
+- [x] Creates valid CROInsight with auto-generated ID ✅
+- [x] Validates severity enum ✅
+- [x] Stores custom category correctly ✅
+- [x] Returns insight in insights array (not just extracted) ✅
+
+**Unit Tests** (5):
+1. valid insight recorded
+2. auto-generated ID format
+3. severity validation
+4. optional element works
+5. category defaults to 'custom'
+
+---
+
+#### T100 [US7] Create src/agent/tools/cro/done-tool.ts ✅
+
+**Action Name**: `done`
+
+**Purpose**: Signal analysis completion. CROAgent checks `action.name === 'done'` to exit loop.
+
+**Parameters**:
+```typescript
+z.object({
+  summary: z.string().min(10).max(1000),
+  confidenceScore: z.number().min(0).max(1).optional(),
+  areasAnalyzed: z.array(z.string()).optional(),
+})
+```
+
+**Returns**: `{ success: true, insights: [], extracted: { summary, confidenceScore, areasAnalyzed } }`
+
+**Acceptance Criteria**:
+- [x] Returns success: true always ✅
+- [x] Returns insights: [] always (control tool) ✅
+- [x] Captures summary in extracted ✅
+- [x] Validates confidenceScore range 0-1 ✅
+- [x] areasAnalyzed optional array works ✅
+
+**Unit Tests** (4):
+1. valid done with summary
+2. confidenceScore validation (0-1)
+3. areasAnalyzed captured
+4. always returns empty insights
+
+---
+
+### Phase 17c Tests & Integration
+
+- [x] T100a [P] [US7] Create tests/unit/control-tools.test.ts (12 tests) ✅
+  | Tool | Tests |
+  |------|-------|
+  | record-insight | 7 |
+  | done-tool | 5 |
+
+- [x] T101 [US7] Create tests/integration/cro-tools.test.ts (18 tests) ✅
+  - Tool execution with mock PageState (5 tests)
+  - Tool chaining: scroll → analyze → record (3 tests)
+  - Error propagation through ToolExecutor (4 tests)
+  - ToolResult schema validation (3 tests)
+  - createCRORegistry() returns all 11 tools (3 tests)
+
+- [x] T102 [US7] Update src/agent/tools/create-cro-registry.ts ✅
+  - Register all 10 new tools
+  - Total: 11 tools (including existing analyze_ctas)
+  - Verify: `registry.getAll().length === 11`
+
+- [x] T103 [US7] Update src/agent/tools/cro/index.ts ✅
+  - Export all tool objects and param schemas
+
+---
+
+**Phase 17c Checkpoint**: ✅
+- [x] 2 control tools compile and export ✅
+- [x] 12 unit tests passing (control tools) ✅
+- [x] 18 integration tests passing (all tools) ✅
+- [x] createCRORegistry() returns registry with 11 tools ✅
+- [x] All CROActionNames have corresponding tool implementation ✅
+
+**Phase 17c Total**: 5 tasks, 30 tests (12 unit + 18 integration) - completed 2025-12-09
+
+---
+
+## Phase 17 Summary **[COMPLETE]**
+
+| Sub-Phase | Tools | Unit Tests | Int Tests | Total | Status |
+|-----------|-------|------------|-----------|-------|--------|
+| 17a | 3 navigation | 21 | - | 21 | ✅ |
+| 17b | 5 analysis | 51 | - | 51 | ✅ |
+| 17c | 2 control + integration | 12 | 18 | 30 | ✅ |
+| **Total** | **10 new (11 with analyze_ctas)** | **84** | **18** | **102** | **✅** |
+
+**Insight Types**: 32 total (6 CTA + 6 form + 5 trust + 5 value + 5 nav + 5 friction)
+
+---
+
+## Phase 18a: Models & Types (US9, US10) **[COMPLETE]**
+
+**Purpose**: Define new models for heuristics, business type, and hypothesis generation
+
+**Prerequisites**: Phase 17 (CRO Tools) complete
+
+**Requirements**: FR-064 to FR-066
+
+- [x] T104 [US9] Create src/models/business-type.ts ✅
+  - Export: BusinessType enum (ecommerce, saas, banking, insurance, travel, media, other)
+  - Export: BusinessTypeResult interface (type, confidence, signals)
+  - Export: BusinessTypeSignals interface (urlPatterns, elementSelectors, keywords)
+  - Export: BUSINESS_TYPE_SIGNALS constant with detection patterns
+- [x] T105 [US10] Create src/models/hypothesis.ts ✅
+  - Export: ExpectedImpact type ('low' | 'medium' | 'high')
+  - Export: Hypothesis interface (id, title, hypothesis, control, treatment, metric, impact, priority, relatedInsights)
+  - Export: HypothesisSchema (Zod validation)
+- [x] T105a [US9] Update src/models/index.ts with Phase 18a exports ✅
+
+**Checkpoint**: Models compile, Zod schema validates (SC-041, SC-042) ✅
+
+---
+
+## Phase 18b: Heuristic Engine Core (US9) **[COMPLETE]**
+
+**Purpose**: Build heuristic rule engine and business type detection
+
+**Prerequisites**: Phase 18a (Models) complete
+
+**Requirements**: FR-067 to FR-071, SC-043 to SC-046
+
+- [x] T106 [US9] Create src/heuristics/types.ts ✅
+  - Export: HeuristicRule interface (id, name, description, category, severity, businessTypes, check function)
+  - Export: HeuristicResult interface (insights, rulesExecuted, rulesPassed, rulesFailed, executionTimeMs)
+
+- [x] T106a [US9] Create src/heuristics/heuristic-engine.ts (11 tests) ✅
+  - HeuristicEngine class with register(), registerAll(), run(), getRule(), getAllRules(), clear()
+  - Run filters rules by applicable businessTypes
+  - Returns HeuristicResult with collected insights
+  - Tests: register rule, duplicate throws, run all rules, filter by business type, empty rules, error handling
+
+- [x] T106b [US9] Create src/heuristics/business-type-detector.ts (8 tests) ✅
+  - BusinessTypeDetector class with detect(pageState) method
+  - Checks URL patterns, element selectors, keywords from BUSINESS_TYPE_SIGNALS
+  - Returns BusinessTypeResult with confidence score
+  - Configurable confidence threshold (default 0.6, CR-019)
+  - Tests: detect ecommerce, detect saas, low confidence returns 'other', URL matching, keyword matching, element matching, threshold config, signals captured
+
+- [x] T106c [US9] Create src/heuristics/severity-scorer.ts (7 tests) ✅
+  - SeverityScorer class with adjustSeverity(insights, businessType) method
+  - Increases severity for business-critical issues (e.g., no cart for ecommerce)
+  - Tests: ecommerce boost, saas boost, no change for other, severity cap at critical
+
+- [x] T106d [US9] Create src/heuristics/index.ts - Module exports ✅
+
+**Checkpoint**: ✅ Engine runs, business type detected on test pages (SC-043, SC-045)
+- 26 new unit tests (11 engine + 8 detector + 7 scorer), 322 total tests passing
+- Completed: 2025-12-09
+
+---
+
+## Phase 18c: Heuristic Rules (US9)
+
+**Purpose**: Implement 10 heuristic rules (H001-H010) per FR-072 to FR-081
+
+**Prerequisites**: Phase 18b (Engine Core) complete
+
+**Requirements**: FR-072 to FR-081, SC-044 (20 tests)
+
+Each rule has 2 tests: positive case (violation found), negative case (passes)
+
+### CTA Rules (src/heuristics/rules/cta-rules.ts)
+
+- [ ] T107a [US9] Implement H001: vague_cta_text (2 tests)
+  - Severity: medium
+  - Condition: CTA text matches generic patterns (Click Here, Learn More, Submit, etc.)
+  - Tests: "Submit" button → insight, "Get Free Quote" → no insight
+
+- [ ] T107b [US9] Implement H002: no_cta_above_fold (2 tests)
+  - Severity: high
+  - Condition: No CTA visible in initial viewport (boundingBox.y < viewport.height)
+  - Tests: page with no CTA above fold → insight, page with CTA at top → no insight
+
+### Form Rules (src/heuristics/rules/form-rules.ts)
+
+- [ ] T108a [US9] Implement H003: form_field_overload (2 tests)
+  - Severity: high
+  - Condition: Form has >5 visible input fields
+  - Tests: form with 7 fields → insight, form with 3 fields → no insight
+
+- [ ] T108b [US9] Implement H004: missing_field_label (2 tests)
+  - Severity: medium
+  - Condition: Input without associated label, placeholder, or aria-label
+  - Tests: input without label → insight, input with placeholder → no insight
+
+### Trust Rules (src/heuristics/rules/trust-rules.ts)
+
+- [ ] T109a [US9] Implement H005: no_trust_above_fold (2 tests)
+  - Severity: medium
+  - Condition: No trust signals (badges, reviews, testimonials) in initial viewport
+  - Tests: page without trust above fold → insight, page with trust badge at top → no insight
+
+- [ ] T109b [US9] Implement H006: no_security_badge (2 tests)
+  - Severity: high
+  - businessTypes: ['ecommerce', 'banking', 'insurance'] (only applies to these)
+  - Condition: Checkout/payment page without SSL/security badge
+  - Tests: checkout without badge → insight, checkout with badge → no insight
+
+### Value Prop Rules (src/heuristics/rules/value-prop-rules.ts)
+
+- [ ] T110a [US9] Implement H007: unclear_value_prop (2 tests)
+  - Severity: high
+  - Condition: Missing H1 or H1 matches generic patterns (Welcome, Home, Untitled)
+  - Tests: page with "Welcome" H1 → insight, page with specific H1 → no insight
+
+- [ ] T110b [US9] Implement H008: headline_too_long (2 tests)
+  - Severity: low
+  - Condition: H1 has >10 words
+  - Tests: H1 with 15 words → insight, H1 with 6 words → no insight
+
+### Navigation Rules (src/heuristics/rules/navigation-rules.ts)
+
+- [ ] T111a [US9] Implement H009: no_breadcrumbs (2 tests)
+  - Severity: low
+  - Condition: Category/product page (detected by URL pattern) without breadcrumb navigation
+  - Tests: /product/123 without breadcrumb → insight, /product/123 with breadcrumb → no insight
+
+- [ ] T111b [US9] Implement H010: no_search_ecommerce (2 tests)
+  - Severity: medium
+  - businessTypes: ['ecommerce'] (only applies to ecommerce)
+  - Condition: Ecommerce site without visible search input/button
+  - Tests: ecommerce without search → insight, ecommerce with search → no insight
+
+- [ ] T111c [US9] Create src/heuristics/rules/index.ts
+  - Export: ctaRules, formRules, trustRules, valuePropRules, navigationRules arrays
+  - Export: allRules combined array
+  - Export: createHeuristicEngine() factory function that registers all 10 rules
+
+**Checkpoint**: 10 rules pass 20 tests (SC-044, SC-012)
+
+---
+
+## Phase 18d: Output Generation (US10)
+
+**Purpose**: Hypothesis generation, insight processing, and report generation
+
+**Prerequisites**: Phase 18c (Heuristic Rules) complete
+
+**Requirements**: FR-082 to FR-087, SC-047 to SC-050
+
+- [ ] T112 [US10] Create src/output/hypothesis-generator.ts (6 tests)
+  - HypothesisGenerator class with generate(insights) method
+  - Configurable minSeverity (default 'high', CR-020)
+  - Creates hypothesis in format: "If {recommendation}, then {metric} will improve because {issue}"
+  - Maps insight category to primary metric (CTR, form completion, conversion rate, etc.)
+  - Calculates priority from severity, estimated effort from category
+  - Tests: generate from high insight, skip low insight, priority sorting, hypothesis format, empty insights, metric mapping
+
+- [ ] T113 [US10] Create src/output/insight-deduplicator.ts (4 tests)
+  - InsightDeduplicator class with deduplicate(insights) method
+  - Removes duplicates based on type + element combination
+  - Keeps first occurrence, merges evidence if different
+  - Tests: remove exact duplicate, keep different elements, keep different types, merge evidence
+
+- [ ] T114 [US10] Create src/output/insight-prioritizer.ts (3 tests)
+  - InsightPrioritizer class with prioritize(insights, businessType) method
+  - Sorts by severity (critical > high > medium > low)
+  - Boosts business-relevant insights (e.g., cart issues for ecommerce)
+  - Tests: severity sorting, business type boost, stable sort for same severity
+
+- [ ] T115 [US10] Create src/output/markdown-reporter.ts (4 tests)
+  - MarkdownReporter class with generate(result) method
+  - Sections: Header, Executive Summary, Critical Issues, High Priority, Medium Priority, Low Priority, Recommended Tests, Footer
+  - Tests: all sections present, empty insights handled, hypotheses formatted, scores displayed
+
+- [ ] T116 [US10] Create src/output/json-exporter.ts (3 tests)
+  - JSONExporter class with export(result) method
+  - Outputs full CROAnalysisResult as formatted JSON
+  - Includes all fields: insights, heuristicInsights, businessType, hypotheses, scores
+  - Tests: valid JSON output, all fields present, parseable result
+
+- [ ] T116a [US10] Update src/output/index.ts with Phase 18d exports
+
+**Checkpoint**: Hypotheses generated for high/critical issues (SC-047), reports include all sections (SC-049)
+
+---
+
+## Phase 18e: Agent Integration (US9, US10)
+
+**Purpose**: Integrate post-processing pipeline into CROAgent
+
+**Prerequisites**: Phase 18d (Output Generation) complete
+
+**Requirements**: FR-088 to FR-092, SC-051 to SC-053
+
+- [ ] T117 [US9] Update src/agent/cro-agent.ts with post-processing pipeline
+  - Add post-processing after agent loop completes:
+    1. Detect business type (BusinessTypeDetector)
+    2. Run heuristics (HeuristicEngine with all 10 rules)
+    3. Combine tool + heuristic insights
+    4. Deduplicate (InsightDeduplicator)
+    5. Prioritize (InsightPrioritizer)
+    6. Generate hypotheses (HypothesisGenerator)
+    7. Calculate scores (overall, byCategory, counts)
+    8. Generate reports if requested
+  - Add AnalyzeOptions.outputFormat field
+
+- [ ] T117a [US9] Update CROAnalysisResult interface
+  - Add: businessType?: BusinessTypeResult
+  - Add: heuristicInsights: CROInsight[]
+  - Add: hypotheses: Hypothesis[]
+  - Add: scores: CROScores
+  - Add: report?: { markdown?: string; json?: string }
+
+- [ ] T117b [US9] Create src/agent/score-calculator.ts
+  - calculateScores(insights) method
+  - Returns: overall (0-100), byCategory, criticalCount, highCount, mediumCount, lowCount
+  - Overall score: 100 - (critical*25 + high*15 + medium*5 + low*2), min 0
+
+- [ ] T118 [US10] Create tests/integration/post-processing.test.ts (12 tests)
+  - Test full pipeline with mock page state
+  - Tests: business type detection, heuristics execution, deduplication, prioritization, hypothesis generation, score calculation, markdown report, json export, empty insights, high volume insights, conflicting insights, end-to-end pipeline
+
+**Checkpoint**: Pipeline executes in sequence (SC-051), result has all fields (SC-052)
+
+---
+
+## Phase 18f: Test Fixtures (US9)
+
+**Purpose**: Create test fixtures for accurate heuristic and business type testing
+
+**Prerequisites**: None (can run in parallel with Phase 18b)
+
+- [ ] T118a [US9] Create tests/fixtures/test-pages/
+  - ecommerce-good.html (passes all heuristics)
+  - ecommerce-bad.html (fails multiple heuristics)
+  - saas-landing.html (SaaS patterns)
+  - form-heavy.html (form field overload test)
+  - no-cta.html (missing CTA above fold)
+
+- [ ] T118b [US9] Create tests/fixtures/expected-results.json
+  - Expected business type for each test page
+  - Expected heuristic failures for each test page
+  - Used for accuracy measurement (SC-013, SC-045)
+
+**Checkpoint**: Test fixtures available for integration tests
+
+---
+
+## Phase 18-CLI: CLI Integration - Final (US6, US10)
 
 **Purpose**: Complete CLI with reports and default CRO mode
 
-- [ ] T109 [US6] Update src/cli.ts - make --analyze the default mode
+**Prerequisites**: Phase 18e (Agent Integration) complete
+
+**Requirements**: FR-093 to FR-097, SC-054 to SC-057
+
+- [ ] T119 [US6] Update src/cli.ts - make --analyze the default mode (4 tests)
   - Remove --cro-extract (now default behavior)
-  - Add --legacy flag for old heading extraction
-  - Add --output-format (json|markdown|console)
-  - Add --output-file path
-- [ ] T110 [US6] Update src/index.ts to export CROAgent as primary
-- [ ] T111 [US6] Create tests/e2e/cro-full-workflow.test.ts
-- [ ] T112 [US6] Update documentation for CRO agent usage
+  - Add --legacy flag for old heading extraction mode
+  - Add --output-format (console|markdown|json) - default: console
+  - Add --output-file <path> - write report to file
+  - Add progress output for post-processing stages
+  - Tests: default mode runs CRO, legacy mode works, output format respected, file written
 
-**Checkpoint**: `npm run start -- https://carwale.com` runs full CRO analysis
+- [ ] T119a [US6] Create src/output/file-writer.ts (2 tests)
+  - FileWriter class with write(content, path) method
+  - Creates directory if missing
+  - Handles existing file (overwrite with warning)
+  - Returns success/error result
+  - Tests: write to new file, write to existing path
 
-**Final test**: `npm run start -- https://www.carwale.com/ --output-format markdown`
+- [ ] T120 [US6] Update src/index.ts to export CROAgent as primary
+  - Export CROAgent as default export
+  - Export BrowserAgent as legacy
+  - Export all Phase 18 types
+
+- [ ] T121 [US6] Create tests/e2e/cro-full-workflow.test.ts (4 tests)
+  - Real browser + mock LLM (or limited real LLM)
+  - Tests: full analysis with report, markdown output, json output, file writing
+
+- [ ] T122 [US6] Update documentation
+  - Update quickstart.md with new CLI usage
+  - Update README.md (if exists) with CRO agent examples
+  - Document all CLI flags
+
+**Checkpoint**: `npm run start -- https://example.com` runs full CRO analysis (SC-054)
+
+**Final test**: `npm run start -- https://www.carwale.com/ --output-format markdown --output-file report.md`
 
 ---
 
 ## Task Summary
 
-| Phase | Tasks | Count | Purpose | Status |
-|-------|-------|-------|---------|--------|
-| 1 | T001-T008 | 8 | Project setup | ✅ Complete |
-| 2 | T009-T011 | 3 | Utilities | ✅ Complete |
-| 3 | T012-T016 | 5 | URL loading (US1) | ✅ Complete |
-| 4 | T017-T019 | 3 | Extraction (US2) | ✅ Complete |
-| 5 | T020-T022 | 3 | LangChain (US3) | ✅ Complete |
-| 6 | T023-T025 | 3 | Output (US4) | ✅ Complete |
-| 7 | T026-T028 | 3 | Orchestrator | ✅ Complete |
-| 8 | T029 | 1 | E2E tests | ✅ Complete |
-| 9 | T030-T035 | 6 | Polish | ✅ Complete |
-| 10 | T036-T039 | 4 | Bug fixes | ✅ Complete |
-| 11 | T040-T044 | 5 | Wait strategy | ✅ Complete |
-| 12 | T045-T053 | 9 | Cookie consent (US5) | ✅ Complete |
-| 13a | T054-T056, T060, T063a, T064a | 6 | Core models | ✅ Complete |
-| 13b | T057-T059, T063b, T064b | 5 | Agent models | ✅ Complete |
-| 14 | T065-T071 | 7 | DOM extraction | ✅ Complete |
-| 14b | T072a-T072c | 3 | CLI: DOM extraction | ✅ Complete |
-| **15** | T073-T077 | 5 | **Tool system** | ⏳ **NEXT** |
-| 15b | T077a-T077b | 2 | CLI: Tool execution | ⏳ Pending |
-| 16 | T078-T087 | 10 | Agent core | ⏳ Pending |
-| 16b | T087a-T087b | 2 | CLI: Agent loop | ⏳ Pending |
-| 17 | T088-T097 | 10 | CRO tools | ⏳ Pending |
-| 18 | T061-T062a, T098-T108 | 14 | Heuristics & output | ⏳ Pending |
-| 18b | T109-T112 | 4 | CLI: Final integration | ⏳ Pending |
+| Phase | Tasks | Count | Purpose | Status | Tests |
+|-------|-------|-------|---------|--------|-------|
+| 1 | T001-T008 | 8 | Project setup | ✅ Complete | - |
+| 2 | T009-T011 | 3 | Utilities | ✅ Complete | - |
+| 3 | T012-T016 | 5 | URL loading (US1) | ✅ Complete | Unit + Integration |
+| 4 | T017-T019 | 3 | Extraction (US2) | ✅ Complete | Unit |
+| 5 | T020-T022 | 3 | LangChain (US3) | ✅ Complete | Integration |
+| 6 | T023-T025 | 3 | Output (US4) | ✅ Complete | Unit |
+| 7 | T026-T028 | 3 | Orchestrator | ✅ Complete | - |
+| 8 | T029 | 1 | E2E tests | ✅ Complete | E2E |
+| 9 | T030-T035 | 6 | Polish | ✅ Complete | - |
+| 10 | T036-T039 | 4 | Bug fixes | ✅ Complete | - |
+| 11 | T040-T044 | 5 | Wait strategy | ✅ Complete | - |
+| 12 | T045-T053 | 9 | Cookie consent (US5) | ✅ Complete | Integration |
+| 13a | T054-T056, T060, T063a, T064a | 6 | Core models | ✅ Complete | 24 unit |
+| 13b | T057-T059, T063b, T064b | 5 | Agent models | ✅ Complete | 33 unit |
+| 14 | T065-T071 | 7 | DOM extraction | ✅ Complete | 35 unit + 14 int |
+| 14b | T072a-T072c | 3 | CLI: DOM extraction | ✅ Complete | - |
+| **15** | T073-T077 | 5 | **Tool system** | ✅ Complete | 20 unit |
+| **15b** | T077a-T077e | 5 | **CLI: Tool execution** | ✅ Complete | 5 unit |
+| **16** | T078-T087 | 12 | **Agent core** | ✅ Complete | 70 unit + 18 int + 8 e2e |
+| **16-CLI** | T088-T090 | 3 | **CLI: Agent loop** | ✅ Complete | 6 unit |
+| **17a** | T091-T093a | 4 | Navigation tools (3) | ✅ Complete | 21 unit |
+| **17b** | T094-T098a | 6 | Analysis tools (5) | ✅ Complete | 51 unit |
+| **17c** | T099-T103 | 6 | Control + Integration | ✅ Complete | 9 unit + 18 int |
+| **18a** | T104-T105a | 3 | Models & Types | ✅ Complete | 8 unit |
+| **18b** | T106-T106d | 5 | Heuristic Engine Core | ✅ Complete | 26 unit |
+| **18c** | T107a-T111c | 11 | 10 Heuristic Rules | ⏳ Pending | 20 unit |
+| **18d** | T112-T116a | 6 | Output Generation | ⏳ Pending | 20 unit |
+| **18e** | T117-T118 | 4 | Agent Integration | ⏳ Pending | 12 int |
+| **18f** | T118a-T118b | 2 | Test Fixtures | ⏳ Pending | - |
+| **18-CLI** | T119-T122 | 6 | CLI: Final Integration | ⏳ Pending | 6 unit + 4 e2e |
 
-**Total**: 120 tasks (74 complete, 46 pending)
+**Total**: 153 tasks (115 complete, 38 pending)
+
+**Phase 18 Structure**:
+- 18a: Models & Types (T104-T105a) - 3 tasks, 8 tests
+- 18b: Heuristic Engine Core (T106-T106d) - 5 tasks, 22 tests
+- 18c: Heuristic Rules (T107a-T111c) - 11 tasks, 20 tests
+- 18d: Output Generation (T112-T116a) - 6 tasks, 20 tests
+- 18e: Agent Integration (T117-T118) - 4 tasks, 12 integration tests
+- 18f: Test Fixtures (T118a-T118b) - 2 tasks, 0 tests (fixtures)
+- 18-CLI: Final Integration (T119-T122) - 6 tasks, 10 tests
+
+**Phase 18 Test Totals**: 88 tests (76 unit + 12 integration)
+
+**Implementation details in plan.md** - tasks.md is task definitions only
 
 **Incremental CLI Milestones**:
-- Phase 14b: `npm run start -- --cro-extract <url>` → Show CRO elements
-- Phase 15b: `npm run start -- --cro-extract --tool <name> <url>` → Run specific tool
-- Phase 16b: `npm run start -- --analyze <url>` → Full agent loop
-- Phase 18b: `npm run start -- <url>` → CRO analysis as default
+- Phase 14b: `npm run start -- --cro-extract <url>` → Show CRO elements ✅
+- Phase 15b: `npm run start -- --cro-extract --tool <name> <url>` → Run specific tool ✅
+- Phase 16-CLI: `npm run start -- --analyze <url>` → Full agent loop ✅
+- Phase 18-CLI: `npm run start -- <url>` → CRO analysis as default (pending)

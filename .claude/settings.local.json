@@ -12,7 +12,11 @@
       "Bash(mkdir:*)",
       "Bash(npx tsc:*)",
       "Bash(npm run test:unit:*)",
-      "Bash(npm run test:integration:*)"
+      "Bash(npm run test:integration:*)",
+      "Bash(npm ls:*)",
+      "Bash(node -e:*)",
+      "WebSearch",
+      "Bash(ls:*)"
     ],
     "deny": [],
     "ask": []

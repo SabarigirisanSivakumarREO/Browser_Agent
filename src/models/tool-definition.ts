@@ -2,12 +2,11 @@
  * Tool Definition Models
  *
  * Defines interfaces for the CRO agent's tool system.
+ * Updated in Phase 15 to use ToolContext for cleaner dependency injection.
  */
 
-import type { Page } from 'playwright';
 import type { ZodSchema } from 'zod';
 import type { CROInsight } from './cro-insight.js';
-import type { PageState } from './page-state.js';
 
 /**
  * Tool execution result
@@ -17,35 +16,31 @@ export interface ToolResult {
   insights: CROInsight[];
   extracted?: unknown;       // Raw data for debugging
   error?: string;            // Error message if !success
-  executionTimeMs?: number;  // For performance tracking
-}
-
-/**
- * Tool definition for registry
- */
-export interface ToolDefinition {
-  name: string;
-  description: string;       // For LLM context (what this tool does)
-  parameters: ZodSchema;     // Zod schema for params validation
-  execute: (
-    params: unknown,
-    page: Page,
-    state: PageState
-  ) => Promise<ToolResult>;
+  executionTimeMs?: number;  // Set by ToolExecutor (CR-017)
 }
 
 /**
  * Action names for CRO tools (for type safety)
+ *
+ * Categories:
+ * - Analysis tools: Examine elements, return CROInsight[]
+ * - Navigation tools: Change page state, return no insights
+ * - Control tools: Agent state management
  */
 export const CROActionNames = [
+  // Analysis tools
   'analyze_ctas',
   'analyze_forms',
   'detect_trust_signals',
   'assess_value_prop',
   'check_navigation',
   'find_friction',
+  // Navigation tools
   'scroll_page',
+  'click', // Added Phase 17
   'go_to_url',
+  // Control tools
+  'record_insight', // Added Phase 17
   'done',
 ] as const;
 
@@ -53,3 +48,23 @@ export const CROActionNames = [
  * CRO action name type (union of all valid action names)
  */
 export type CROActionName = (typeof CROActionNames)[number];
+
+/**
+ * LLM-friendly tool definition (no execute function)
+ * Used by ToolRegistry.getToolDefinitions() for system prompt (FR-037)
+ */
+export interface ToolDefinitionForLLM {
+  name: CROActionName;
+  description: string;
+  parameters: Record<string, unknown>;  // JSON Schema from Zod
+}
+
+/**
+ * @deprecated Use Tool interface from src/agent/tools/types.ts instead
+ * Kept for backward compatibility during Phase 15 transition
+ */
+export interface ToolDefinition {
+  name: string;
+  description: string;
+  parameters: ZodSchema;
+}

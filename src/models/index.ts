@@ -1,5 +1,5 @@
 /**
- * Models Module - Phase 13a + 13b Exports
+ * Models Module - Phase 13a + 13b + 18a Exports
  *
  * Core data models for CRO Agent.
  */
@@ -34,6 +34,7 @@ export type {
 export type {
   ToolResult,
   ToolDefinition,
+  ToolDefinitionForLLM,
   CROActionName,
 } from './tool-definition.js';
 export { CROActionNames } from './tool-definition.js';
@@ -49,3 +50,24 @@ export { DEFAULT_CRO_OPTIONS, createInitialState } from './agent-state.js';
 // Agent output
 export type { CROAgentOutput, ParseResult } from './agent-output.js';
 export { CROAgentOutputSchema, parseAgentOutput } from './agent-output.js';
+
+// Business type (Phase 18a)
+export type {
+  BusinessType,
+  BusinessTypeResult,
+  BusinessTypeSignals,
+} from './business-type.js';
+export { BUSINESS_TYPE_SIGNALS, BUSINESS_TYPES } from './business-type.js';
+
+// Hypothesis (Phase 18a)
+export type {
+  ExpectedImpact,
+  Hypothesis,
+  HypothesisValidated,
+} from './hypothesis.js';
+export {
+  HypothesisSchema,
+  CATEGORY_METRICS,
+  IMPACT_WEIGHTS,
+  SEVERITY_TO_IMPACT,
+} from './hypothesis.js';

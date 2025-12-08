@@ -1,30 +1,39 @@
 # Quickstart: Browser Agent Core
 
 **Feature**: `001-browser-agent-core`
-**Last Updated**: 2025-12-05
+**Last Updated**: 2025-12-09
 
 ---
 
 ## Session Bootstrap (READ THIS FIRST)
 
-**Status**: CRO Agent Implementation In Progress
-- Infrastructure: 74 tasks across 14b phases ✅
-- Remaining: 46 tasks across 9 phases ⏳
+**Status**: CRO Agent Implementation - Phase 18b Complete
+- Completed: 115 tasks (75%) ✅
+- Remaining: 38 tasks across Phase 18c-18-CLI ⏳
 
 **Progress**:
 - Phase 1-12: MVP infrastructure ✅
 - Phase 13a-13b: Data models ✅
 - Phase 14: DOM extraction ✅
 - Phase 14b: CLI `--cro-extract` flag ✅
-- Phase 15-18b: CRO agent + incremental CLI ⏳
+- Phase 15: Tool system ✅
+- Phase 15b: CLI `--tool <name>` flag ✅
+- Phase 16: Agent core ✅
+- Phase 16-CLI: `--analyze` flag ✅
+- Phase 17a: Navigation tools (scroll, click, go_to_url) ✅
+- Phase 17b: Analysis tools (forms, trust, value_prop, navigation, friction) ✅
+- Phase 17c: Control tools (record_insight, done) + Integration ✅
+- Phase 18a: Models & Types (BusinessType, Hypothesis) ✅
+- Phase 18b: Heuristic Engine Core (26 tests) ✅
+- **Phase 18c: 10 Heuristic Rules** ⏳ ← NEXT
 
 **Architecture**:
 - MVP: 5 modules (browser, extraction, langchain, output, orchestrator)
-- CRO Agent: +6 modules (agent, dom, tools, heuristics, models, output extensions)
+- CRO Agent: +7 modules (agent, dom, tools, heuristics, models, output extensions, score-calculator)
 
-**Key insight**: Restructured for incremental CLI integration - test each phase on real sites immediately
+**Key insight**: Phase 18 restructured into 7 sub-phases for better spec coverage (100% FR/SC mapping)
 
-**Next milestone**: Phase 15 - Tool system (BaseTool, ToolRegistry, ToolExecutor)
+**Next milestone**: Phase 18c - 10 Heuristic Rules (H001-H010)
 
 **Instructions**: Keep it concise. Compromise on grammar. Clear, to the point. No fluff.
 
@@ -47,7 +56,7 @@
 | Understand architecture | plan.md (Module Architecture section) |
 | Check requirements | spec.md (User Stories, Requirements) |
 | See implementation details | tasks.md (full task history with checkpoints) |
-| Investigate past decisions | tasks.md (specific phase) + this file (Change History) |
+| Investigate past decisions | research.md (tech decisions) + tasks.md (specific phase) |
 
 ### Change Workflow (MUST FOLLOW)
 
@@ -110,24 +119,25 @@ For any feature/bug fix request:
 
 ### Recent Changes (keep last 3)
 
-**1. Phase 14b: CLI DOM Extraction** - ✅ COMPLETE (2025-12-05)
-- Added `--cro-extract` CLI flag for DOM extraction without LangChain
-- Created CROElementFormatter for CRO element display
-- Tested on carwale.com - extracts CTAs, forms, trust, value props, navigation
-- See: src/cli.ts, src/output/cro-element-formatter.ts
+**1. Phase 18b: Heuristic Engine Core** - ✅ COMPLETE (2025-12-09)
+- Created src/heuristics/ module: types.ts, heuristic-engine.ts, business-type-detector.ts, severity-scorer.ts
+- HeuristicEngine: register rules, run with business type filtering, collect insights
+- BusinessTypeDetector: detect ecommerce/saas/banking/etc from URL, elements, keywords
+- SeverityScorer: boost severity for business-critical issues
+- 26 unit tests (322 total), type check passes
+- See: src/heuristics/index.ts
 
-**2. Incremental CLI Integration Restructure** - ✅ COMPLETE (2025-12-05)
-- Restructured Phases 14-18 for incremental CLI integration
-- Added Phase 14b, 15b, 16b, 18b with CLI milestones
-- Each phase now has testable CLI output
-- See: tasks.md Phase 14b-18b
+**2. Phase 18a: Models & Types** - ✅ COMPLETE (2025-12-09)
+- Created BusinessType enum and BusinessTypeResult interface
+- Created Hypothesis interface with HypothesisSchema (Zod validation)
+- BUSINESS_TYPE_SIGNALS constant for detection patterns
+- See: src/models/business-type.ts, src/models/hypothesis.ts
 
-**3. Phase 13-14: Models & DOM Extraction** - ✅ COMPLETE (2025-12-05)
-- Phase 13a: Core models (DOMTree, CROInsight, PageState, ToolDefinition)
-- Phase 13b: Agent models (CROMemory, AgentState, AgentOutput)
-- Phase 14: DOM extraction pipeline with CRO classification
-- 111 unit tests, 14 integration tests passing
-- See: tasks.md Phase 13-14, src/models/, src/browser/dom/
+**3. Phase 17c: Control Tools + Integration** - ✅ COMPLETE (2025-12-09)
+- Created control tools: record_insight, done
+- Full integration tests for tool chaining and registry
+- All 11 CRO tools complete: 6 analysis + 3 navigation + 2 control
+- See: src/agent/tools/cro/record-insight-tool.ts, done-tool.ts
 
 ---
 
@@ -135,36 +145,31 @@ For any feature/bug fix request:
 
 | Change | Phase | Tasks | CLI Milestone | Status |
 |--------|-------|-------|---------------|--------|
-| **CLI: Final integration** | 18b | T109-T112 | `npm run start -- <url>` (CRO default) | ⏳ |
-| Heuristics & Output | 18 | T061-T108 | - | ⏳ |
-| CRO Analysis Tools | 17 | T088-T097 | - | ⏳ |
-| **CLI: Agent loop** | 16b | T087a-T087b | `--analyze --max-steps N` | ⏳ |
-| Agent Core | 16 | T078-T087 | - | ⏳ |
-| **CLI: Tool execution** | 15b | T077a-T077b | `--tool <name>` | ⏳ |
-| **Tool System** | 15 | T073-T077 | - | ⏳ **NEXT** |
+| **CLI: Final integration** | 18-CLI | T119-T122 | `npm run start -- <url>` (CRO default) | ⏳ |
+| Agent Integration | 18e | T117-T118 | - | ⏳ |
+| Output Generation | 18d | T112-T116a | - | ⏳ |
+| 10 Heuristic Rules | 18c | T107a-T111c | - | ⏳ |
+| Heuristic Engine Core | 18b | T106-T106d | - | ✅ |
+| Models & Types | 18a | T104-T105a | - | ✅ |
+| Control + Integration | 17c | T099-T103 | - | ✅ |
+| Analysis Tools (5) | 17b | T094-T098a | - | ✅ |
+| Navigation Tools (3) | 17a | T091-T093a | - | ✅ |
+| **CLI: Agent loop** | 16-CLI | T088-T090 | `--analyze --max-steps N` | ✅ |
+| Agent Core | 16 | T078-T087 | - | ✅ |
+| **CLI: Tool execution** | 15b | T077a-T077e | `--tool <name>` | ✅ |
+| **Tool System** | 15 | T073-T077 | - | ✅ |
 | CLI: DOM extraction | 14b | T072a-T072c | `--cro-extract` | ✅ |
 | DOM Extraction | 14 | T065-T071 | - | ✅ |
-| Agent Models | 13b | T057-T059, T063b, T064b | - | ✅ |
-| Core Models | 13a | T054-T056, T060, T063a, T064a | - | ✅ |
 | Cookie consent | 12 | T045-T053 | `--no-cookie-dismiss` | ✅ |
-| Hybrid wait | 11 | T040-T044 | `--post-load-wait` | ✅ |
-| Bug fixes | 10 | T036-T039 | - | ✅ |
-| Polish | 9 | T030-T035 | - | ✅ |
-| E2E tests | 8 | T029 | - | ✅ |
-| Orchestrator & CLI | 7 | T026-T028 | `npm run start -- <url>` | ✅ |
-| Output (US4) | 6 | T023-T025 | - | ✅ |
-| LangChain (US3) | 5 | T020-T022 | - | ✅ |
-| Extraction (US2) | 4 | T017-T019 | - | ✅ |
-| URL loading (US1) | 3 | T012-T016 | - | ✅ |
-| Utilities | 2 | T009-T011 | - | ✅ |
-| Setup | 1 | T001-T008 | - | ✅ |
+| Phases 1-13b | - | T001-T064 | - | ✅ |
 
 **Incremental CLI Milestones**:
 ```
-Phase 14b: npm run start -- --cro-extract https://carwale.com
-Phase 15b: npm run start -- --cro-extract --tool analyze_ctas https://carwale.com
-Phase 16b: npm run start -- --analyze --max-steps 5 https://carwale.com
-Phase 18b: npm run start -- https://carwale.com  (CRO analysis as default)
+Phase 14b: npm run start -- --cro-extract https://carwale.com           ✅
+Phase 15b: npm run start -- --cro-extract --tool analyze_ctas https://carwale.com  ✅
+Phase 16-CLI: npm run start -- --analyze --max-steps 5 https://carwale.com  ✅
+Phase 18-CLI: npm run start -- https://carwale.com  (CRO analysis as default)  ⏳
+            npm run start -- https://carwale.com --output-format markdown --output-file report.md  ⏳
 ```
 
 ---
