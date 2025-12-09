@@ -1,19 +1,23 @@
 # Browser Agent
 
-A TypeScript-based browser automation agent that extracts web page data and generates AI-powered insights using LangChain and OpenAI.
+A TypeScript-based CRO (Conversion Rate Optimization) browser automation agent that analyzes web pages and generates AI-powered insights, hypotheses, and optimization recommendations.
 
 ## Overview
 
-Browser Agent is a CLI tool that autonomously navigates web pages, extracts structured data (heading hierarchy), and processes it through OpenAI's GPT-4o-mini model to generate intelligent summaries, categorizations, and insights.
+Browser Agent is a CLI tool that autonomously navigates web pages, extracts CRO-relevant DOM elements, and processes them through a heuristic engine and OpenAI's GPT-4o-mini model to identify conversion optimization opportunities. It generates prioritized insights, testable hypotheses, and actionable recommendations.
 
 ## Features
 
+- **CRO Analysis** - Analyzes CTAs, forms, trust signals, value propositions, navigation, and friction points
+- **Heuristic Engine** - Rule-based analysis with business type detection and severity scoring
+- **Hypothesis Generation** - Creates testable A/B test hypotheses with expected impact
 - **Browser Automation** - Powered by Playwright for reliable web page loading
-- **Heading Extraction** - Extracts H1-H6 elements with document structure analysis
+- **DOM Extraction** - Extracts CRO-relevant elements with intelligent selectors
+- **Cookie Consent Handling** - Automatic detection and dismissal of cookie banners
+- **Multiple Output Formats** - Console, Markdown reports, and JSON export
 - **AI Processing** - LangChain integration with OpenAI GPT-4o-mini for intelligent analysis
 - **Batch Processing** - Process multiple URLs sequentially with aggregated results
-- **Formatted Output** - Beautiful console output with Unicode box drawing
-- **Configurable** - Flexible CLI options for headless mode, timeouts, and verbosity
+- **Legacy Mode** - Original heading extraction mode available via `--legacy` flag
 
 ## Tech Stack
 
@@ -65,66 +69,108 @@ OPENAI_API_KEY=sk-your-api-key-here
 
 ## Usage
 
-### Basic Usage
+### Basic Usage (CRO Analysis)
 
 ```bash
-# Process a single URL
+# Analyze a single URL for CRO opportunities
 npm run start -- https://example.com
 
-# Process multiple URLs
+# Analyze multiple URLs
 npm run start -- https://site1.com https://site2.com https://site3.com
+
+# Generate markdown report
+npm run start -- https://example.com --output-format markdown --output-file report.md
+
+# Generate JSON export
+npm run start -- https://example.com --output-format json --output-file analysis.json
 ```
 
 ### CLI Options
 
 ```bash
-# Run in headless mode (no browser window)
-npm run start -- --headless https://example.com
-npm run start -- -h https://example.com
+# Browser Options
+--headless              Run browser in headless mode (default: visible)
+--timeout <ms>          Page load timeout in milliseconds (default: 60000)
+--wait-until <strategy> Page load wait strategy: load, domcontentloaded, networkidle (default: load)
+--post-load-wait <ms>   Wait time for JS rendering after load (default: 5000)
+--no-cookie-dismiss     Disable automatic cookie consent dismissal
 
-# Set custom timeout (in milliseconds)
-npm run start -- --timeout 120000 https://example.com
+# CRO Analysis Options
+--output-format <fmt>   Output format: console, markdown, json (default: console)
+--output-file <path>    Write report to file
+--max-steps <n>         Maximum analysis steps (default: 10, max: 50)
+--tool <name>           Execute specific CRO tool for debugging
+                        Available: analyze_ctas, analyze_forms, detect_trust_signals,
+                        assess_value_prop, check_navigation, find_friction,
+                        scroll_page, go_to_url, done
 
-# Enable verbose logging
-npm run start -- --verbose https://example.com
-npm run start -- -v https://example.com
+# Mode Options
+--legacy                Use legacy heading extraction mode (no CRO analysis)
+--verbose, -v           Enable verbose logging
+--help, -h              Show help message
+```
 
-# Combine options
-npm run start -- -h -v --timeout 30000 https://example.com
+### Examples
 
-# Show help
-npm run start -- --help
+```bash
+# Full CRO analysis with markdown report
+npm run start -- https://www.example.com --output-format markdown --output-file report.md
+
+# CRO analysis with limited steps
+npm run start -- --max-steps 5 https://www.example.com
+
+# Headless mode with JSON output
+npm run start -- --headless --output-format json --output-file analysis.json https://example.com
+
+# Execute specific tool for debugging
+npm run start -- --tool analyze_ctas https://www.example.com
+
+# Legacy heading extraction mode
+npm run start -- --legacy https://example.com
+
+# Custom wait strategy for dynamic sites
+npm run start -- --wait-until networkidle --post-load-wait 10000 https://spa-site.com
 ```
 
 ### Programmatic Usage
 
 ```typescript
-import { BrowserAgent } from './src';
+import { CROAgent, BrowserAgent } from './src';
 
-const agent = new BrowserAgent({
-  browser: {
+// CRO Analysis (Primary Mode)
+const croAgent = new CROAgent({
+  maxSteps: 10,
+  actionWaitMs: 500,
+  llmTimeoutMs: 60000,
+  failureLimit: 3,
+});
+
+const result = await croAgent.analyze('https://example.com', {
+  browserConfig: {
     headless: true,
     timeout: 60000,
+    waitUntil: 'load',
+    postLoadWait: 5000,
+    dismissCookieConsent: true,
+    browserType: 'chromium',
   },
+  verbose: false,
+});
+
+console.log(result.insights);      // CRO insights found
+console.log(result.hypotheses);    // Testable hypotheses
+console.log(result.scores);        // CRO scores by category
+
+// Legacy Mode (Heading Extraction)
+const legacyAgent = new BrowserAgent({
+  browser: { headless: true, timeout: 60000 },
   verbose: true,
 });
 
-// Validate environment
-agent.validateEnvironment();
-
-// Process single URL
-const result = await agent.processUrl('https://example.com');
-console.log(agent.formatResult(result));
-
-// Process batch
-const batch = await agent.processBatch([
-  'https://site1.com',
-  'https://site2.com',
-]);
-console.log(agent.formatBatch(batch));
-
-// Cleanup
-await agent.close();
+legacyAgent.validateEnvironment();
+const legacyResult = await legacyAgent.processUrl('https://example.com');
+console.log(legacyAgent.formatResult(legacyResult));
+await legacyAgent.close();
 ```
 
 ## Architecture
@@ -132,72 +178,144 @@ await agent.close();
 ### System Overview
 
 ```
-┌─────────────┐     ┌─────────────────┐     ┌─────────────┐
-│   CLI       │────▶│  BrowserAgent   │────▶│   Console   │
-│   Input     │     │  (Orchestrator) │     │   Output    │
-└─────────────┘     └─────────────────┘     └─────────────┘
+┌─────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│   CLI       │────▶│    CROAgent     │────▶│  Output Layer   │
+│   Input     │     │  (Orchestrator) │     │ (Console/MD/JSON)│
+└─────────────┘     └─────────────────┘     └─────────────────┘
                             │
          ┌──────────────────┼──────────────────┐
          │                  │                  │
          ▼                  ▼                  ▼
-  ┌─────────────┐   ┌─────────────┐   ┌─────────────┐
-  │   Browser   │   │  Extraction │   │  LangChain  │
-  │   Module    │   │   Module    │   │   Module    │
-  └─────────────┘   └─────────────┘   └─────────────┘
-         │                                    │
-         ▼                                    ▼
-  ┌─────────────┐                     ┌─────────────┐
-  │  Playwright │                     │ OpenAI API  │
-  └─────────────┘                     └─────────────┘
+  ┌─────────────┐   ┌─────────────┐   ┌─────────────────┐
+  │   Browser   │   │  Heuristic  │   │   LangChain     │
+  │   Module    │   │   Engine    │   │   + Tools       │
+  └─────────────┘   └─────────────┘   └─────────────────┘
+         │                  │                  │
+         ▼                  ▼                  ▼
+  ┌─────────────┐   ┌─────────────┐   ┌─────────────────┐
+  │  Playwright │   │ CRO Rules   │   │   OpenAI API    │
+  │  + DOM Ext. │   │ + Scoring   │   │   + Tool Exec   │
+  └─────────────┘   └─────────────┘   └─────────────────┘
 ```
 
 ### Data Flow Pipeline
 
-1. **Input** - Accept URL(s) from CLI
-2. **Validation** - Validate URL format and environment
-3. **Load** - Navigate to URL using Playwright
-4. **Extract** - Query H1-H6 heading elements
-5. **Process** - Analyze with LangChain + OpenAI
-6. **Output** - Format and display results
+1. **Input** - Accept URL(s) from CLI with analysis options
+2. **Validation** - Validate URL format and environment (API key)
+3. **Load** - Navigate to URL using Playwright with cookie consent handling
+4. **Extract** - Extract CRO-relevant DOM elements (CTAs, forms, trust signals, etc.)
+5. **Analyze** - Run heuristic rules and LLM-powered CRO tools
+6. **Score** - Calculate severity scores and prioritize insights
+7. **Generate** - Create hypotheses from insights
+8. **Output** - Format and display/export results
 
 ### Module Structure
 
 | Module | Responsibility |
 |--------|----------------|
-| `BrowserAgent` | Main orchestrator, coordinates all modules |
+| `CROAgent` | Main orchestrator for CRO analysis workflow |
+| `StateManager` | Manages agent state across analysis steps |
+| `MessageManager` | Handles LLM conversation history |
+| `PromptBuilder` | Constructs prompts for LLM analysis |
+| `ToolRegistry` | Registers and manages CRO analysis tools |
+| `ToolExecutor` | Executes CRO tools with page context |
+| `HeuristicEngine` | Runs rule-based CRO analysis |
+| `BusinessTypeDetector` | Detects website business type |
+| `SeverityScorer` | Calculates insight severity scores |
 | `BrowserManager` | Playwright browser lifecycle management |
-| `PageLoader` | URL navigation and page loading |
-| `HeadingExtractor` | DOM querying for heading elements |
-| `LangChainProcessor` | AI analysis with OpenAI integration |
-| `ResultFormatter` | Console output formatting |
-| `Logger` | Structured JSON logging |
-| `Validator` | URL and environment validation |
+| `PageLoader` | URL navigation with wait strategies |
+| `DOMExtractor` | Extracts CRO-relevant DOM elements |
+| `CookieConsentHandler` | Detects and dismisses cookie banners |
+| `HypothesisGenerator` | Generates testable A/B hypotheses |
+| `InsightDeduplicator` | Removes duplicate insights |
+| `InsightPrioritizer` | Prioritizes insights by impact |
+| `MarkdownReporter` | Generates markdown reports |
+| `JSONExporter` | Exports analysis to JSON |
+| `LangChainProcessor` | AI analysis with OpenAI (legacy mode) |
+| `HeadingExtractor` | H1-H6 extraction (legacy mode) |
 
 ## Project Structure
 
 ```
 browser-agent/
 ├── src/
-│   ├── index.ts              # Main BrowserAgent class
+│   ├── index.ts              # Main exports and BrowserAgent class
 │   ├── cli.ts                # CLI entry point
-│   ├── browser/
+│   ├── agent/                # CRO Agent (primary)
+│   │   ├── cro-agent.ts      # Main CRO analysis orchestrator
+│   │   ├── state-manager.ts  # Agent state management
+│   │   ├── message-manager.ts # LLM conversation handling
+│   │   ├── prompt-builder.ts # LLM prompt construction
+│   │   ├── score-calculator.ts # CRO score calculation
+│   │   └── tools/            # CRO analysis tools
+│   │       ├── tool-registry.ts
+│   │       ├── tool-executor.ts
+│   │       └── cro/          # Individual CRO tools
+│   │           ├── analyze-ctas.ts
+│   │           ├── analyze-forms-tool.ts
+│   │           ├── analyze-trust-tool.ts
+│   │           ├── analyze-value-prop-tool.ts
+│   │           ├── check-navigation-tool.ts
+│   │           ├── find-friction-tool.ts
+│   │           ├── scroll-tool.ts
+│   │           ├── go-to-url-tool.ts
+│   │           ├── click-tool.ts
+│   │           ├── record-insight-tool.ts
+│   │           └── done-tool.ts
+│   ├── browser/              # Browser automation
 │   │   ├── browser-manager.ts
-│   │   └── page-loader.ts
-│   ├── extraction/
+│   │   ├── page-loader.ts
+│   │   ├── cookie-handler.ts # Cookie consent handling
+│   │   ├── cookie-patterns.ts
+│   │   └── dom/              # DOM extraction
+│   │       ├── extractor.ts
+│   │       ├── build-dom-tree.ts
+│   │       ├── serializer.ts
+│   │       └── cro-selectors.ts
+│   ├── heuristics/           # Heuristic analysis engine
+│   │   ├── heuristic-engine.ts
+│   │   ├── business-type-detector.ts
+│   │   ├── severity-scorer.ts
+│   │   └── rules/            # CRO heuristic rules
+│   │       ├── cta-rules.ts
+│   │       ├── form-rules.ts
+│   │       ├── trust-rules.ts
+│   │       ├── navigation-rules.ts
+│   │       └── value-prop-rules.ts
+│   ├── models/               # Data models
+│   │   ├── dom-tree.ts
+│   │   ├── cro-insight.ts
+│   │   ├── hypothesis.ts
+│   │   ├── page-state.ts
+│   │   ├── agent-state.ts
+│   │   ├── agent-output.ts
+│   │   ├── cro-memory.ts
+│   │   ├── business-type.ts
+│   │   └── tool-definition.ts
+│   ├── output/               # Output formatters
+│   │   ├── formatter.ts      # Legacy result formatter
+│   │   ├── cro-element-formatter.ts
+│   │   ├── tool-result-formatter.ts
+│   │   ├── agent-progress-formatter.ts
+│   │   ├── hypothesis-generator.ts
+│   │   ├── insight-deduplicator.ts
+│   │   ├── insight-prioritizer.ts
+│   │   ├── markdown-reporter.ts
+│   │   ├── json-exporter.ts
+│   │   └── file-writer.ts
+│   ├── extraction/           # Legacy heading extraction
 │   │   └── heading-extractor.ts
-│   ├── langchain/
+│   ├── langchain/            # LangChain integration
 │   │   └── processor.ts
-│   ├── output/
-│   │   └── formatter.ts
-│   ├── types/
+│   ├── types/                # TypeScript types
 │   │   └── index.ts
-│   └── utils/
+│   └── utils/                # Utilities
 │       ├── logger.ts
 │       └── validator.ts
 ├── tests/
-│   ├── unit/
-│   ├── integration/
-│   └── e2e/
+│   ├── unit/                 # Unit tests
+│   ├── integration/          # Integration tests
+│   └── e2e/                  # End-to-end tests
 ├── design/                   # Architecture diagrams (SVG)
 │   ├── architecture-overview.svg
 │   ├── component-details.svg
@@ -213,6 +331,50 @@ browser-agent/
 ```
 
 ## Output Example
+
+### CRO Analysis Output (Default)
+
+```
+╔══════════════════════════════════════════════════════════════════════════╗
+║                        CRO ANALYSIS RESULTS                              ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║ URL: https://example.com                                                 ║
+║ Status: SUCCESS                                                          ║
+║ Steps Executed: 8                                                        ║
+║ Total Time: 45.2s                                                        ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║ CRO SCORES                                                               ║
+║   Overall: 72/100                                                        ║
+║   CTAs: 65  |  Forms: 80  |  Trust: 75  |  Value Prop: 70                ║
+║   Critical: 1  |  High: 3  |  Medium: 5  |  Low: 2                       ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║ TOP INSIGHTS                                                             ║
+║                                                                          ║
+║ [CRITICAL] Primary CTA below the fold                                    ║
+║   Category: CTA | Element: #signup-btn                                   ║
+║   The main call-to-action is not visible without scrolling               ║
+║                                                                          ║
+║ [HIGH] Missing trust signals near checkout                               ║
+║   Category: Trust | Element: .checkout-form                              ║
+║   No security badges or guarantees visible in checkout area              ║
+║                                                                          ║
+║ [HIGH] Form has too many required fields                                 ║
+║   Category: Forms | Element: #contact-form                               ║
+║   12 required fields may cause form abandonment                          ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║ HYPOTHESES                                                               ║
+║                                                                          ║
+║ 1. Move primary CTA above the fold                                       ║
+║    Expected Impact: +15-25% conversion rate                              ║
+║    Test: A/B test CTA position                                           ║
+║                                                                          ║
+║ 2. Add trust badges near checkout button                                 ║
+║    Expected Impact: +5-10% checkout completion                           ║
+║    Test: Add SSL/security badges, money-back guarantee                   ║
+╚══════════════════════════════════════════════════════════════════════════╝
+```
+
+### Legacy Mode Output (--legacy)
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
@@ -283,7 +445,60 @@ The agent implements stage-aware error handling:
 
 ## Type Definitions
 
-### Core Types
+### Core Types (CRO Analysis)
+
+```typescript
+// CRO Analysis Result
+interface CROAnalysisResult {
+  url: string;
+  success: boolean;
+  insights: CROInsight[];
+  heuristicInsights: CROInsight[];
+  hypotheses: Hypothesis[];
+  scores: CROScores;
+  stepsExecuted: number;
+  totalTimeMs: number;
+  terminationReason: string;
+  errors: string[];
+}
+
+// CRO Insight
+interface CROInsight {
+  id: string;
+  category: CROCategory;
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  title: string;
+  description: string;
+  element?: string;
+  recommendation: string;
+  impact: string;
+}
+
+// CRO Scores
+interface CROScores {
+  overall: number;
+  byCategory: Record<CROCategory, number>;
+  criticalCount: number;
+  highCount: number;
+  mediumCount: number;
+  lowCount: number;
+}
+
+// Hypothesis for A/B Testing
+interface Hypothesis {
+  id: string;
+  title: string;
+  description: string;
+  expectedImpact: string;
+  testSuggestion: string;
+  relatedInsights: string[];
+  priority: 'high' | 'medium' | 'low';
+}
+
+type CROCategory = 'cta' | 'forms' | 'trust' | 'value_prop' | 'navigation' | 'friction';
+```
+
+### Legacy Types (Heading Extraction)
 
 ```typescript
 interface Heading {
@@ -296,12 +511,6 @@ interface ExtractionResult {
   headings: Heading[];
   totalCount: number;
   countByLevel: Record<number, number>;
-}
-
-interface ProcessingResult {
-  summary: string;
-  categories: string[];
-  insights: string[];
 }
 
 interface AgentResult {
