@@ -268,5 +268,31 @@ export * from './types/index.js';
 export { BrowserManager, PageLoader } from './browser/index.js';
 export { HeadingExtractor } from './extraction/index.js';
 export { LangChainProcessor } from './langchain/index.js';
-export { ResultFormatter } from './output/index.js';
+export {
+  ResultFormatter,
+  CROElementFormatter,
+  ToolResultFormatter,
+  AgentProgressFormatter,
+  HypothesisGenerator,
+  InsightDeduplicator,
+  InsightPrioritizer,
+  MarkdownReporter,
+  JSONExporter,
+  FileWriter,
+} from './output/index.js';
 export { createLogger, validateUrl, validateEnvironment } from './utils/index.js';
+
+// Phase 18: CRO Agent exports (primary)
+export { CROAgent, type CROAnalysisResult, type CROScores } from './agent/index.js';
+export {
+  createCRORegistry,
+  ToolRegistry,
+  ToolExecutor,
+} from './agent/tools/index.js';
+export {
+  createHeuristicEngine,
+  HeuristicEngine,
+  BusinessTypeDetector,
+  SeverityScorer,
+} from './heuristics/index.js';
+export * from './models/index.js';

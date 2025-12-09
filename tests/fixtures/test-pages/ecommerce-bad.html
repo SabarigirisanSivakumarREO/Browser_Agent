@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bad Store</title>
+</head>
+<body>
+  <!-- No main navigation element -->
+  <div class="header">
+    <a href="/">Bad Store</a>
+    <ul>
+      <li><a href="/products">Products</a></li>
+      <li><a href="/cart" class="cart-link">Cart</a></li>
+    </ul>
+    <!-- No search functionality -->
+  </div>
+
+  <!-- No breadcrumb navigation -->
+
+  <!-- Generic/Unclear Value Proposition -->
+  <header class="hero">
+    <!-- H007: unclear_value_prop - Generic headline -->
+    <h1>Welcome</h1>
+    <!-- H008: headline_too_long - Would fail if H1 were long -->
+    <!-- No subheadline -->
+  </header>
+
+  <!-- H002: no_cta_above_fold - All CTAs below fold -->
+  <!-- Trust signals and CTAs pushed far down -->
+
+  <div style="height: 2000px;">
+    <!-- Large spacer to push content below fold -->
+    <p>Scroll down for content...</p>
+  </div>
+
+  <!-- No trust signals above fold -->
+  <!-- H005: no_trust_above_fold -->
+  <!-- H006: no_security_badge (ecommerce checkout without SSL badge) -->
+
+  <!-- Product section with issues -->
+  <main class="product-listing">
+    <article class="product-card">
+      <h3>Product Name</h3>
+      <p class="price">$99.00</p>
+
+      <!-- H001: vague_cta_text - Generic CTA text -->
+      <button class="cta" data-add-to-cart="true">
+        Click Here
+      </button>
+
+      <!-- Another vague CTA -->
+      <a href="/details" class="cta">Learn More</a>
+    </article>
+  </main>
+
+  <!-- H003: form_field_overload - Form with too many fields (>5) -->
+  <section class="checkout-form">
+    <h2>Checkout</h2>
+    <form id="checkout-form" action="/checkout">
+      <!-- H004: missing_field_label - Inputs without labels -->
+      <input type="text" name="first_name" />
+      <input type="text" name="last_name" />
+      <input name="email" />
+      <input name="phone" />
+      <input name="address1" />
+      <input name="address2" />
+      <input name="city" />
+      <!-- 7 fields - exceeds 5 field limit -->
+
+      <!-- Generic submit button -->
+      <button type="submit">Submit</button>
+      <!-- No error container -->
+    </form>
+  </section>
+
+  <!-- Trust signals far below fold (not counted as above fold) -->
+  <section class="trust-section" style="margin-top: 500px;">
+    <div class="reviews">
+      <span>Some reviews here</span>
+    </div>
+  </section>
+
+  <!-- No footer navigation -->
+  <footer>
+    <p>&copy; 2024 Bad Store</p>
+  </footer>
+</body>
+</html>

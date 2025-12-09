@@ -1,0 +1,316 @@
+{
+  "$schema": "./expected-results.schema.json",
+  "description": "Expected results for test fixtures - used for accuracy measurement (SC-013, SC-045)",
+  "version": "1.0.0",
+  "testPages": {
+    "ecommerce-good.html": {
+      "description": "Well-optimized ecommerce page that passes all heuristics",
+      "businessType": {
+        "expected": "ecommerce",
+        "minConfidence": 0.7,
+        "expectedSignals": [
+          "URL pattern match",
+          "Element selectors found",
+          "Keywords matched"
+        ]
+      },
+      "heuristicFailures": {
+        "expected": [],
+        "description": "Should pass all 10 heuristic rules"
+      },
+      "croElements": {
+        "cta": {
+          "minCount": 2,
+          "aboveFold": true,
+          "hasSpecificText": true
+        },
+        "form": {
+          "minCount": 1,
+          "hasLabels": true,
+          "fieldCount": 2
+        },
+        "trust": {
+          "minCount": 3,
+          "aboveFold": true,
+          "hasSecurityBadge": true
+        },
+        "value_prop": {
+          "hasH1": true,
+          "h1IsSpecific": true,
+          "hasSubheadline": true
+        },
+        "navigation": {
+          "hasMainNav": true,
+          "hasBreadcrumb": true,
+          "hasSearch": true
+        }
+      }
+    },
+    "ecommerce-bad.html": {
+      "description": "Poorly optimized ecommerce page that fails multiple heuristics",
+      "businessType": {
+        "expected": "ecommerce",
+        "minConfidence": 0.5,
+        "expectedSignals": [
+          "Element selectors found"
+        ]
+      },
+      "heuristicFailures": {
+        "expected": [
+          "H001",
+          "H002",
+          "H003",
+          "H004",
+          "H005",
+          "H006",
+          "H007",
+          "H010"
+        ],
+        "description": "Should fail 8 heuristic rules: vague CTA, no CTA above fold, form overload, missing labels, no trust above fold, no security badge, unclear value prop, no search (ecommerce)"
+      },
+      "croElements": {
+        "cta": {
+          "minCount": 2,
+          "aboveFold": false,
+          "hasSpecificText": false,
+          "vagueTextExamples": ["Click Here", "Learn More", "Submit"]
+        },
+        "form": {
+          "minCount": 1,
+          "hasLabels": false,
+          "fieldCount": 7
+        },
+        "trust": {
+          "minCount": 1,
+          "aboveFold": false,
+          "hasSecurityBadge": false
+        },
+        "value_prop": {
+          "hasH1": true,
+          "h1IsSpecific": false,
+          "h1Text": "Welcome",
+          "hasSubheadline": false
+        },
+        "navigation": {
+          "hasMainNav": false,
+          "hasBreadcrumb": false,
+          "hasSearch": false
+        }
+      }
+    },
+    "saas-landing.html": {
+      "description": "Well-optimized SaaS landing page",
+      "businessType": {
+        "expected": "saas",
+        "minConfidence": 0.7,
+        "expectedSignals": [
+          "URL pattern match",
+          "Element selectors found",
+          "Keywords matched"
+        ]
+      },
+      "heuristicFailures": {
+        "expected": [],
+        "description": "Should pass all applicable heuristic rules"
+      },
+      "croElements": {
+        "cta": {
+          "minCount": 5,
+          "aboveFold": true,
+          "hasSpecificText": true,
+          "specificTextExamples": ["Start Free Trial", "Start Your 14-Day Free Trial"]
+        },
+        "form": {
+          "minCount": 1,
+          "hasLabels": true,
+          "fieldCount": 1
+        },
+        "trust": {
+          "minCount": 3,
+          "aboveFold": true,
+          "hasTestimonials": true
+        },
+        "value_prop": {
+          "hasH1": true,
+          "h1IsSpecific": true,
+          "h1ContainsBenefit": true,
+          "hasSubheadline": true
+        },
+        "navigation": {
+          "hasMainNav": true,
+          "hasBreadcrumb": false,
+          "hasSearch": false
+        }
+      }
+    },
+    "form-heavy.html": {
+      "description": "Insurance quote page with intentionally long form for H003 testing",
+      "businessType": {
+        "expected": "insurance",
+        "minConfidence": 0.6,
+        "expectedSignals": [
+          "URL pattern match",
+          "Keywords matched"
+        ]
+      },
+      "heuristicFailures": {
+        "expected": [
+          "H003"
+        ],
+        "description": "Should fail H003 (form field overload) due to >5 visible fields"
+      },
+      "croElements": {
+        "cta": {
+          "minCount": 1,
+          "aboveFold": true,
+          "hasSpecificText": true
+        },
+        "form": {
+          "minCount": 1,
+          "hasLabels": true,
+          "fieldCount": 15,
+          "note": "Large form with 15+ fields triggers H003"
+        },
+        "trust": {
+          "minCount": 2,
+          "aboveFold": true,
+          "hasSecurityBadge": true
+        },
+        "value_prop": {
+          "hasH1": true,
+          "h1IsSpecific": true,
+          "hasSubheadline": true
+        },
+        "navigation": {
+          "hasMainNav": true,
+          "hasBreadcrumb": true,
+          "hasSearch": false
+        }
+      }
+    },
+    "no-cta.html": {
+      "description": "Corporate about page with no CTAs - tests CTA detection",
+      "businessType": {
+        "expected": "other",
+        "minConfidence": 0.0,
+        "expectedSignals": [
+          "No strong signals detected"
+        ]
+      },
+      "heuristicFailures": {
+        "expected": [
+          "H002",
+          "H005",
+          "H007"
+        ],
+        "description": "Should fail: no CTA above fold (H002), no trust above fold (H005), unclear value prop (H007 - generic 'About Us' headline)"
+      },
+      "croElements": {
+        "cta": {
+          "minCount": 0,
+          "aboveFold": false,
+          "note": "No CTAs on page at all"
+        },
+        "form": {
+          "minCount": 0
+        },
+        "trust": {
+          "minCount": 0,
+          "aboveFold": false
+        },
+        "value_prop": {
+          "hasH1": true,
+          "h1IsSpecific": false,
+          "h1Text": "About Us",
+          "hasSubheadline": false
+        },
+        "navigation": {
+          "hasMainNav": false,
+          "hasBreadcrumb": false,
+          "hasSearch": false
+        }
+      }
+    }
+  },
+  "heuristicRules": {
+    "H001": {
+      "name": "vague_cta_text",
+      "category": "cta",
+      "severity": "medium",
+      "description": "CTAs should have specific, action-oriented text",
+      "triggerPatterns": ["Click Here", "Learn More", "Submit", "Go", "Continue", "Next", "More", "Info", "Details", "Here", "Link", "Button", "Read More"]
+    },
+    "H002": {
+      "name": "no_cta_above_fold",
+      "category": "cta",
+      "severity": "high",
+      "description": "At least one CTA should be visible without scrolling"
+    },
+    "H003": {
+      "name": "form_field_overload",
+      "category": "form",
+      "severity": "high",
+      "description": "Forms with more than 5 visible fields create friction",
+      "threshold": 5
+    },
+    "H004": {
+      "name": "missing_field_label",
+      "category": "form",
+      "severity": "medium",
+      "description": "Form inputs should have associated labels or placeholders"
+    },
+    "H005": {
+      "name": "no_trust_above_fold",
+      "category": "trust",
+      "severity": "medium",
+      "description": "Trust signals should be visible without scrolling"
+    },
+    "H006": {
+      "name": "no_security_badge",
+      "category": "trust",
+      "severity": "high",
+      "businessTypes": ["ecommerce", "banking", "insurance"],
+      "description": "Security badges required on checkout/sensitive pages"
+    },
+    "H007": {
+      "name": "unclear_value_prop",
+      "category": "value_prop",
+      "severity": "high",
+      "description": "H1 should clearly communicate value proposition",
+      "genericPatterns": ["Welcome", "Home", "Homepage", "Untitled", "About", "About Us"]
+    },
+    "H008": {
+      "name": "headline_too_long",
+      "category": "value_prop",
+      "severity": "low",
+      "description": "Headlines should be concise (10 words or fewer)",
+      "threshold": 10
+    },
+    "H009": {
+      "name": "no_breadcrumbs",
+      "category": "navigation",
+      "severity": "low",
+      "description": "Category/product pages should have breadcrumb navigation",
+      "appliesTo": ["product", "category", "subcategory"]
+    },
+    "H010": {
+      "name": "no_search_ecommerce",
+      "category": "navigation",
+      "severity": "medium",
+      "businessTypes": ["ecommerce"],
+      "description": "Ecommerce sites should have visible search functionality"
+    }
+  },
+  "accuracyTargets": {
+    "SC-013": {
+      "description": "Heuristic accuracy target",
+      "target": 0.9,
+      "note": "90% accuracy on heuristic detection"
+    },
+    "SC-045": {
+      "description": "Business type detection accuracy target",
+      "target": 0.8,
+      "note": "80% accuracy on business type detection"
+    }
+  }
+}

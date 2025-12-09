@@ -7,7 +7,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
   HeuristicEngine,
-  createHeuristicEngine,
   type HeuristicRule,
 } from '../../src/heuristics/index.js';
 import type { PageState, CROInsight, BusinessType } from '../../src/models/index.js';
@@ -92,7 +91,8 @@ describe('HeuristicEngine', () => {
   let engine: HeuristicEngine;
 
   beforeEach(() => {
-    engine = createHeuristicEngine();
+    // Use new HeuristicEngine() directly to get empty engine for testing
+    engine = new HeuristicEngine();
   });
 
   describe('register', () => {

@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 950">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1100">
   <defs>
     <style>
       .title { font: bold 28px 'Segoe UI', Arial, sans-serif; fill: #1e293b; }
@@ -28,14 +28,24 @@
       <stop offset="100%" style="stop-color:#059669"/>
     </linearGradient>
 
-    <linearGradient id="extractGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+    <linearGradient id="domGrad" x1="0%" y1="0%" x2="0%" y2="100%">
       <stop offset="0%" style="stop-color:#f59e0b"/>
       <stop offset="100%" style="stop-color:#d97706"/>
     </linearGradient>
 
-    <linearGradient id="aiGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+    <linearGradient id="agentGrad" x1="0%" y1="0%" x2="0%" y2="100%">
       <stop offset="0%" style="stop-color:#8b5cf6"/>
       <stop offset="100%" style="stop-color:#7c3aed"/>
+    </linearGradient>
+
+    <linearGradient id="toolsGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#06b6d4"/>
+      <stop offset="100%" style="stop-color:#0891b2"/>
+    </linearGradient>
+
+    <linearGradient id="heuristicGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#f97316"/>
+      <stop offset="100%" style="stop-color:#ea580c"/>
     </linearGradient>
 
     <linearGradient id="outputGrad" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -53,9 +63,9 @@
       <stop offset="100%" style="stop-color:#dc2626"/>
     </linearGradient>
 
-    <linearGradient id="cookieGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" style="stop-color:#06b6d4"/>
-      <stop offset="100%" style="stop-color:#0891b2"/>
+    <linearGradient id="loopGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#a855f7"/>
+      <stop offset="100%" style="stop-color:#6366f1"/>
     </linearGradient>
 
     <!-- Shadow filter -->
@@ -63,7 +73,7 @@
       <feDropShadow dx="2" dy="4" stdDeviation="4" flood-opacity="0.15"/>
     </filter>
 
-    <!-- Arrow marker -->
+    <!-- Arrow markers -->
     <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
       <path d="M0,0 L0,6 L9,3 z" fill="#94a3b8"/>
     </marker>
@@ -71,356 +81,512 @@
     <marker id="arrow-blue" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
       <path d="M0,0 L0,6 L9,3 z" fill="#3b82f6"/>
     </marker>
+
+    <marker id="arrow-purple" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#8b5cf6"/>
+    </marker>
   </defs>
 
   <!-- Background -->
-  <rect width="1200" height="950" fill="#f8fafc"/>
+  <rect width="1400" height="1100" fill="#f8fafc"/>
 
   <!-- Header -->
-  <rect x="0" y="0" width="1200" height="80" fill="url(#headerGrad)"/>
-  <text x="600" y="40" class="title" text-anchor="middle" fill="white">Browser Agent - System Architecture</text>
-  <text x="600" y="62" class="subtitle" text-anchor="middle" fill="rgba(255,255,255,0.8)">Web Data Extraction &amp; AI Analysis Pipeline</text>
+  <rect x="0" y="0" width="1400" height="80" fill="url(#headerGrad)"/>
+  <text x="700" y="40" class="title" text-anchor="middle" fill="white">CRO Browser Agent - System Architecture</text>
+  <text x="700" y="62" class="subtitle" text-anchor="middle" fill="rgba(255,255,255,0.8)">AI-Powered Conversion Rate Optimization Analysis Platform</text>
 
   <!-- User/CLI Input -->
   <g transform="translate(50, 110)">
-    <rect width="120" height="70" rx="10" fill="white" stroke="#e2e8f0" stroke-width="2" filter="url(#shadow)"/>
-    <rect width="120" height="25" rx="10" fill="#1e293b"/>
-    <rect x="0" y="15" width="120" height="10" fill="#1e293b"/>
-    <text x="60" y="17" class="component-title" text-anchor="middle">USER / CLI</text>
-    <text x="60" y="48" class="label" text-anchor="middle">npm run start</text>
-    <text x="60" y="62" class="small-text" text-anchor="middle">--url --headless</text>
+    <rect width="140" height="80" rx="10" fill="white" stroke="#e2e8f0" stroke-width="2" filter="url(#shadow)"/>
+    <rect width="140" height="25" rx="10" fill="#1e293b"/>
+    <rect x="0" y="15" width="140" height="10" fill="#1e293b"/>
+    <text x="70" y="17" class="component-title" text-anchor="middle">USER / CLI</text>
+    <text x="70" y="45" class="label" text-anchor="middle">npm run start</text>
+    <text x="70" y="60" class="small-text" text-anchor="middle">--output-format md</text>
+    <text x="70" y="72" class="small-text" text-anchor="middle">--max-steps 10</text>
   </g>
 
-  <!-- Arrow from User to BrowserAgent -->
-  <line x1="170" y1="145" x2="230" y2="145" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
-  <text x="200" y="138" class="small-text" text-anchor="middle">URLs</text>
+  <!-- Arrow from User to CROAgent -->
+  <line x1="190" y1="150" x2="250" y2="150" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="220" y="143" class="small-text" text-anchor="middle">URL</text>
 
-  <!-- Main Orchestrator - BrowserAgent -->
-  <g transform="translate(240, 100)">
-    <rect width="200" height="100" rx="12" fill="url(#orchestratorGrad)" filter="url(#shadow)"/>
-    <text x="100" y="30" class="component-title" text-anchor="middle">BROWSER AGENT</text>
-    <text x="100" y="48" class="component-subtitle" text-anchor="middle">Main Orchestrator</text>
-    <line x1="20" y1="58" x2="180" y2="58" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
-    <text x="100" y="75" class="component-subtitle" text-anchor="middle">index.ts</text>
-    <text x="100" y="90" class="component-subtitle" text-anchor="middle">processUrl() | processBatch()</text>
+  <!-- Main Orchestrator - CROAgent -->
+  <g transform="translate(260, 100)">
+    <rect width="220" height="110" rx="12" fill="url(#orchestratorGrad)" filter="url(#shadow)"/>
+    <text x="110" y="28" class="component-title" text-anchor="middle">CRO AGENT</text>
+    <text x="110" y="45" class="component-subtitle" text-anchor="middle">Main Orchestrator</text>
+    <line x1="20" y1="55" x2="200" y2="55" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+    <text x="110" y="72" class="component-subtitle" text-anchor="middle">cro-agent.ts</text>
+    <text x="110" y="87" class="component-subtitle" text-anchor="middle">analyze(url, options)</text>
+    <text x="110" y="102" class="component-subtitle" text-anchor="middle">observe → reason → act</text>
   </g>
 
-  <!-- Five main modules -->
+  <!-- Agent Loop Indicator -->
+  <g transform="translate(490, 105)">
+    <rect width="130" height="100" rx="8" fill="url(#loopGrad)" filter="url(#shadow)"/>
+    <text x="65" y="25" class="component-title" text-anchor="middle">AGENT LOOP</text>
+    <line x1="10" y1="35" x2="120" y2="35" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+    <text x="65" y="52" class="component-subtitle" text-anchor="middle">Max 10 steps</text>
+    <text x="65" y="67" class="component-subtitle" text-anchor="middle">GPT-4 reasoning</text>
+    <text x="65" y="82" class="component-subtitle" text-anchor="middle">Tool execution</text>
+  </g>
+
+  <!-- Six main modules -->
 
   <!-- Browser Module -->
   <g transform="translate(50, 260)">
-    <rect width="200" height="150" rx="12" fill="url(#browserGrad)" filter="url(#shadow)"/>
-    <text x="100" y="28" class="component-title" text-anchor="middle">BROWSER MODULE</text>
-    <line x1="15" y1="38" x2="185" y2="38" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
-    <text x="100" y="58" class="component-subtitle" text-anchor="middle">BrowserManager</text>
-    <text x="100" y="73" class="component-subtitle" text-anchor="middle">PageLoader (hybrid wait)</text>
-    <text x="100" y="88" class="component-subtitle" text-anchor="middle">CookieConsentHandler</text>
-    <line x1="15" y1="100" x2="185" y2="100" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
-    <text x="100" y="118" class="component-subtitle" text-anchor="middle">Chromium | ignoreHTTPS</text>
-    <text x="100" y="133" class="component-subtitle" text-anchor="middle">8 CMP patterns + heuristic</text>
+    <rect width="190" height="140" rx="12" fill="url(#browserGrad)" filter="url(#shadow)"/>
+    <text x="95" y="25" class="component-title" text-anchor="middle">BROWSER MODULE</text>
+    <line x1="15" y1="35" x2="175" y2="35" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+    <text x="95" y="52" class="component-subtitle" text-anchor="middle">BrowserManager</text>
+    <text x="95" y="67" class="component-subtitle" text-anchor="middle">PageLoader (hybrid wait)</text>
+    <text x="95" y="82" class="component-subtitle" text-anchor="middle">CookieConsentHandler</text>
+    <line x1="15" y1="92" x2="175" y2="92" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+    <text x="95" y="108" class="component-subtitle" text-anchor="middle">Chromium | 60s timeout</text>
+    <text x="95" y="123" class="component-subtitle" text-anchor="middle">8 CMPs + heuristic</text>
   </g>
 
-  <!-- Extraction Module -->
-  <g transform="translate(280, 260)">
-    <rect width="180" height="130" rx="12" fill="url(#extractGrad)" filter="url(#shadow)"/>
-    <text x="90" y="28" class="component-title" text-anchor="middle">EXTRACTION MODULE</text>
-    <line x1="15" y1="38" x2="165" y2="38" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
-    <text x="90" y="58" class="component-subtitle" text-anchor="middle">HeadingExtractor</text>
-    <line x1="15" y1="70" x2="165" y2="70" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
-    <text x="90" y="88" class="component-subtitle" text-anchor="middle">Extracts H1-H6</text>
-    <text x="90" y="103" class="component-subtitle" text-anchor="middle">Normalizes text</text>
-    <text x="90" y="118" class="component-subtitle" text-anchor="middle">Counts by level</text>
+  <!-- DOM Extraction Module -->
+  <g transform="translate(260, 260)">
+    <rect width="190" height="140" rx="12" fill="url(#domGrad)" filter="url(#shadow)"/>
+    <text x="95" y="25" class="component-title" text-anchor="middle">DOM EXTRACTION</text>
+    <line x1="15" y1="35" x2="175" y2="35" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+    <text x="95" y="52" class="component-subtitle" text-anchor="middle">DOMExtractor</text>
+    <text x="95" y="67" class="component-subtitle" text-anchor="middle">CRO Classifier</text>
+    <text x="95" y="82" class="component-subtitle" text-anchor="middle">DOM Serializer</text>
+    <line x1="15" y1="92" x2="175" y2="92" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+    <text x="95" y="108" class="component-subtitle" text-anchor="middle">cta | form | trust</text>
+    <text x="95" y="123" class="component-subtitle" text-anchor="middle">value_prop | navigation</text>
   </g>
 
-  <!-- LangChain Module -->
-  <g transform="translate(490, 260)">
-    <rect width="180" height="130" rx="12" fill="url(#aiGrad)" filter="url(#shadow)"/>
-    <text x="90" y="28" class="component-title" text-anchor="middle">LANGCHAIN MODULE</text>
-    <line x1="15" y1="38" x2="165" y2="38" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
-    <text x="90" y="58" class="component-subtitle" text-anchor="middle">LangChainProcessor</text>
-    <line x1="15" y1="70" x2="165" y2="70" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
-    <text x="90" y="88" class="component-subtitle" text-anchor="middle">GPT-4o-mini</text>
-    <text x="90" y="103" class="component-subtitle" text-anchor="middle">Prompt building</text>
-    <text x="90" y="118" class="component-subtitle" text-anchor="middle">Zod validation</text>
+  <!-- Tool System Module -->
+  <g transform="translate(470, 260)">
+    <rect width="190" height="140" rx="12" fill="url(#toolsGrad)" filter="url(#shadow)"/>
+    <text x="95" y="25" class="component-title" text-anchor="middle">TOOL SYSTEM</text>
+    <line x1="15" y1="35" x2="175" y2="35" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+    <text x="95" y="52" class="component-subtitle" text-anchor="middle">ToolRegistry (9 tools)</text>
+    <text x="95" y="67" class="component-subtitle" text-anchor="middle">ToolExecutor + Zod</text>
+    <line x1="15" y1="77" x2="175" y2="77" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+    <text x="95" y="92" class="component-subtitle" text-anchor="middle">analyze_ctas, forms</text>
+    <text x="95" y="107" class="component-subtitle" text-anchor="middle">trust, value_prop, nav</text>
+    <text x="95" y="122" class="component-subtitle" text-anchor="middle">scroll, click, done</text>
+  </g>
+
+  <!-- Agent Core Module -->
+  <g transform="translate(680, 260)">
+    <rect width="190" height="140" rx="12" fill="url(#agentGrad)" filter="url(#shadow)"/>
+    <text x="95" y="25" class="component-title" text-anchor="middle">AGENT CORE</text>
+    <line x1="15" y1="35" x2="175" y2="35" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+    <text x="95" y="52" class="component-subtitle" text-anchor="middle">PromptBuilder</text>
+    <text x="95" y="67" class="component-subtitle" text-anchor="middle">MessageManager</text>
+    <text x="95" y="82" class="component-subtitle" text-anchor="middle">StateManager</text>
+    <line x1="15" y1="92" x2="175" y2="92" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+    <text x="95" y="108" class="component-subtitle" text-anchor="middle">LangChain + GPT-4</text>
+    <text x="95" y="123" class="component-subtitle" text-anchor="middle">Zod output parsing</text>
+  </g>
+
+  <!-- Heuristic Engine Module -->
+  <g transform="translate(890, 260)">
+    <rect width="190" height="140" rx="12" fill="url(#heuristicGrad)" filter="url(#shadow)"/>
+    <text x="95" y="25" class="component-title" text-anchor="middle">HEURISTIC ENGINE</text>
+    <line x1="15" y1="35" x2="175" y2="35" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+    <text x="95" y="52" class="component-subtitle" text-anchor="middle">10 Rules (H001-H010)</text>
+    <text x="95" y="67" class="component-subtitle" text-anchor="middle">BusinessTypeDetector</text>
+    <text x="95" y="82" class="component-subtitle" text-anchor="middle">SeverityScorer</text>
+    <line x1="15" y1="92" x2="175" y2="92" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+    <text x="95" y="108" class="component-subtitle" text-anchor="middle">CTA, Form, Trust rules</text>
+    <text x="95" y="123" class="component-subtitle" text-anchor="middle">Value prop, Nav rules</text>
   </g>
 
   <!-- Output Module -->
-  <g transform="translate(700, 260)">
-    <rect width="180" height="130" rx="12" fill="url(#outputGrad)" filter="url(#shadow)"/>
-    <text x="90" y="28" class="component-title" text-anchor="middle">OUTPUT MODULE</text>
-    <line x1="15" y1="38" x2="165" y2="38" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
-    <text x="90" y="58" class="component-subtitle" text-anchor="middle">ResultFormatter</text>
-    <line x1="15" y1="70" x2="165" y2="70" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
-    <text x="90" y="88" class="component-subtitle" text-anchor="middle">Console output</text>
-    <text x="90" y="103" class="component-subtitle" text-anchor="middle">Unicode box drawing</text>
-    <text x="90" y="118" class="component-subtitle" text-anchor="middle">Batch formatting</text>
+  <g transform="translate(1100, 260)">
+    <rect width="190" height="140" rx="12" fill="url(#outputGrad)" filter="url(#shadow)"/>
+    <text x="95" y="25" class="component-title" text-anchor="middle">OUTPUT MODULE</text>
+    <line x1="15" y1="35" x2="175" y2="35" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+    <text x="95" y="52" class="component-subtitle" text-anchor="middle">MarkdownReporter</text>
+    <text x="95" y="67" class="component-subtitle" text-anchor="middle">JSONExporter</text>
+    <text x="95" y="82" class="component-subtitle" text-anchor="middle">FileWriter</text>
+    <line x1="15" y1="92" x2="175" y2="92" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+    <text x="95" y="108" class="component-subtitle" text-anchor="middle">HypothesisGenerator</text>
+    <text x="95" y="123" class="component-subtitle" text-anchor="middle">InsightPrioritizer</text>
   </g>
 
   <!-- Arrows from Orchestrator to modules -->
-  <path d="M340,200 L340,230 L150,230 L150,260" stroke="#3b82f6" stroke-width="2" fill="none" marker-end="url(#arrow-blue)"/>
-  <path d="M340,200 L340,230 L370,230 L370,260" stroke="#3b82f6" stroke-width="2" fill="none" marker-end="url(#arrow-blue)"/>
-  <path d="M340,200 L340,230 L580,230 L580,260" stroke="#3b82f6" stroke-width="2" fill="none" marker-end="url(#arrow-blue)"/>
-  <path d="M340,200 L340,230 L790,230 L790,260" stroke="#3b82f6" stroke-width="2" fill="none" marker-end="url(#arrow-blue)"/>
+  <path d="M370,210 L370,235 L145,235 L145,260" stroke="#3b82f6" stroke-width="2" fill="none" marker-end="url(#arrow-blue)"/>
+  <path d="M370,210 L370,235 L355,235 L355,260" stroke="#3b82f6" stroke-width="2" fill="none" marker-end="url(#arrow-blue)"/>
+  <path d="M370,210 L370,235 L565,235 L565,260" stroke="#3b82f6" stroke-width="2" fill="none" marker-end="url(#arrow-blue)"/>
+  <path d="M370,210 L370,235 L775,235 L775,260" stroke="#3b82f6" stroke-width="2" fill="none" marker-end="url(#arrow-blue)"/>
+  <path d="M370,210 L370,235 L985,235 L985,260" stroke="#3b82f6" stroke-width="2" fill="none" marker-end="url(#arrow-blue)"/>
+  <path d="M370,210 L370,235 L1195,235 L1195,260" stroke="#3b82f6" stroke-width="2" fill="none" marker-end="url(#arrow-blue)"/>
 
   <!-- External Dependencies -->
 
   <!-- Playwright -->
-  <g transform="translate(50, 445)">
-    <rect width="200" height="60" rx="8" fill="white" stroke="#10b981" stroke-width="2" filter="url(#shadow)"/>
-    <text x="100" y="28" class="label-bold" text-anchor="middle" fill="#059669">Playwright</text>
-    <text x="100" y="45" class="small-text" text-anchor="middle">Browser automation</text>
+  <g transform="translate(50, 430)">
+    <rect width="190" height="55" rx="8" fill="white" stroke="#10b981" stroke-width="2" filter="url(#shadow)"/>
+    <text x="95" y="25" class="label-bold" text-anchor="middle" fill="#059669">Playwright</text>
+    <text x="95" y="42" class="small-text" text-anchor="middle">Browser automation</text>
   </g>
-  <line x1="150" y1="410" x2="150" y2="445" stroke="#10b981" stroke-width="2" stroke-dasharray="4,4"/>
+  <line x1="145" y1="400" x2="145" y2="430" stroke="#10b981" stroke-width="2" stroke-dasharray="4,4"/>
 
   <!-- OpenAI API -->
-  <g transform="translate(490, 430)">
-    <rect width="180" height="60" rx="8" fill="url(#externalGrad)" filter="url(#shadow)"/>
-    <text x="90" y="28" class="component-title" text-anchor="middle">OpenAI API</text>
-    <text x="90" y="45" class="component-subtitle" text-anchor="middle">GPT-4o-mini model</text>
+  <g transform="translate(680, 430)">
+    <rect width="190" height="55" rx="8" fill="url(#externalGrad)" filter="url(#shadow)"/>
+    <text x="95" y="25" class="component-title" text-anchor="middle">OpenAI API</text>
+    <text x="95" y="42" class="component-subtitle" text-anchor="middle">GPT-4 model</text>
   </g>
-  <line x1="580" y1="390" x2="580" y2="430" stroke="#8b5cf6" stroke-width="2" stroke-dasharray="4,4"/>
+  <line x1="775" y1="400" x2="775" y2="430" stroke="#8b5cf6" stroke-width="2" stroke-dasharray="4,4"/>
 
-  <!-- Console Output -->
-  <g transform="translate(700, 430)">
-    <rect width="180" height="60" rx="8" fill="white" stroke="#ec4899" stroke-width="2" filter="url(#shadow)"/>
-    <text x="90" y="28" class="label-bold" text-anchor="middle" fill="#db2777">Console</text>
-    <text x="90" y="45" class="small-text" text-anchor="middle">Terminal output</text>
+  <!-- Console/File Output -->
+  <g transform="translate(1100, 430)">
+    <rect width="190" height="55" rx="8" fill="white" stroke="#ec4899" stroke-width="2" filter="url(#shadow)"/>
+    <text x="95" y="25" class="label-bold" text-anchor="middle" fill="#db2777">Output Destinations</text>
+    <text x="95" y="42" class="small-text" text-anchor="middle">Console | File | JSON | MD</text>
   </g>
-  <line x1="790" y1="390" x2="790" y2="430" stroke="#ec4899" stroke-width="2" stroke-dasharray="4,4"/>
+  <line x1="1195" y1="400" x2="1195" y2="430" stroke="#ec4899" stroke-width="2" stroke-dasharray="4,4"/>
 
   <!-- Utils Section -->
-  <g transform="translate(910, 110)">
-    <rect width="250" height="200" rx="12" fill="white" stroke="#e2e8f0" stroke-width="2" filter="url(#shadow)"/>
-    <rect width="250" height="35" rx="12" fill="url(#utilsGrad)"/>
-    <rect x="0" y="23" width="250" height="12" fill="url(#utilsGrad)"/>
-    <text x="125" y="25" class="component-title" text-anchor="middle">UTILITIES</text>
+  <g transform="translate(1100, 110)">
+    <rect width="250" height="130" rx="12" fill="white" stroke="#e2e8f0" stroke-width="2" filter="url(#shadow)"/>
+    <rect width="250" height="30" rx="12" fill="url(#utilsGrad)"/>
+    <rect x="0" y="20" width="250" height="10" fill="url(#utilsGrad)"/>
+    <text x="125" y="22" class="component-title" text-anchor="middle">UTILITIES &amp; MODELS</text>
 
     <!-- Logger -->
-    <g transform="translate(15, 50)">
-      <rect width="100" height="55" rx="6" fill="#f1f5f9" stroke="#cbd5e1"/>
-      <text x="50" y="20" class="label-bold" text-anchor="middle">Logger</text>
-      <text x="50" y="35" class="small-text" text-anchor="middle">JSON structured</text>
-      <text x="50" y="47" class="small-text" text-anchor="middle">debug/info/warn</text>
+    <g transform="translate(15, 42)">
+      <rect width="105" height="35" rx="6" fill="#f1f5f9" stroke="#cbd5e1"/>
+      <text x="52" y="15" class="label-bold" text-anchor="middle">Logger</text>
+      <text x="52" y="28" class="small-text" text-anchor="middle">JSON structured</text>
     </g>
 
     <!-- Validator -->
-    <g transform="translate(130, 50)">
-      <rect width="105" height="55" rx="6" fill="#f1f5f9" stroke="#cbd5e1"/>
-      <text x="52" y="20" class="label-bold" text-anchor="middle">Validator</text>
-      <text x="52" y="35" class="small-text" text-anchor="middle">URL validation</text>
-      <text x="52" y="47" class="small-text" text-anchor="middle">Env checking</text>
+    <g transform="translate(130, 42)">
+      <rect width="105" height="35" rx="6" fill="#f1f5f9" stroke="#cbd5e1"/>
+      <text x="52" y="15" class="label-bold" text-anchor="middle">Validator</text>
+      <text x="52" y="28" class="small-text" text-anchor="middle">URL + Env check</text>
     </g>
 
-    <!-- Types -->
-    <g transform="translate(15, 115)">
-      <rect width="220" height="70" rx="6" fill="#f1f5f9" stroke="#cbd5e1"/>
-      <text x="110" y="18" class="label-bold" text-anchor="middle">TypeScript Types</text>
-      <text x="110" y="33" class="small-text" text-anchor="middle">Heading | ExtractionResult | ProcessingResult</text>
-      <text x="110" y="48" class="small-text" text-anchor="middle">AgentConfig | AgentResult | BatchResult</text>
-      <text x="110" y="63" class="small-text" text-anchor="middle">CookieConsentPattern | WaitUntilStrategy</text>
+    <!-- Models -->
+    <g transform="translate(15, 85)">
+      <rect width="220" height="35" rx="6" fill="#f1f5f9" stroke="#cbd5e1"/>
+      <text x="110" y="15" class="label-bold" text-anchor="middle">Data Models (Zod)</text>
+      <text x="110" y="28" class="small-text" text-anchor="middle">DOMTree | CROInsight | Hypothesis | PageState</text>
     </g>
   </g>
-
-  <!-- Dashed line from orchestrator to utils -->
-  <line x1="440" y1="150" x2="910" y2="200" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="6,4"/>
 
   <!-- Data Flow Section -->
-  <g transform="translate(50, 530)">
-    <rect width="1100" height="390" rx="12" fill="white" stroke="#e2e8f0" stroke-width="2" filter="url(#shadow)"/>
-    <rect width="1100" height="40" rx="12" fill="#1e293b"/>
-    <rect x="0" y="28" width="1100" height="12" fill="#1e293b"/>
-    <text x="550" y="28" class="component-title" text-anchor="middle">DATA FLOW PIPELINE</text>
+  <g transform="translate(50, 520)">
+    <rect width="1300" height="550" rx="12" fill="white" stroke="#e2e8f0" stroke-width="2" filter="url(#shadow)"/>
+    <rect width="1300" height="40" rx="12" fill="#1e293b"/>
+    <rect x="0" y="28" width="1300" height="12" fill="#1e293b"/>
+    <text x="650" y="28" class="component-title" text-anchor="middle">CRO ANALYSIS PIPELINE</text>
   </g>
 
-  <!-- Pipeline stages -->
+  <!-- Pipeline stages - Row 1 -->
   <!-- Stage 1: Input -->
-  <g transform="translate(70, 590)">
-    <rect width="130" height="80" rx="10" fill="#f1f5f9" stroke="#3b82f6" stroke-width="2"/>
-    <circle cx="65" cy="-10" r="18" fill="#3b82f6"/>
-    <text x="65" y="-5" fill="white" font-size="12" font-weight="bold" text-anchor="middle">1</text>
-    <text x="65" y="30" class="label-bold" text-anchor="middle">INPUT</text>
-    <text x="65" y="48" class="small-text" text-anchor="middle">CLI Arguments</text>
-    <text x="65" y="62" class="small-text" text-anchor="middle">URL(s) + Options</text>
+  <g transform="translate(70, 580)">
+    <rect width="120" height="75" rx="10" fill="#f1f5f9" stroke="#3b82f6" stroke-width="2"/>
+    <circle cx="60" cy="-10" r="16" fill="#3b82f6"/>
+    <text x="60" y="-5" fill="white" font-size="11" font-weight="bold" text-anchor="middle">1</text>
+    <text x="60" y="25" class="label-bold" text-anchor="middle">INPUT</text>
+    <text x="60" y="42" class="small-text" text-anchor="middle">URL + Config</text>
+    <text x="60" y="55" class="small-text" text-anchor="middle">CLI Arguments</text>
   </g>
 
-  <!-- Stage 2: Validate -->
-  <g transform="translate(220, 590)">
-    <rect width="130" height="80" rx="10" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
-    <circle cx="65" cy="-10" r="18" fill="#64748b"/>
-    <text x="65" y="-5" fill="white" font-size="12" font-weight="bold" text-anchor="middle">2</text>
-    <text x="65" y="30" class="label-bold" text-anchor="middle">VALIDATE</text>
-    <text x="65" y="48" class="small-text" text-anchor="middle">URL Format</text>
-    <text x="65" y="62" class="small-text" text-anchor="middle">Environment</text>
+  <!-- Stage 2: Load Page -->
+  <g transform="translate(210, 580)">
+    <rect width="120" height="75" rx="10" fill="#f1f5f9" stroke="#10b981" stroke-width="2"/>
+    <circle cx="60" cy="-10" r="16" fill="#10b981"/>
+    <text x="60" y="-5" fill="white" font-size="11" font-weight="bold" text-anchor="middle">2</text>
+    <text x="60" y="25" class="label-bold" text-anchor="middle">LOAD PAGE</text>
+    <text x="60" y="42" class="small-text" text-anchor="middle">Navigate URL</text>
+    <text x="60" y="55" class="small-text" text-anchor="middle">Dismiss cookies</text>
   </g>
 
-  <!-- Stage 3: Load -->
-  <g transform="translate(370, 590)">
-    <rect width="130" height="80" rx="10" fill="#f1f5f9" stroke="#10b981" stroke-width="2"/>
-    <circle cx="65" cy="-10" r="18" fill="#10b981"/>
-    <text x="65" y="-5" fill="white" font-size="12" font-weight="bold" text-anchor="middle">3</text>
-    <text x="65" y="30" class="label-bold" text-anchor="middle">LOAD PAGE</text>
-    <text x="65" y="48" class="small-text" text-anchor="middle">Navigate URL</text>
-    <text x="65" y="62" class="small-text" text-anchor="middle">Hybrid wait strategy</text>
+  <!-- Stage 3: Extract DOM -->
+  <g transform="translate(350, 580)">
+    <rect width="120" height="75" rx="10" fill="#f1f5f9" stroke="#f59e0b" stroke-width="2"/>
+    <circle cx="60" cy="-10" r="16" fill="#f59e0b"/>
+    <text x="60" y="-5" fill="white" font-size="11" font-weight="bold" text-anchor="middle">3</text>
+    <text x="60" y="25" class="label-bold" text-anchor="middle">EXTRACT DOM</text>
+    <text x="60" y="42" class="small-text" text-anchor="middle">Build DOM tree</text>
+    <text x="60" y="55" class="small-text" text-anchor="middle">CRO classify</text>
   </g>
 
-  <!-- Stage 4: Cookie -->
-  <g transform="translate(520, 590)">
-    <rect width="130" height="80" rx="10" fill="#f1f5f9" stroke="#06b6d4" stroke-width="2"/>
-    <circle cx="65" cy="-10" r="18" fill="#06b6d4"/>
-    <text x="65" y="-5" fill="white" font-size="12" font-weight="bold" text-anchor="middle">4</text>
-    <text x="65" y="30" class="label-bold" text-anchor="middle">COOKIE</text>
-    <text x="65" y="48" class="small-text" text-anchor="middle">Dismiss popups</text>
-    <text x="65" y="62" class="small-text" text-anchor="middle">8 CMPs + heuristic</text>
+  <!-- Stage 4: Agent Loop -->
+  <g transform="translate(490, 580)">
+    <rect width="180" height="75" rx="10" fill="#f1f5f9" stroke="#8b5cf6" stroke-width="2"/>
+    <circle cx="90" cy="-10" r="16" fill="#8b5cf6"/>
+    <text x="90" y="-5" fill="white" font-size="11" font-weight="bold" text-anchor="middle">4</text>
+    <text x="90" y="25" class="label-bold" text-anchor="middle">AGENT LOOP</text>
+    <text x="90" y="42" class="small-text" text-anchor="middle">observe → reason → act</text>
+    <text x="90" y="55" class="small-text" text-anchor="middle">Execute 9 tools</text>
   </g>
 
-  <!-- Stage 5: Extract -->
-  <g transform="translate(670, 590)">
-    <rect width="130" height="80" rx="10" fill="#f1f5f9" stroke="#f59e0b" stroke-width="2"/>
-    <circle cx="65" cy="-10" r="18" fill="#f59e0b"/>
-    <text x="65" y="-5" fill="white" font-size="12" font-weight="bold" text-anchor="middle">5</text>
-    <text x="65" y="30" class="label-bold" text-anchor="middle">EXTRACT</text>
-    <text x="65" y="48" class="small-text" text-anchor="middle">Query H1-H6</text>
-    <text x="65" y="62" class="small-text" text-anchor="middle">Normalize text</text>
+  <!-- Stage 5: Heuristics -->
+  <g transform="translate(690, 580)">
+    <rect width="120" height="75" rx="10" fill="#f1f5f9" stroke="#f97316" stroke-width="2"/>
+    <circle cx="60" cy="-10" r="16" fill="#f97316"/>
+    <text x="60" y="-5" fill="white" font-size="11" font-weight="bold" text-anchor="middle">5</text>
+    <text x="60" y="25" class="label-bold" text-anchor="middle">HEURISTICS</text>
+    <text x="60" y="42" class="small-text" text-anchor="middle">Run 10 rules</text>
+    <text x="60" y="55" class="small-text" text-anchor="middle">Detect biz type</text>
   </g>
 
-  <!-- Stage 6: Process -->
-  <g transform="translate(820, 590)">
-    <rect width="130" height="80" rx="10" fill="#f1f5f9" stroke="#8b5cf6" stroke-width="2"/>
-    <circle cx="65" cy="-10" r="18" fill="#8b5cf6"/>
-    <text x="65" y="-5" fill="white" font-size="12" font-weight="bold" text-anchor="middle">6</text>
-    <text x="65" y="30" class="label-bold" text-anchor="middle">AI PROCESS</text>
-    <text x="65" y="48" class="small-text" text-anchor="middle">LangChain</text>
-    <text x="65" y="62" class="small-text" text-anchor="middle">GPT-4o Analysis</text>
+  <!-- Stage 6: Post-Process -->
+  <g transform="translate(830, 580)">
+    <rect width="120" height="75" rx="10" fill="#f1f5f9" stroke="#06b6d4" stroke-width="2"/>
+    <circle cx="60" cy="-10" r="16" fill="#06b6d4"/>
+    <text x="60" y="-5" fill="white" font-size="11" font-weight="bold" text-anchor="middle">6</text>
+    <text x="60" y="25" class="label-bold" text-anchor="middle">POST-PROCESS</text>
+    <text x="60" y="42" class="small-text" text-anchor="middle">Deduplicate</text>
+    <text x="60" y="55" class="small-text" text-anchor="middle">Prioritize</text>
   </g>
 
-  <!-- Stage 7: Output -->
-  <g transform="translate(970, 590)">
-    <rect width="130" height="80" rx="10" fill="#f1f5f9" stroke="#ec4899" stroke-width="2"/>
-    <circle cx="65" cy="-10" r="18" fill="#ec4899"/>
-    <text x="65" y="-5" fill="white" font-size="12" font-weight="bold" text-anchor="middle">7</text>
-    <text x="65" y="30" class="label-bold" text-anchor="middle">OUTPUT</text>
-    <text x="65" y="48" class="small-text" text-anchor="middle">Format results</text>
-    <text x="65" y="62" class="small-text" text-anchor="middle">Display console</text>
+  <!-- Stage 7: Generate -->
+  <g transform="translate(970, 580)">
+    <rect width="120" height="75" rx="10" fill="#f1f5f9" stroke="#a855f7" stroke-width="2"/>
+    <circle cx="60" cy="-10" r="16" fill="#a855f7"/>
+    <text x="60" y="-5" fill="white" font-size="11" font-weight="bold" text-anchor="middle">7</text>
+    <text x="60" y="25" class="label-bold" text-anchor="middle">GENERATE</text>
+    <text x="60" y="42" class="small-text" text-anchor="middle">A/B hypotheses</text>
+    <text x="60" y="55" class="small-text" text-anchor="middle">CRO scores</text>
+  </g>
+
+  <!-- Stage 8: Output -->
+  <g transform="translate(1110, 580)">
+    <rect width="120" height="75" rx="10" fill="#f1f5f9" stroke="#ec4899" stroke-width="2"/>
+    <circle cx="60" cy="-10" r="16" fill="#ec4899"/>
+    <text x="60" y="-5" fill="white" font-size="11" font-weight="bold" text-anchor="middle">8</text>
+    <text x="60" y="25" class="label-bold" text-anchor="middle">OUTPUT</text>
+    <text x="60" y="42" class="small-text" text-anchor="middle">MD / JSON / Console</text>
+    <text x="60" y="55" class="small-text" text-anchor="middle">Write to file</text>
   </g>
 
   <!-- Arrows between stages -->
-  <line x1="200" y1="630" x2="220" y2="630" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
-  <line x1="350" y1="630" x2="370" y2="630" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
-  <line x1="500" y1="630" x2="520" y2="630" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
-  <line x1="650" y1="630" x2="670" y2="630" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
-  <line x1="800" y1="630" x2="820" y2="630" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
-  <line x1="950" y1="630" x2="970" y2="630" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="190" y1="618" x2="210" y2="618" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="330" y1="618" x2="350" y2="618" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="470" y1="618" x2="490" y2="618" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="670" y1="618" x2="690" y2="618" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="810" y1="618" x2="830" y2="618" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="950" y1="618" x2="970" y2="618" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="1090" y1="618" x2="1110" y2="618" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
 
-  <!-- Data types passed -->
-  <g transform="translate(70, 700)">
-    <rect width="130" height="40" rx="6" fill="#eff6ff" stroke="#bfdbfe"/>
-    <text x="65" y="17" class="small-text" text-anchor="middle" fill="#1d4ed8">string[]</text>
-    <text x="65" y="32" class="small-text" text-anchor="middle" fill="#64748b">URL list</text>
+  <!-- Data types passed - Row 2 -->
+  <g transform="translate(70, 680)">
+    <rect width="120" height="35" rx="6" fill="#eff6ff" stroke="#bfdbfe"/>
+    <text x="60" y="15" class="small-text" text-anchor="middle" fill="#1d4ed8">string</text>
+    <text x="60" y="28" class="small-text" text-anchor="middle" fill="#64748b">URL + BrowserConfig</text>
   </g>
 
-  <g transform="translate(220, 700)">
-    <rect width="130" height="40" rx="6" fill="#f0fdf4" stroke="#bbf7d0"/>
-    <text x="65" y="17" class="small-text" text-anchor="middle" fill="#15803d">ValidationResult</text>
-    <text x="65" y="32" class="small-text" text-anchor="middle" fill="#64748b">isValid, normalizedUrl</text>
+  <g transform="translate(210, 680)">
+    <rect width="120" height="35" rx="6" fill="#f0fdf4" stroke="#bbf7d0"/>
+    <text x="60" y="15" class="small-text" text-anchor="middle" fill="#15803d">PageLoadResult</text>
+    <text x="60" y="28" class="small-text" text-anchor="middle" fill="#64748b">success, title, time</text>
   </g>
 
-  <g transform="translate(370, 700)">
-    <rect width="130" height="40" rx="6" fill="#f0fdf4" stroke="#bbf7d0"/>
-    <text x="65" y="17" class="small-text" text-anchor="middle" fill="#15803d">PageLoadResult</text>
-    <text x="65" y="32" class="small-text" text-anchor="middle" fill="#64748b">success, title, time</text>
+  <g transform="translate(350, 680)">
+    <rect width="120" height="35" rx="6" fill="#fffbeb" stroke="#fde68a"/>
+    <text x="60" y="15" class="small-text" text-anchor="middle" fill="#b45309">DOMTree</text>
+    <text x="60" y="28" class="small-text" text-anchor="middle" fill="#64748b">nodes[], metadata</text>
   </g>
 
-  <g transform="translate(520, 700)">
-    <rect width="130" height="40" rx="6" fill="#ecfeff" stroke="#a5f3fc"/>
-    <text x="65" y="17" class="small-text" text-anchor="middle" fill="#0891b2">CookieConsentResult</text>
-    <text x="65" y="32" class="small-text" text-anchor="middle" fill="#64748b">dismissed, mode</text>
+  <g transform="translate(490, 680)">
+    <rect width="180" height="35" rx="6" fill="#f5f3ff" stroke="#ddd6fe"/>
+    <text x="90" y="15" class="small-text" text-anchor="middle" fill="#7c3aed">CROInsight[]</text>
+    <text x="90" y="28" class="small-text" text-anchor="middle" fill="#64748b">Tool insights from agent</text>
   </g>
 
-  <g transform="translate(670, 700)">
-    <rect width="130" height="40" rx="6" fill="#fffbeb" stroke="#fde68a"/>
-    <text x="65" y="17" class="small-text" text-anchor="middle" fill="#b45309">ExtractionResult</text>
-    <text x="65" y="32" class="small-text" text-anchor="middle" fill="#64748b">headings[], counts</text>
+  <g transform="translate(690, 680)">
+    <rect width="120" height="35" rx="6" fill="#fff7ed" stroke="#fed7aa"/>
+    <text x="60" y="15" class="small-text" text-anchor="middle" fill="#c2410c">HeuristicInsight[]</text>
+    <text x="60" y="28" class="small-text" text-anchor="middle" fill="#64748b">Rule-based findings</text>
   </g>
 
-  <g transform="translate(820, 700)">
-    <rect width="130" height="40" rx="6" fill="#f5f3ff" stroke="#ddd6fe"/>
-    <text x="65" y="17" class="small-text" text-anchor="middle" fill="#7c3aed">ProcessingResult</text>
-    <text x="65" y="32" class="small-text" text-anchor="middle" fill="#64748b">summary, insights</text>
+  <g transform="translate(830, 680)">
+    <rect width="120" height="35" rx="6" fill="#ecfeff" stroke="#a5f3fc"/>
+    <text x="60" y="15" class="small-text" text-anchor="middle" fill="#0891b2">Deduplicated[]</text>
+    <text x="60" y="28" class="small-text" text-anchor="middle" fill="#64748b">Prioritized insights</text>
   </g>
 
-  <g transform="translate(970, 700)">
-    <rect width="130" height="40" rx="6" fill="#fdf2f8" stroke="#fbcfe8"/>
-    <text x="65" y="17" class="small-text" text-anchor="middle" fill="#db2777">AgentResult</text>
-    <text x="65" y="32" class="small-text" text-anchor="middle" fill="#64748b">Complete result</text>
+  <g transform="translate(970, 680)">
+    <rect width="120" height="35" rx="6" fill="#faf5ff" stroke="#e9d5ff"/>
+    <text x="60" y="15" class="small-text" text-anchor="middle" fill="#9333ea">Hypothesis[]</text>
+    <text x="60" y="28" class="small-text" text-anchor="middle" fill="#64748b">A/B test specs</text>
+  </g>
+
+  <g transform="translate(1110, 680)">
+    <rect width="120" height="35" rx="6" fill="#fdf2f8" stroke="#fbcfe8"/>
+    <text x="60" y="15" class="small-text" text-anchor="middle" fill="#db2777">CROAnalysisResult</text>
+    <text x="60" y="28" class="small-text" text-anchor="middle" fill="#64748b">Complete report</text>
+  </g>
+
+  <!-- Agent Loop Detail Box -->
+  <g transform="translate(70, 740)">
+    <rect width="540" height="150" rx="8" fill="#faf5ff" stroke="#c4b5fd" stroke-width="2"/>
+    <text x="270" y="22" class="label-bold" text-anchor="middle" fill="#7c3aed">Agent Loop Detail (observe → reason → act)</text>
+
+    <!-- Observe -->
+    <g transform="translate(20, 40)">
+      <rect width="150" height="95" rx="6" fill="white" stroke="#a78bfa"/>
+      <text x="75" y="18" class="label-bold" text-anchor="middle" fill="#7c3aed">OBSERVE</text>
+      <text x="75" y="35" class="small-text" text-anchor="middle">Re-extract DOM</text>
+      <text x="75" y="48" class="small-text" text-anchor="middle">Build context</text>
+      <text x="75" y="61" class="small-text" text-anchor="middle">Serialize for LLM</text>
+      <text x="75" y="74" class="small-text" text-anchor="middle">Check memory</text>
+      <text x="75" y="87" class="small-text" text-anchor="middle">Token budget</text>
+    </g>
+
+    <!-- Arrow -->
+    <path d="M180,90 L205,90" stroke="#8b5cf6" stroke-width="2" marker-end="url(#arrow-purple)"/>
+
+    <!-- Reason -->
+    <g transform="translate(195, 40)">
+      <rect width="150" height="95" rx="6" fill="white" stroke="#a78bfa"/>
+      <text x="75" y="18" class="label-bold" text-anchor="middle" fill="#7c3aed">REASON</text>
+      <text x="75" y="35" class="small-text" text-anchor="middle">PromptBuilder</text>
+      <text x="75" y="48" class="small-text" text-anchor="middle">GPT-4 reasoning</text>
+      <text x="75" y="61" class="small-text" text-anchor="middle">Tool selection</text>
+      <text x="75" y="74" class="small-text" text-anchor="middle">Param extraction</text>
+      <text x="75" y="87" class="small-text" text-anchor="middle">Zod validation</text>
+    </g>
+
+    <!-- Arrow -->
+    <path d="M355,90 L380,90" stroke="#8b5cf6" stroke-width="2" marker-end="url(#arrow-purple)"/>
+
+    <!-- Act -->
+    <g transform="translate(370, 40)">
+      <rect width="150" height="95" rx="6" fill="white" stroke="#a78bfa"/>
+      <text x="75" y="18" class="label-bold" text-anchor="middle" fill="#7c3aed">ACT</text>
+      <text x="75" y="35" class="small-text" text-anchor="middle">ToolExecutor</text>
+      <text x="75" y="48" class="small-text" text-anchor="middle">Execute tool</text>
+      <text x="75" y="61" class="small-text" text-anchor="middle">Collect insights</text>
+      <text x="75" y="74" class="small-text" text-anchor="middle">Update state</text>
+      <text x="75" y="87" class="small-text" text-anchor="middle">Check done</text>
+    </g>
+  </g>
+
+  <!-- 9 Tools Detail Box -->
+  <g transform="translate(630, 740)">
+    <rect width="350" height="150" rx="8" fill="#ecfeff" stroke="#67e8f9" stroke-width="2"/>
+    <text x="175" y="22" class="label-bold" text-anchor="middle" fill="#0891b2">9 CRO Analysis Tools</text>
+
+    <!-- Analysis Tools -->
+    <g transform="translate(15, 35)">
+      <rect width="155" height="100" rx="6" fill="white" stroke="#22d3ee"/>
+      <text x="77" y="15" class="small-text" text-anchor="middle" fill="#0891b2" font-weight="bold">Analysis (6)</text>
+      <text x="77" y="32" class="small-text" text-anchor="middle">analyze_ctas</text>
+      <text x="77" y="45" class="small-text" text-anchor="middle">analyze_forms</text>
+      <text x="77" y="58" class="small-text" text-anchor="middle">detect_trust_signals</text>
+      <text x="77" y="71" class="small-text" text-anchor="middle">assess_value_prop</text>
+      <text x="77" y="84" class="small-text" text-anchor="middle">check_navigation</text>
+      <text x="77" y="97" class="small-text" text-anchor="middle">find_friction</text>
+    </g>
+
+    <!-- Navigation + Control -->
+    <g transform="translate(180, 35)">
+      <rect width="155" height="100" rx="6" fill="white" stroke="#22d3ee"/>
+      <text x="77" y="15" class="small-text" text-anchor="middle" fill="#0891b2" font-weight="bold">Navigation (3)</text>
+      <text x="77" y="32" class="small-text" text-anchor="middle">scroll_page</text>
+      <text x="77" y="45" class="small-text" text-anchor="middle">click</text>
+      <text x="77" y="58" class="small-text" text-anchor="middle">go_to_url</text>
+      <text x="77" y="75" class="small-text" text-anchor="middle" fill="#0891b2" font-weight="bold">Control</text>
+      <text x="77" y="92" class="small-text" text-anchor="middle">done (terminate)</text>
+    </g>
+  </g>
+
+  <!-- Heuristic Rules Box -->
+  <g transform="translate(1000, 740)">
+    <rect width="230" height="150" rx="8" fill="#fff7ed" stroke="#fdba74" stroke-width="2"/>
+    <text x="115" y="22" class="label-bold" text-anchor="middle" fill="#c2410c">10 Heuristic Rules</text>
+
+    <g transform="translate(15, 35)">
+      <text x="0" y="12" class="small-text" fill="#c2410c">CTA:</text>
+      <text x="35" y="12" class="small-text">H001 vague_cta, H002 no_cta_above_fold</text>
+
+      <text x="0" y="30" class="small-text" fill="#c2410c">Form:</text>
+      <text x="35" y="30" class="small-text">H003 field_overload, H004 missing_label</text>
+
+      <text x="0" y="48" class="small-text" fill="#c2410c">Trust:</text>
+      <text x="35" y="48" class="small-text">H005 no_trust_fold, H006 no_security</text>
+
+      <text x="0" y="66" class="small-text" fill="#c2410c">Value:</text>
+      <text x="35" y="66" class="small-text">H007 unclear_value, H008 headline_long</text>
+
+      <text x="0" y="84" class="small-text" fill="#c2410c">Nav:</text>
+      <text x="35" y="84" class="small-text">H009 no_breadcrumbs, H010 no_search</text>
+    </g>
+
+    <g transform="translate(15, 125)">
+      <text x="0" y="0" class="small-text" fill="#64748b">Business Types: ecommerce, saas, banking...</text>
+    </g>
   </g>
 
   <!-- Tech Stack Footer -->
-  <g transform="translate(70, 770)">
-    <rect width="1030" height="115" rx="8" fill="#f8fafc" stroke="#e2e8f0"/>
-    <text x="515" y="22" class="section-title" text-anchor="middle">Technology Stack</text>
+  <g transform="translate(70, 910)">
+    <rect width="1160" height="115" rx="8" fill="#f8fafc" stroke="#e2e8f0"/>
+    <text x="580" y="22" class="section-title" text-anchor="middle">Technology Stack</text>
 
     <g transform="translate(20, 35)">
-      <rect width="80" height="30" rx="4" fill="#3178c6"/>
-      <text x="40" y="20" fill="white" font-size="11" font-weight="bold" text-anchor="middle">TypeScript</text>
+      <rect width="80" height="28" rx="4" fill="#3178c6"/>
+      <text x="40" y="18" fill="white" font-size="10" font-weight="bold" text-anchor="middle">TypeScript</text>
     </g>
 
-    <g transform="translate(110, 35)">
-      <rect width="80" height="30" rx="4" fill="#339933"/>
-      <text x="40" y="20" fill="white" font-size="11" font-weight="bold" text-anchor="middle">Node.js 20+</text>
+    <g transform="translate(108, 35)">
+      <rect width="75" height="28" rx="4" fill="#339933"/>
+      <text x="37" y="18" fill="white" font-size="10" font-weight="bold" text-anchor="middle">Node.js 20</text>
     </g>
 
-    <g transform="translate(200, 35)">
-      <rect width="80" height="30" rx="4" fill="#2ecc71"/>
-      <text x="40" y="20" fill="white" font-size="11" font-weight="bold" text-anchor="middle">Playwright</text>
+    <g transform="translate(191, 35)">
+      <rect width="75" height="28" rx="4" fill="#2ecc71"/>
+      <text x="37" y="18" fill="white" font-size="10" font-weight="bold" text-anchor="middle">Playwright</text>
     </g>
 
-    <g transform="translate(290, 35)">
-      <rect width="80" height="30" rx="4" fill="#1c3c3c"/>
-      <text x="40" y="20" fill="white" font-size="11" font-weight="bold" text-anchor="middle">LangChain</text>
+    <g transform="translate(274, 35)">
+      <rect width="75" height="28" rx="4" fill="#1c3c3c"/>
+      <text x="37" y="18" fill="white" font-size="10" font-weight="bold" text-anchor="middle">LangChain</text>
     </g>
 
-    <g transform="translate(380, 35)">
-      <rect width="80" height="30" rx="4" fill="#412991"/>
-      <text x="40" y="20" fill="white" font-size="11" font-weight="bold" text-anchor="middle">OpenAI</text>
+    <g transform="translate(357, 35)">
+      <rect width="65" height="28" rx="4" fill="#412991"/>
+      <text x="32" y="18" fill="white" font-size="10" font-weight="bold" text-anchor="middle">OpenAI</text>
     </g>
 
-    <g transform="translate(470, 35)">
-      <rect width="60" height="30" rx="4" fill="#3178c6"/>
-      <text x="30" y="20" fill="white" font-size="11" font-weight="bold" text-anchor="middle">Zod</text>
+    <g transform="translate(430, 35)">
+      <rect width="50" height="28" rx="4" fill="#3178c6"/>
+      <text x="25" y="18" fill="white" font-size="10" font-weight="bold" text-anchor="middle">Zod</text>
     </g>
 
-    <g transform="translate(540, 35)">
-      <rect width="60" height="30" rx="4" fill="#729b1b"/>
-      <text x="30" y="20" fill="white" font-size="11" font-weight="bold" text-anchor="middle">Vitest</text>
+    <g transform="translate(488, 35)">
+      <rect width="55" height="28" rx="4" fill="#729b1b"/>
+      <text x="27" y="18" fill="white" font-size="10" font-weight="bold" text-anchor="middle">Vitest</text>
     </g>
 
-    <g transform="translate(610, 35)">
-      <rect width="60" height="30" rx="4" fill="#4b32c3"/>
-      <text x="30" y="20" fill="white" font-size="11" font-weight="bold" text-anchor="middle">ESLint</text>
+    <g transform="translate(551, 35)">
+      <rect width="55" height="28" rx="4" fill="#4b32c3"/>
+      <text x="27" y="18" fill="white" font-size="10" font-weight="bold" text-anchor="middle">ESLint</text>
     </g>
 
-    <g transform="translate(680, 35)">
-      <rect width="70" height="30" rx="4" fill="#f7b93e"/>
-      <text x="35" y="20" fill="#1a1a1a" font-size="11" font-weight="bold" text-anchor="middle">Prettier</text>
+    <g transform="translate(614, 35)">
+      <rect width="60" height="28" rx="4" fill="#f7b93e"/>
+      <text x="30" y="18" fill="#1a1a1a" font-size="10" font-weight="bold" text-anchor="middle">Prettier</text>
     </g>
 
-    <g transform="translate(760, 35)">
-      <rect width="55" height="30" rx="4" fill="#1a1a1a"/>
-      <text x="27" y="20" fill="white" font-size="11" font-weight="bold" text-anchor="middle">dotenv</text>
+    <g transform="translate(682, 35)">
+      <rect width="50" height="28" rx="4" fill="#1a1a1a"/>
+      <text x="25" y="18" fill="white" font-size="10" font-weight="bold" text-anchor="middle">dotenv</text>
     </g>
 
-    <g transform="translate(825, 35)">
-      <rect width="55" height="30" rx="4" fill="#007acc"/>
-      <text x="27" y="20" fill="white" font-size="11" font-weight="bold" text-anchor="middle">tsx</text>
+    <g transform="translate(740, 35)">
+      <rect width="45" height="28" rx="4" fill="#007acc"/>
+      <text x="22" y="18" fill="white" font-size="10" font-weight="bold" text-anchor="middle">tsx</text>
     </g>
 
-    <g transform="translate(890, 35)">
-      <rect width="100" height="30" rx="4" fill="#cb3837"/>
-      <text x="50" y="20" fill="white" font-size="11" font-weight="bold" text-anchor="middle">npm scripts</text>
-    </g>
+    <!-- CLI Modes -->
+    <text x="20" y="82" class="small-text" fill="#64748b">CLI Modes:</text>
+    <text x="80" y="82" class="small-text" fill="#1e293b">CRO Analysis (default) | --legacy (heading extraction) | --tool (debug specific tool)</text>
 
-    <!-- CLI Flags -->
-    <text x="20" y="82" class="small-text" fill="#64748b">CLI Flags:</text>
-    <text x="80" y="82" class="small-text" fill="#1e293b">--headless | --timeout | --wait-until | --post-load-wait | --no-cookie-dismiss | --verbose</text>
+    <text x="20" y="100" class="small-text" fill="#64748b">Output:</text>
+    <text x="80" y="100" class="small-text" fill="#1e293b">--output-format console|markdown|json | --output-file &lt;path&gt; | --max-steps &lt;n&gt;</text>
   </g>
 </svg>

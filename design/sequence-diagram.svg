@@ -1,328 +1,462 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1350">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 1800">
   <defs>
     <style>
       .title { font: bold 24px Arial, sans-serif; fill: #1a1a2e; }
       .subtitle { font: 14px Arial, sans-serif; fill: #666; }
       .actor-box { fill: #4a90d9; stroke: #2563eb; stroke-width: 2; rx: 8; }
-      .actor-text { font: bold 12px Arial, sans-serif; fill: white; text-anchor: middle; }
+      .actor-text { font: bold 11px Arial, sans-serif; fill: white; text-anchor: middle; }
       .lifeline { stroke: #94a3b8; stroke-width: 2; stroke-dasharray: 8,4; }
       .activation { fill: #e0e7ff; stroke: #6366f1; stroke-width: 2; }
-      .activation-cookie { fill: #cffafe; stroke: #06b6d4; stroke-width: 2; }
+      .activation-agent { fill: #f5f3ff; stroke: #8b5cf6; stroke-width: 2; }
+      .activation-tool { fill: #ecfeff; stroke: #06b6d4; stroke-width: 2; }
+      .activation-heuristic { fill: #fff7ed; stroke: #f97316; stroke-width: 2; }
+      .activation-output { fill: #fdf2f8; stroke: #ec4899; stroke-width: 2; }
       .message { stroke: #1e293b; stroke-width: 2; }
-      .message-async { stroke: #1e293b; stroke-width: 2; stroke-dasharray: 6,3; }
       .message-return { stroke: #64748b; stroke-width: 1.5; stroke-dasharray: 4,4; }
-      .message-text { font: 11px Arial, sans-serif; fill: #1e293b; }
-      .message-text-bold { font: bold 11px Arial, sans-serif; fill: #1e293b; }
+      .message-loop { stroke: #8b5cf6; stroke-width: 2; stroke-dasharray: 6,3; }
+      .message-text { font: 10px Arial, sans-serif; fill: #1e293b; }
+      .message-text-bold { font: bold 10px Arial, sans-serif; fill: #1e293b; }
       .note { fill: #fef3c7; stroke: #f59e0b; stroke-width: 1; }
-      .note-cookie { fill: #cffafe; stroke: #06b6d4; stroke-width: 1; }
-      .note-text { font: 11px Arial, sans-serif; fill: #92400e; }
-      .note-text-cookie { font: 11px Arial, sans-serif; fill: #0e7490; }
+      .note-agent { fill: #f5f3ff; stroke: #8b5cf6; stroke-width: 1; }
+      .note-tool { fill: #ecfeff; stroke: #06b6d4; stroke-width: 1; }
+      .note-text { font: 10px Arial, sans-serif; fill: #92400e; }
+      .note-text-agent { font: 10px Arial, sans-serif; fill: #7c3aed; }
+      .note-text-tool { font: 10px Arial, sans-serif; fill: #0891b2; }
       .section { fill: #f1f5f9; stroke: #cbd5e1; stroke-width: 1; }
-      .section-cookie { fill: #ecfeff; stroke: #06b6d4; stroke-width: 1; }
-      .section-label { font: bold 12px Arial, sans-serif; fill: #475569; }
-      .section-label-cookie { font: bold 12px Arial, sans-serif; fill: #0e7490; }
+      .section-agent { fill: #faf5ff; stroke: #c4b5fd; stroke-width: 2; }
+      .section-label { font: bold 11px Arial, sans-serif; fill: #475569; }
+      .section-label-agent { font: bold 11px Arial, sans-serif; fill: #7c3aed; }
       .external { fill: #fecaca; stroke: #ef4444; stroke-width: 2; rx: 8; }
-      .external-text { font: bold 12px Arial, sans-serif; fill: #991b1b; text-anchor: middle; }
-      .cookie-box { fill: #06b6d4; stroke: #0891b2; stroke-width: 2; rx: 8; }
-      .cookie-text { font: bold 11px Arial, sans-serif; fill: white; text-anchor: middle; }
+      .external-text { font: bold 11px Arial, sans-serif; fill: #991b1b; text-anchor: middle; }
       .arrow { fill: #1e293b; }
       .arrow-return { fill: #64748b; }
     </style>
-    <!-- Arrow markers -->
     <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
       <polygon points="0 0, 10 3.5, 0 7" class="arrow"/>
     </marker>
     <marker id="arrowhead-return" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
       <polygon points="0 0, 10 3.5, 0 7" class="arrow-return"/>
     </marker>
-    <marker id="arrowhead-open" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-      <polyline points="0 0, 10 3.5, 0 7" fill="none" stroke="#1e293b" stroke-width="2"/>
+    <marker id="arrowhead-loop" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#8b5cf6"/>
     </marker>
   </defs>
 
   <!-- Background -->
-  <rect width="1400" height="1350" fill="#ffffff"/>
+  <rect width="1500" height="1800" fill="#ffffff"/>
 
   <!-- Title -->
-  <text x="700" y="35" class="title" text-anchor="middle">Browser Agent - Sequence Diagram</text>
-  <text x="700" y="55" class="subtitle" text-anchor="middle">Single URL Processing Flow (with Cookie Consent Handling)</text>
+  <text x="750" y="35" class="title" text-anchor="middle">CRO Browser Agent - Sequence Diagram</text>
+  <text x="750" y="55" class="subtitle" text-anchor="middle">CRO Analysis Flow with Agent Loop (observe → reason → act)</text>
 
   <!-- Actor boxes at top -->
   <!-- User/CLI -->
-  <rect x="40" y="75" width="70" height="40" class="actor-box"/>
-  <text x="75" y="100" class="actor-text">User/CLI</text>
+  <rect x="30" y="75" width="60" height="40" class="actor-box"/>
+  <text x="60" y="98" class="actor-text">CLI</text>
 
-  <!-- BrowserAgent -->
-  <rect x="145" y="75" width="90" height="40" class="actor-box"/>
-  <text x="190" y="100" class="actor-text">BrowserAgent</text>
-
-  <!-- Validator -->
-  <rect x="265" y="75" width="70" height="40" class="actor-box"/>
-  <text x="300" y="100" class="actor-text">Validator</text>
+  <!-- CROAgent -->
+  <rect x="110" y="75" width="80" height="40" class="actor-box"/>
+  <text x="150" y="98" class="actor-text">CROAgent</text>
 
   <!-- BrowserManager -->
-  <rect x="365" y="75" width="100" height="40" class="actor-box"/>
-  <text x="415" y="100" class="actor-text">BrowserManager</text>
+  <rect x="210" y="75" width="80" height="40" class="actor-box"/>
+  <text x="250" y="98" class="actor-text">Browser</text>
 
-  <!-- PageLoader -->
-  <rect x="495" y="75" width="80" height="40" class="actor-box"/>
-  <text x="535" y="100" class="actor-text">PageLoader</text>
+  <!-- DOMExtractor -->
+  <rect x="310" y="75" width="80" height="40" class="actor-box"/>
+  <text x="350" y="98" class="actor-text">DOMExtractor</text>
 
-  <!-- CookieConsentHandler (NEW) -->
-  <rect x="600" y="75" width="110" height="40" class="cookie-box"/>
-  <text x="655" y="93" class="cookie-text">CookieConsent</text>
-  <text x="655" y="106" class="cookie-text">Handler</text>
+  <!-- PromptBuilder -->
+  <rect x="410" y="75" width="80" height="40" class="actor-box"/>
+  <text x="450" y="98" class="actor-text">Prompt</text>
 
-  <!-- HeadingExtractor -->
-  <rect x="735" y="75" width="100" height="40" class="actor-box"/>
-  <text x="785" y="100" class="actor-text">HeadingExtractor</text>
+  <!-- ChatOpenAI -->
+  <rect x="510" y="75" width="80" height="40" class="external"/>
+  <text x="550" y="98" class="external-text">GPT-4</text>
 
-  <!-- LangChainProcessor -->
-  <rect x="865" y="75" width="110" height="40" class="actor-box"/>
-  <text x="920" y="100" class="actor-text">LangChainProc</text>
+  <!-- ToolExecutor -->
+  <rect x="610" y="75" width="80" height="40" class="actor-box"/>
+  <text x="650" y="98" class="actor-text">ToolExec</text>
 
-  <!-- OpenAI API (External) -->
-  <rect x="1005" y="75" width="80" height="40" class="external"/>
-  <text x="1045" y="100" class="external-text">OpenAI API</text>
+  <!-- Tools -->
+  <rect x="710" y="75" width="80" height="40" class="actor-box"/>
+  <text x="750" y="98" class="actor-text">9 Tools</text>
 
-  <!-- ResultFormatter -->
-  <rect x="1115" y="75" width="100" height="40" class="actor-box"/>
-  <text x="1165" y="100" class="actor-text">ResultFormatter</text>
+  <!-- HeuristicEngine -->
+  <rect x="810" y="75" width="80" height="40" class="actor-box"/>
+  <text x="850" y="98" class="actor-text">Heuristic</text>
+
+  <!-- PostProcess -->
+  <rect x="910" y="75" width="80" height="40" class="actor-box"/>
+  <text x="950" y="98" class="actor-text">PostProc</text>
+
+  <!-- Output -->
+  <rect x="1010" y="75" width="80" height="40" class="actor-box"/>
+  <text x="1050" y="98" class="actor-text">Output</text>
 
   <!-- Lifelines -->
-  <line x1="75" y1="115" x2="75" y2="1300" class="lifeline"/>
-  <line x1="190" y1="115" x2="190" y2="1300" class="lifeline"/>
-  <line x1="300" y1="115" x2="300" y2="1300" class="lifeline"/>
-  <line x1="415" y1="115" x2="415" y2="1300" class="lifeline"/>
-  <line x1="535" y1="115" x2="535" y2="1300" class="lifeline"/>
-  <line x1="655" y1="115" x2="655" y2="1300" class="lifeline"/>
-  <line x1="785" y1="115" x2="785" y2="1300" class="lifeline"/>
-  <line x1="920" y1="115" x2="920" y2="1300" class="lifeline"/>
-  <line x1="1045" y1="115" x2="1045" y2="1300" class="lifeline"/>
-  <line x1="1165" y1="115" x2="1165" y2="1300" class="lifeline"/>
+  <line x1="60" y1="115" x2="60" y2="1750" class="lifeline"/>
+  <line x1="150" y1="115" x2="150" y2="1750" class="lifeline"/>
+  <line x1="250" y1="115" x2="250" y2="1750" class="lifeline"/>
+  <line x1="350" y1="115" x2="350" y2="1750" class="lifeline"/>
+  <line x1="450" y1="115" x2="450" y2="1750" class="lifeline"/>
+  <line x1="550" y1="115" x2="550" y2="1750" class="lifeline"/>
+  <line x1="650" y1="115" x2="650" y2="1750" class="lifeline"/>
+  <line x1="750" y1="115" x2="750" y2="1750" class="lifeline"/>
+  <line x1="850" y1="115" x2="850" y2="1750" class="lifeline"/>
+  <line x1="950" y1="115" x2="950" y2="1750" class="lifeline"/>
+  <line x1="1050" y1="115" x2="1050" y2="1750" class="lifeline"/>
 
   <!-- Section 1: Initialization -->
-  <rect x="30" y="130" width="1200" height="120" class="section" rx="5"/>
-  <text x="45" y="148" class="section-label">1. INITIALIZATION</text>
+  <rect x="20" y="130" width="1080" height="90" class="section" rx="5"/>
+  <text x="35" y="148" class="section-label">1. INITIALIZATION</text>
 
-  <!-- Activation bars for Section 1 -->
-  <rect x="70" y="155" width="10" height="85" class="activation"/>
-  <rect x="185" y="165" width="10" height="70" class="activation"/>
-  <rect x="295" y="180" width="10" height="40" class="activation"/>
+  <!-- Activation bars -->
+  <rect x="55" y="155" width="10" height="55" class="activation"/>
+  <rect x="145" y="165" width="10" height="40" class="activation"/>
 
-  <!-- Message 1: processUrl -->
-  <line x1="80" y1="170" x2="185" y2="170" class="message" marker-end="url(#arrowhead)"/>
-  <text x="110" y="163" class="message-text-bold">processUrl(url)</text>
+  <!-- Message: analyze(url, options) -->
+  <line x1="65" y1="170" x2="145" y2="170" class="message" marker-end="url(#arrowhead)"/>
+  <text x="85" y="163" class="message-text-bold">analyze(url, options)</text>
 
-  <!-- Message 2: validateUrl -->
-  <line x1="195" y1="190" x2="295" y2="190" class="message" marker-end="url(#arrowhead)"/>
-  <text x="220" y="183" class="message-text">validateUrl(url)</text>
+  <!-- Note -->
+  <rect x="160" y="175" width="100" height="25" class="note" rx="3"/>
+  <text x="170" y="192" class="note-text">maxSteps: 10</text>
 
-  <!-- Message 3: return valid -->
-  <line x1="295" y1="210" x2="195" y2="210" class="message-return" marker-end="url(#arrowhead-return)"/>
-  <text x="210" y="225" class="message-text">{ isValid: true, normalizedUrl }</text>
+  <!-- Section 2: Browser & Page Load -->
+  <rect x="20" y="230" width="1080" height="120" class="section" rx="5"/>
+  <text x="35" y="248" class="section-label">2. PAGE LOADING &amp; COOKIE DISMISSAL</text>
 
-  <!-- Section 2: Browser Setup -->
-  <rect x="30" y="260" width="1200" height="180" class="section" rx="5"/>
-  <text x="45" y="278" class="section-label">2. BROWSER SETUP &amp; PAGE LOAD</text>
+  <!-- Activation bars -->
+  <rect x="145" y="260" width="10" height="80" class="activation"/>
+  <rect x="245" y="270" width="10" height="60" class="activation"/>
 
-  <!-- Activation bars for Section 2 -->
-  <rect x="185" y="290" width="10" height="140" class="activation"/>
-  <rect x="410" y="300" width="10" height="80" class="activation"/>
-  <rect x="530" y="395" width="10" height="35" class="activation"/>
+  <!-- Message: launch & load -->
+  <line x1="155" y1="275" x2="245" y2="275" class="message" marker-end="url(#arrowhead)"/>
+  <text x="180" y="268" class="message-text">launch() + load(url)</text>
 
-  <!-- Message 4: launch -->
-  <line x1="195" y1="310" x2="410" y2="310" class="message" marker-end="url(#arrowhead)"/>
-  <text x="280" y="303" class="message-text">launch()</text>
+  <!-- Note -->
+  <rect x="260" y="280" width="120" height="35" class="note" rx="3"/>
+  <text x="270" y="295" class="note-text">Chromium browser</text>
+  <text x="270" y="308" class="note-text">Dismiss cookie consent</text>
 
-  <!-- Note: Browser launch -->
-  <rect x="425" y="315" width="150" height="35" class="note" rx="3"/>
-  <text x="435" y="330" class="note-text">Launch Chromium</text>
-  <text x="435" y="343" class="note-text">ignoreHTTPSErrors: true</text>
+  <!-- Return -->
+  <line x1="245" y1="325" x2="155" y2="325" class="message-return" marker-end="url(#arrowhead-return)"/>
+  <text x="175" y="320" class="message-text">PageLoadResult</text>
 
-  <!-- Message 5: return browser -->
-  <line x1="410" y1="365" x2="195" y2="365" class="message-return" marker-end="url(#arrowhead-return)"/>
-  <text x="270" y="380" class="message-text">Browser instance ready</text>
+  <!-- Section 3: Initial DOM Extraction -->
+  <rect x="20" y="360" width="1080" height="90" class="section" rx="5"/>
+  <text x="35" y="378" class="section-label">3. INITIAL DOM EXTRACTION</text>
 
-  <!-- Message 6: load page -->
-  <line x1="195" y1="405" x2="530" y2="405" class="message" marker-end="url(#arrowhead)"/>
-  <text x="330" y="398" class="message-text">load(page, url, config)</text>
+  <!-- Activation bars -->
+  <rect x="145" y="390" width="10" height="50" class="activation"/>
+  <rect x="345" y="400" width="10" height="30" class="activation"/>
 
-  <!-- Message 7: return PageLoadResult -->
-  <line x1="530" y1="425" x2="195" y2="425" class="message-return" marker-end="url(#arrowhead-return)"/>
-  <text x="300" y="418" class="message-text">PageLoadResult { success, title, loadTimeMs }</text>
+  <!-- Message -->
+  <line x1="155" y1="405" x2="345" y2="405" class="message" marker-end="url(#arrowhead)"/>
+  <text x="230" y="398" class="message-text">extract(page)</text>
 
-  <!-- Section 2B: Cookie Consent (NEW) -->
-  <rect x="30" y="450" width="1200" height="130" class="section-cookie" rx="5"/>
-  <text x="45" y="468" class="section-label-cookie">2B. COOKIE CONSENT DISMISSAL (Best-effort, never fails)</text>
+  <!-- Note -->
+  <rect x="360" y="395" width="130" height="35" class="note" rx="3"/>
+  <text x="370" y="410" class="note-text">Classify elements:</text>
+  <text x="370" y="423" class="note-text">cta|form|trust|nav</text>
 
-  <!-- Activation bars for Section 2B -->
-  <rect x="185" y="480" width="10" height="90" class="activation"/>
-  <rect x="530" y="490" width="10" height="70" class="activation-cookie"/>
-  <rect x="650" y="505" width="10" height="45" class="activation-cookie"/>
+  <!-- Return -->
+  <line x1="345" y1="430" x2="155" y2="430" class="message-return" marker-end="url(#arrowhead-return)"/>
+  <text x="230" y="425" class="message-text">DOMTree</text>
 
-  <!-- Message: PageLoader calls CookieConsentHandler -->
-  <line x1="195" y1="500" x2="530" y2="500" class="message" marker-end="url(#arrowhead)"/>
-  <text x="320" y="493" class="message-text">dismissCookieConsent(page)</text>
+  <!-- Section 4: AGENT LOOP (Large section) -->
+  <rect x="20" y="460" width="1080" height="650" class="section-agent" rx="5"/>
+  <text x="35" y="478" class="section-label-agent">4. AGENT LOOP (observe → reason → act) - Repeat until done/max_steps/3_failures</text>
 
-  <!-- Message: PageLoader delegates to CookieConsentHandler -->
-  <line x1="540" y1="515" x2="650" y2="515" class="message" marker-end="url(#arrowhead)"/>
-  <text x="570" y="508" class="message-text">dismiss(page)</text>
+  <!-- Loop indicator -->
+  <rect x="30" y="490" width="1060" height="600" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-dasharray="10,5" rx="8"/>
+  <text x="50" y="510" class="section-label-agent">loop [step 1..10]</text>
 
-  <!-- Note: Cookie detection -->
-  <rect x="665" y="520" width="150" height="45" class="note-cookie" rx="3"/>
-  <text x="675" y="535" class="note-text-cookie">1. Try 8 CMP patterns</text>
-  <text x="675" y="548" class="note-text-cookie">2. Fallback: heuristic</text>
-  <text x="675" y="561" class="note-text-cookie">3. 3s timeout, best-effort</text>
+  <!-- OBSERVE Phase -->
+  <rect x="40" y="520" width="300" height="170" class="section" rx="5"/>
+  <text x="55" y="538" class="section-label">4a. OBSERVE</text>
 
-  <!-- Message: return CookieConsentResult -->
-  <line x1="650" y1="545" x2="540" y2="545" class="message-return" marker-end="url(#arrowhead-return)"/>
-  <text x="565" y="540" class="message-text">CookieConsentResult</text>
+  <rect x="145" y="550" width="10" height="130" class="activation-agent"/>
+  <rect x="345" y="570" width="10" height="50" class="activation"/>
 
-  <!-- Message: return to BrowserAgent -->
-  <line x1="530" y1="560" x2="195" y2="560" class="message-return" marker-end="url(#arrowhead-return)"/>
-  <text x="300" y="555" class="message-text">{ dismissed, mode, selector, error? }</text>
+  <!-- Re-extract DOM -->
+  <line x1="155" y1="580" x2="345" y2="580" class="message" marker-end="url(#arrowhead)"/>
+  <text x="230" y="573" class="message-text">extract(page)</text>
 
-  <!-- Section 3: Data Extraction -->
-  <rect x="30" y="590" width="1200" height="140" class="section" rx="5"/>
-  <text x="45" y="608" class="section-label">3. DATA EXTRACTION</text>
+  <rect x="360" y="575" width="100" height="25" class="note" rx="3"/>
+  <text x="370" y="592" class="note-text">Re-extract DOM</text>
 
-  <!-- Activation bars for Section 3 -->
-  <rect x="185" y="620" width="10" height="100" class="activation"/>
-  <rect x="780" y="635" width="10" height="70" class="activation"/>
+  <line x1="345" y1="610" x2="155" y2="610" class="message-return" marker-end="url(#arrowhead-return)"/>
+  <text x="230" y="605" class="message-text">DOMTree</text>
 
-  <!-- Message 8: extract -->
-  <line x1="195" y1="645" x2="780" y2="645" class="message" marker-end="url(#arrowhead)"/>
-  <text x="460" y="638" class="message-text">extract(page)</text>
+  <!-- Build PageState -->
+  <rect x="160" y="625" width="110" height="45" class="note-agent" rx="3"/>
+  <text x="170" y="640" class="note-text-agent">Build PageState:</text>
+  <text x="170" y="653" class="note-text-agent">url, title, domTree</text>
+  <text x="170" y="666" class="note-text-agent">viewport, scroll</text>
 
-  <!-- Note: Extraction -->
-  <rect x="795" y="650" width="130" height="35" class="note" rx="3"/>
-  <text x="805" y="665" class="note-text">Query h1-h6 elements</text>
-  <text x="805" y="678" class="note-text">Normalize text content</text>
+  <!-- REASON Phase -->
+  <rect x="350" y="520" width="350" height="170" class="section" rx="5"/>
+  <text x="365" y="538" class="section-label">4b. REASON</text>
 
-  <!-- Message 9: return ExtractionResult -->
-  <line x1="780" y1="700" x2="195" y2="700" class="message-return" marker-end="url(#arrowhead-return)"/>
-  <text x="420" y="715" class="message-text">ExtractionResult { headings[], totalCount, countByLevel }</text>
+  <rect x="145" y="695" width="10" height="100" class="activation-agent"/>
+  <rect x="445" y="710" width="10" height="35" class="activation"/>
+  <rect x="545" y="755" width="10" height="30" class="activation"/>
 
-  <!-- Section 4: AI Processing -->
-  <rect x="30" y="740" width="1200" height="220" class="section" rx="5"/>
-  <text x="45" y="758" class="section-label">4. AI PROCESSING (LangChain + OpenAI)</text>
+  <!-- Build prompt -->
+  <line x1="155" y1="720" x2="445" y2="720" class="message" marker-end="url(#arrowhead)"/>
+  <text x="270" y="713" class="message-text">buildPrompt(state, tools)</text>
 
-  <!-- Activation bars for Section 4 -->
-  <rect x="185" y="770" width="10" height="180" class="activation"/>
-  <rect x="915" y="785" width="10" height="130" class="activation"/>
-  <rect x="1040" y="835" width="10" height="60" class="activation"/>
+  <rect x="460" y="715" width="100" height="25" class="note" rx="3"/>
+  <text x="470" y="732" class="note-text">6 sections</text>
 
-  <!-- Message 10: analyze -->
-  <line x1="195" y1="800" x2="915" y2="800" class="message" marker-end="url(#arrowhead)"/>
-  <text x="520" y="793" class="message-text">analyze(extractionResult)</text>
+  <line x1="445" y1="740" x2="155" y2="740" class="message-return" marker-end="url(#arrowhead-return)"/>
+  <text x="280" y="735" class="message-text">messages[]</text>
 
-  <!-- Note: Build prompt -->
-  <rect x="930" y="805" width="120" height="25" class="note" rx="3"/>
-  <text x="940" y="822" class="note-text">Build analysis prompt</text>
+  <!-- GPT-4 call -->
+  <line x1="155" y1="765" x2="545" y2="765" class="message" marker-end="url(#arrowhead)"/>
+  <text x="320" y="758" class="message-text">ChatOpenAI.invoke(messages)</text>
 
-  <!-- Message 11: ChatOpenAI invoke -->
-  <line x1="925" y1="845" x2="1040" y2="845" class="message" marker-end="url(#arrowhead)"/>
-  <text x="960" y="838" class="message-text">invoke(messages)</text>
+  <rect x="560" y="760" width="90" height="25" class="note" rx="3"/>
+  <text x="570" y="777" class="note-text">GPT-4 reasoning</text>
 
-  <!-- Note: API call -->
-  <rect x="1055" y="850" width="100" height="35" class="note" rx="3"/>
-  <text x="1065" y="865" class="note-text">GPT-4o-mini API</text>
-  <text x="1065" y="878" class="note-text">maxTokens: 1000</text>
+  <line x1="545" y1="785" x2="155" y2="785" class="message-return" marker-end="url(#arrowhead-return)"/>
+  <text x="320" y="780" class="message-text">CROAgentOutput {action, params}</text>
 
-  <!-- Message 12: return AI response -->
-  <line x1="1040" y1="895" x2="925" y2="895" class="message-return" marker-end="url(#arrowhead-return)"/>
-  <text x="960" y="910" class="message-text">AI Response (JSON)</text>
+  <!-- ACT Phase -->
+  <rect x="710" y="520" width="360" height="170" class="section" rx="5"/>
+  <text x="725" y="538" class="section-label">4c. ACT</text>
 
-  <!-- Note: Parse response -->
-  <rect x="930" y="900" width="120" height="25" class="note" rx="3"/>
-  <text x="940" y="917" class="note-text">Parse &amp; validate (Zod)</text>
+  <rect x="145" y="800" width="10" height="120" class="activation-agent"/>
+  <rect x="645" y="815" width="10" height="60" class="activation-tool"/>
+  <rect x="745" y="830" width="10" height="35" class="activation-tool"/>
 
-  <!-- Message 13: return ProcessingResult -->
-  <line x1="915" y1="940" x2="195" y2="940" class="message-return" marker-end="url(#arrowhead-return)"/>
-  <text x="490" y="933" class="message-text">ProcessingResult { summary, categories[], insights[] }</text>
+  <!-- Execute tool -->
+  <line x1="155" y1="825" x2="645" y2="825" class="message" marker-end="url(#arrowhead)"/>
+  <text x="370" y="818" class="message-text">execute(action, params, context)</text>
 
-  <!-- Section 5: Output Formatting -->
-  <rect x="30" y="970" width="1200" height="140" class="section" rx="5"/>
-  <text x="45" y="988" class="section-label">5. OUTPUT FORMATTING</text>
+  <rect x="660" y="820" width="80" height="25" class="note-tool" rx="3"/>
+  <text x="670" y="837" class="note-text-tool">Zod validate</text>
 
-  <!-- Activation bars for Section 5 -->
-  <rect x="185" y="1000" width="10" height="100" class="activation"/>
-  <rect x="1160" y="1015" width="10" height="55" class="activation"/>
+  <!-- Tool execution -->
+  <line x1="655" y1="840" x2="745" y2="840" class="message" marker-end="url(#arrowhead)"/>
+  <text x="680" y="833" class="message-text">tool.execute()</text>
 
-  <!-- Message 14: formatResult -->
-  <line x1="195" y1="1030" x2="1160" y2="1030" class="message" marker-end="url(#arrowhead)"/>
-  <text x="640" y="1023" class="message-text">formatResult(agentResult)</text>
+  <rect x="760" y="835" width="90" height="35" class="note-tool" rx="3"/>
+  <text x="770" y="850" class="note-text-tool">analyze_ctas,</text>
+  <text x="770" y="863" class="note-text-tool">scroll, done...</text>
 
-  <!-- Note: Format -->
-  <rect x="1175" y="1035" width="110" height="25" class="note" rx="3"/>
-  <text x="1185" y="1052" class="note-text">Build console output</text>
+  <line x1="745" y1="865" x2="655" y2="865" class="message-return" marker-end="url(#arrowhead-return)"/>
+  <text x="680" y="860" class="message-text">ToolResult</text>
 
-  <!-- Message 15: return formatted -->
-  <line x1="1160" y1="1070" x2="195" y2="1070" class="message-return" marker-end="url(#arrowhead-return)"/>
-  <text x="640" y="1085" class="message-text">Formatted string (Unicode box)</text>
+  <line x1="645" y1="875" x2="155" y2="875" class="message-return" marker-end="url(#arrowhead-return)"/>
+  <text x="370" y="870" class="message-text">ToolResult {success, insights[]}</text>
 
-  <!-- Section 6: Response -->
-  <rect x="30" y="1120" width="1200" height="100" class="section" rx="5"/>
-  <text x="45" y="1138" class="section-label">6. RESPONSE TO USER</text>
+  <!-- State update -->
+  <rect x="160" y="890" width="120" height="35" class="note-agent" rx="3"/>
+  <text x="170" y="905" class="note-text-agent">Update state:</text>
+  <text x="170" y="918" class="note-text-agent">step++, insights[]</text>
 
-  <!-- Activation bars for Section 6 -->
-  <rect x="185" y="1150" width="10" height="55" class="activation"/>
-  <rect x="70" y="1175" width="10" height="35" class="activation"/>
+  <!-- Loop check -->
+  <rect x="40" y="940" width="1050" height="50" class="section" rx="5"/>
+  <text x="55" y="965" class="section-label">4d. CHECK TERMINATION: done tool? | step &gt;= 10? | 3 consecutive failures?</text>
 
-  <!-- Message 16: return AgentResult -->
-  <line x1="185" y1="1190" x2="80" y2="1190" class="message-return" marker-end="url(#arrowhead-return)"/>
-  <text x="110" y="1183" class="message-text-bold">AgentResult</text>
+  <!-- Loop back arrow -->
+  <path d="M1070,965 L1085,965 L1085,530 L140,530 L140,550" stroke="#8b5cf6" stroke-width="2" stroke-dasharray="6,3" fill="none" marker-end="url(#arrowhead-loop)"/>
+  <text x="1000" y="958" class="message-text" fill="#7c3aed">continue loop</text>
 
-  <!-- Note: Final output -->
-  <rect x="85" y="1195" width="180" height="25" class="note" rx="3"/>
-  <text x="95" y="1212" class="note-text">Display formatted results to console</text>
+  <!-- Exit loop arrow -->
+  <line x1="150" y1="1000" x2="150" y2="1030" stroke="#8b5cf6" stroke-width="2" marker-end="url(#arrowhead-loop)"/>
+  <text x="160" y="1020" class="message-text" fill="#7c3aed">exit loop</text>
 
-  <!-- Actor boxes at bottom (duplicated for clarity) -->
-  <rect x="40" y="1240" width="70" height="40" class="actor-box"/>
-  <text x="75" y="1265" class="actor-text">User/CLI</text>
+  <!-- 9 Tools Reference -->
+  <rect x="1110" y="460" width="280" height="280" fill="white" stroke="#06b6d4" stroke-width="2" rx="8"/>
+  <rect x="1110" y="460" width="280" height="30" fill="#06b6d4" rx="8"/>
+  <rect x="1110" y="480" width="280" height="10" fill="#06b6d4"/>
+  <text x="1250" y="480" fill="white" font-size="12" font-weight="bold" text-anchor="middle">9 CRO TOOLS</text>
 
-  <rect x="145" y="1240" width="90" height="40" class="actor-box"/>
-  <text x="190" y="1265" class="actor-text">BrowserAgent</text>
+  <text x="1125" y="510" class="note-text-tool" font-weight="bold">Analysis (6):</text>
+  <text x="1125" y="525" class="note-text">analyze_ctas</text>
+  <text x="1125" y="540" class="note-text">analyze_forms</text>
+  <text x="1125" y="555" class="note-text">detect_trust_signals</text>
+  <text x="1125" y="570" class="note-text">assess_value_prop</text>
+  <text x="1125" y="585" class="note-text">check_navigation</text>
+  <text x="1125" y="600" class="note-text">find_friction</text>
 
-  <rect x="265" y="1240" width="70" height="40" class="actor-box"/>
-  <text x="300" y="1265" class="actor-text">Validator</text>
+  <text x="1250" y="510" class="note-text-tool" font-weight="bold">Navigation (3):</text>
+  <text x="1250" y="525" class="note-text">scroll_page</text>
+  <text x="1250" y="540" class="note-text">click</text>
+  <text x="1250" y="555" class="note-text">go_to_url</text>
 
-  <rect x="365" y="1240" width="100" height="40" class="actor-box"/>
-  <text x="415" y="1265" class="actor-text">BrowserManager</text>
+  <text x="1250" y="585" class="note-text-tool" font-weight="bold">Control:</text>
+  <text x="1250" y="600" class="note-text">done (terminate)</text>
 
-  <rect x="495" y="1240" width="80" height="40" class="actor-box"/>
-  <text x="535" y="1265" class="actor-text">PageLoader</text>
+  <rect x="1120" y="620" width="260" height="110" fill="#f0fdfa" stroke="#5eead4" rx="5"/>
+  <text x="1250" y="640" class="note-text-tool" text-anchor="middle" font-weight="bold">ToolResult</text>
+  <text x="1130" y="660" class="note-text">success: boolean</text>
+  <text x="1130" y="675" class="note-text">insights: CROInsight[]</text>
+  <text x="1130" y="690" class="note-text">navigated?: boolean</text>
+  <text x="1130" y="705" class="note-text">error?: string</text>
+  <text x="1130" y="720" class="note-text">executionTimeMs: number</text>
 
-  <rect x="600" y="1240" width="110" height="40" class="cookie-box"/>
-  <text x="655" y="1258" class="cookie-text">CookieConsent</text>
-  <text x="655" y="1271" class="cookie-text">Handler</text>
+  <!-- Section 5: Heuristic Engine -->
+  <rect x="20" y="1120" width="1080" height="120" class="section" rx="5"/>
+  <text x="35" y="1138" class="section-label">5. HEURISTIC ENGINE (Post-Agent)</text>
 
-  <rect x="735" y="1240" width="100" height="40" class="actor-box"/>
-  <text x="785" y="1265" class="actor-text">HeadingExtractor</text>
+  <rect x="145" y="1150" width="10" height="80" class="activation"/>
+  <rect x="845" y="1165" width="10" height="50" class="activation-heuristic"/>
 
-  <rect x="865" y="1240" width="110" height="40" class="actor-box"/>
-  <text x="920" y="1265" class="actor-text">LangChainProc</text>
+  <line x1="155" y1="1175" x2="845" y2="1175" class="message" marker-end="url(#arrowhead)"/>
+  <text x="470" y="1168" class="message-text">run(pageState, businessType)</text>
 
-  <rect x="1005" y="1240" width="80" height="40" class="external"/>
-  <text x="1045" y="1265" class="external-text">OpenAI API</text>
+  <rect x="860" y="1170" width="130" height="35" class="note" rx="3"/>
+  <text x="870" y="1185" class="note-text">Run 10 rules (H001-H010)</text>
+  <text x="870" y="1198" class="note-text">Detect business type</text>
 
-  <rect x="1115" y="1240" width="100" height="40" class="actor-box"/>
-  <text x="1165" y="1265" class="actor-text">ResultFormatter</text>
+  <line x1="845" y1="1210" x2="155" y2="1210" class="message-return" marker-end="url(#arrowhead-return)"/>
+  <text x="470" y="1205" class="message-text">HeuristicResult {insights[], businessType}</text>
+
+  <!-- Section 6: Post-Processing -->
+  <rect x="20" y="1250" width="1080" height="120" class="section" rx="5"/>
+  <text x="35" y="1268" class="section-label">6. POST-PROCESSING</text>
+
+  <rect x="145" y="1280" width="10" height="80" class="activation"/>
+  <rect x="945" y="1295" width="10" height="50" class="activation"/>
+
+  <line x1="155" y1="1305" x2="945" y2="1305" class="message" marker-end="url(#arrowhead)"/>
+  <text x="510" y="1298" class="message-text">process(toolInsights, heuristicInsights)</text>
+
+  <rect x="960" y="1300" width="130" height="45" class="note" rx="3"/>
+  <text x="970" y="1315" class="note-text">Deduplicate</text>
+  <text x="970" y="1328" class="note-text">Prioritize by severity</text>
+  <text x="970" y="1341" class="note-text">Generate hypotheses</text>
+
+  <line x1="945" y1="1345" x2="155" y2="1345" class="message-return" marker-end="url(#arrowhead-return)"/>
+  <text x="510" y="1340" class="message-text">{dedupedInsights[], hypotheses[], scores}</text>
+
+  <!-- Section 7: Output -->
+  <rect x="20" y="1380" width="1080" height="120" class="section" rx="5"/>
+  <text x="35" y="1398" class="section-label">7. OUTPUT GENERATION</text>
+
+  <rect x="145" y="1410" width="10" height="80" class="activation"/>
+  <rect x="1045" y="1425" width="10" height="50" class="activation-output"/>
+
+  <line x1="155" y1="1435" x2="1045" y2="1435" class="message" marker-end="url(#arrowhead)"/>
+  <text x="560" y="1428" class="message-text">generate(result, format)</text>
+
+  <rect x="1060" y="1430" width="100" height="35" class="note" rx="3"/>
+  <text x="1070" y="1445" class="note-text">Console / MD / JSON</text>
+  <text x="1070" y="1458" class="note-text">FileWriter</text>
+
+  <line x1="1045" y1="1475" x2="155" y2="1475" class="message-return" marker-end="url(#arrowhead-return)"/>
+  <text x="560" y="1470" class="message-text">formatted output string</text>
+
+  <!-- Section 8: Return to CLI -->
+  <rect x="20" y="1510" width="1080" height="80" class="section" rx="5"/>
+  <text x="35" y="1528" class="section-label">8. RETURN TO CLI</text>
+
+  <rect x="145" y="1540" width="10" height="40" class="activation"/>
+  <rect x="55" y="1555" width="10" height="25" class="activation"/>
+
+  <line x1="145" y1="1565" x2="65" y2="1565" class="message-return" marker-end="url(#arrowhead-return)"/>
+  <text x="85" y="1558" class="message-text-bold">CROAnalysisResult</text>
+
+  <!-- Actor boxes at bottom -->
+  <rect x="30" y="1610" width="60" height="40" class="actor-box"/>
+  <text x="60" y="1633" class="actor-text">CLI</text>
+
+  <rect x="110" y="1610" width="80" height="40" class="actor-box"/>
+  <text x="150" y="1633" class="actor-text">CROAgent</text>
+
+  <rect x="210" y="1610" width="80" height="40" class="actor-box"/>
+  <text x="250" y="1633" class="actor-text">Browser</text>
+
+  <rect x="310" y="1610" width="80" height="40" class="actor-box"/>
+  <text x="350" y="1633" class="actor-text">DOMExtractor</text>
+
+  <rect x="410" y="1610" width="80" height="40" class="actor-box"/>
+  <text x="450" y="1633" class="actor-text">Prompt</text>
+
+  <rect x="510" y="1610" width="80" height="40" class="external"/>
+  <text x="550" y="1633" class="external-text">GPT-4</text>
+
+  <rect x="610" y="1610" width="80" height="40" class="actor-box"/>
+  <text x="650" y="1633" class="actor-text">ToolExec</text>
+
+  <rect x="710" y="1610" width="80" height="40" class="actor-box"/>
+  <text x="750" y="1633" class="actor-text">9 Tools</text>
+
+  <rect x="810" y="1610" width="80" height="40" class="actor-box"/>
+  <text x="850" y="1633" class="actor-text">Heuristic</text>
+
+  <rect x="910" y="1610" width="80" height="40" class="actor-box"/>
+  <text x="950" y="1633" class="actor-text">PostProc</text>
+
+  <rect x="1010" y="1610" width="80" height="40" class="actor-box"/>
+  <text x="1050" y="1633" class="actor-text">Output</text>
 
   <!-- Legend -->
-  <rect x="30" y="1295" width="600" height="45" fill="none" stroke="#cbd5e1" stroke-width="1" rx="5"/>
-  <text x="45" y="1315" class="message-text-bold">Legend:</text>
-  <line x1="100" y1="1312" x2="140" y2="1312" class="message" marker-end="url(#arrowhead)"/>
-  <text x="145" y="1316" class="message-text">Sync call</text>
-  <line x1="200" y1="1312" x2="240" y2="1312" class="message-return" marker-end="url(#arrowhead-return)"/>
-  <text x="245" y="1316" class="message-text">Return</text>
-  <rect x="295" y="1303" width="20" height="18" class="activation"/>
-  <text x="320" y="1316" class="message-text">Active</text>
-  <rect x="360" y="1303" width="20" height="18" class="note" rx="2"/>
-  <text x="385" y="1316" class="message-text">Note</text>
-  <rect x="420" y="1303" width="20" height="18" class="activation-cookie"/>
-  <text x="445" y="1316" class="message-text">Cookie Handler</text>
-  <rect x="540" y="1303" width="20" height="18" class="note-cookie" rx="2"/>
-  <text x="565" y="1316" class="message-text">Cookie Note</text>
+  <rect x="20" y="1670" width="1080" height="110" fill="white" stroke="#cbd5e1" stroke-width="1" rx="5"/>
+  <text x="40" y="1695" class="message-text-bold">Legend:</text>
+
+  <line x1="100" y1="1690" x2="150" y2="1690" class="message" marker-end="url(#arrowhead)"/>
+  <text x="160" y="1695" class="message-text">Sync call</text>
+
+  <line x1="230" y1="1690" x2="280" y2="1690" class="message-return" marker-end="url(#arrowhead-return)"/>
+  <text x="290" y="1695" class="message-text">Return</text>
+
+  <line x1="350" y1="1690" x2="400" y2="1690" class="message-loop" marker-end="url(#arrowhead-loop)"/>
+  <text x="410" y="1695" class="message-text">Loop</text>
+
+  <rect x="460" y="1680" width="20" height="18" class="activation"/>
+  <text x="490" y="1695" class="message-text">Active</text>
+
+  <rect x="540" y="1680" width="20" height="18" class="activation-agent"/>
+  <text x="570" y="1695" class="message-text">Agent loop</text>
+
+  <rect x="640" y="1680" width="20" height="18" class="activation-tool"/>
+  <text x="670" y="1695" class="message-text">Tool exec</text>
+
+  <rect x="730" y="1680" width="20" height="18" class="activation-heuristic"/>
+  <text x="760" y="1695" class="message-text">Heuristic</text>
+
+  <rect x="820" y="1680" width="20" height="18" class="activation-output"/>
+  <text x="850" y="1695" class="message-text">Output</text>
+
+  <rect x="900" y="1680" width="20" height="18" class="note" rx="2"/>
+  <text x="930" y="1695" class="message-text">Note</text>
+
+  <rect x="970" y="1680" width="20" height="18" class="external" rx="2"/>
+  <text x="1000" y="1695" class="message-text">External API</text>
+
+  <!-- Final result info -->
+  <rect x="40" y="1715" width="1040" height="50" fill="#f0fdf4" stroke="#86efac" rx="5"/>
+  <text x="560" y="1735" class="note-text" text-anchor="middle" fill="#166534" font-weight="bold">CROAnalysisResult: { url, success, insights[], heuristicInsights[], businessType, hypotheses[], scores, stepsExecuted, totalTimeMs, terminationReason }</text>
+  <text x="560" y="1755" class="note-text" text-anchor="middle" fill="#166534">Termination: done tool called | max 10 steps | 3 consecutive failures | error</text>
+
+  <!-- 10 Heuristic Rules Reference -->
+  <rect x="1110" y="750" width="280" height="200" fill="white" stroke="#f97316" stroke-width="2" rx="8"/>
+  <rect x="1110" y="750" width="280" height="30" fill="#f97316" rx="8"/>
+  <rect x="1110" y="770" width="280" height="10" fill="#f97316"/>
+  <text x="1250" y="770" fill="white" font-size="12" font-weight="bold" text-anchor="middle">10 HEURISTIC RULES</text>
+
+  <text x="1125" y="800" class="note-text" font-weight="bold" fill="#c2410c">CTA:</text>
+  <text x="1160" y="800" class="note-text">H001 vague_cta, H002 no_cta_fold</text>
+
+  <text x="1125" y="820" class="note-text" font-weight="bold" fill="#c2410c">Form:</text>
+  <text x="1165" y="820" class="note-text">H003 field_overload, H004 no_label</text>
+
+  <text x="1125" y="840" class="note-text" font-weight="bold" fill="#c2410c">Trust:</text>
+  <text x="1165" y="840" class="note-text">H005 no_trust, H006 no_security</text>
+
+  <text x="1125" y="860" class="note-text" font-weight="bold" fill="#c2410c">Value:</text>
+  <text x="1170" y="860" class="note-text">H007 unclear, H008 headline_long</text>
+
+  <text x="1125" y="880" class="note-text" font-weight="bold" fill="#c2410c">Nav:</text>
+  <text x="1160" y="880" class="note-text">H009 no_breadcrumbs, H010 no_search</text>
+
+  <rect x="1120" y="900" width="260" height="40" fill="#fef3c7" stroke="#fcd34d" rx="5"/>
+  <text x="1250" y="917" class="note-text" text-anchor="middle" font-weight="bold" fill="#b45309">Business Types:</text>
+  <text x="1250" y="932" class="note-text" text-anchor="middle">ecommerce | saas | banking | insurance | travel | media</text>
 </svg>

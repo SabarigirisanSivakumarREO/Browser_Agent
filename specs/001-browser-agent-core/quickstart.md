@@ -7,9 +7,9 @@
 
 ## Session Bootstrap (READ THIS FIRST)
 
-**Status**: CRO Agent Implementation - Phase 18b Complete
-- Completed: 115 tasks (75%) ✅
-- Remaining: 38 tasks across Phase 18c-18-CLI ⏳
+**Status**: CRO Agent Implementation - Phase 18-CLI Complete ✅
+- Completed: 153 tasks (100%) ✅
+- All phases complete!
 
 **Progress**:
 - Phase 1-12: MVP infrastructure ✅
@@ -25,7 +25,11 @@
 - Phase 17c: Control tools (record_insight, done) + Integration ✅
 - Phase 18a: Models & Types (BusinessType, Hypothesis) ✅
 - Phase 18b: Heuristic Engine Core (26 tests) ✅
-- **Phase 18c: 10 Heuristic Rules** ⏳ ← NEXT
+- Phase 18c: 10 Heuristic Rules (H001-H010, 22 tests) ✅
+- Phase 18d: Output Generation (21 tests) ✅
+- Phase 18e: Agent Integration (21 tests) ✅
+- Phase 18f: Test Fixtures (5 HTML + expected-results.json) ✅
+- **Phase 18-CLI: Final CLI Integration** ✅ (default CRO mode, report output)
 
 **Architecture**:
 - MVP: 5 modules (browser, extraction, langchain, output, orchestrator)
@@ -33,7 +37,7 @@
 
 **Key insight**: Phase 18 restructured into 7 sub-phases for better spec coverage (100% FR/SC mapping)
 
-**Next milestone**: Phase 18c - 10 Heuristic Rules (H001-H010)
+**All milestones complete!** CRO Agent is fully functional with default CRO mode and report output
 
 **Instructions**: Keep it concise. Compromise on grammar. Clear, to the point. No fluff.
 
@@ -119,25 +123,34 @@ For any feature/bug fix request:
 
 ### Recent Changes (keep last 3)
 
-**1. Phase 18b: Heuristic Engine Core** - ✅ COMPLETE (2025-12-09)
-- Created src/heuristics/ module: types.ts, heuristic-engine.ts, business-type-detector.ts, severity-scorer.ts
-- HeuristicEngine: register rules, run with business type filtering, collect insights
-- BusinessTypeDetector: detect ecommerce/saas/banking/etc from URL, elements, keywords
-- SeverityScorer: boost severity for business-critical issues
-- 26 unit tests (322 total), type check passes
-- See: src/heuristics/index.ts
+**1. Phase 18-CLI: Final CLI Integration** - ✅ COMPLETE (2025-12-09)
+- CRO analysis is now the default mode (no flags needed)
+- New CLI flags:
+  - `--output-format <fmt>`: console, markdown, json (default: console)
+  - `--output-file <path>`: Write report to file
+  - `--legacy`: Use old heading extraction mode (for backwards compatibility)
+- Created src/output/file-writer.ts: Writes reports to files with directory creation
+- Updated src/index.ts with comprehensive exports for CROAgent, tools, heuristics, models
+- 369 unit tests, 4 e2e tests, type check passes
+- See: src/cli.ts, src/output/file-writer.ts
 
-**2. Phase 18a: Models & Types** - ✅ COMPLETE (2025-12-09)
-- Created BusinessType enum and BusinessTypeResult interface
-- Created Hypothesis interface with HypothesisSchema (Zod validation)
-- BUSINESS_TYPE_SIGNALS constant for detection patterns
-- See: src/models/business-type.ts, src/models/hypothesis.ts
+**2. Phase 18f: Test Fixtures** - ✅ COMPLETE (2025-12-09)
+- Created tests/fixtures/test-pages/ with 5 HTML test pages
+- ecommerce-good.html: Well-optimized page (passes all heuristics)
+- ecommerce-bad.html: Poorly optimized (fails H001-H007, H010)
+- saas-landing.html: SaaS patterns with strong value prop
+- form-heavy.html: Insurance quote with 15+ fields (triggers H003)
+- no-cta.html: Corporate page with no CTAs (triggers H002, H005, H007)
+- Created tests/fixtures/expected-results.json: Expected business types, heuristic failures, accuracy targets
+- See: tests/fixtures/
 
-**3. Phase 17c: Control Tools + Integration** - ✅ COMPLETE (2025-12-09)
-- Created control tools: record_insight, done
-- Full integration tests for tool chaining and registry
-- All 11 CRO tools complete: 6 analysis + 3 navigation + 2 control
-- See: src/agent/tools/cro/record-insight-tool.ts, done-tool.ts
+**3. Phase 18e: Agent Integration** - ✅ COMPLETE (2025-12-09)
+- Integrated post-processing pipeline into CROAgent.analyze()
+- Pipeline steps: detect business type → run heuristics → deduplicate → prioritize → generate hypotheses → calculate scores → generate reports
+- Created src/agent/score-calculator.ts: calculates CRO scores (0-100) with severity-based deductions
+- Extended CROAnalysisResult interface with: heuristicInsights, businessType, hypotheses, scores, report
+- 21 new integration tests (468 total), type check passes
+- See: src/agent/cro-agent.ts, src/agent/score-calculator.ts
 
 ---
 
@@ -145,10 +158,11 @@ For any feature/bug fix request:
 
 | Change | Phase | Tasks | CLI Milestone | Status |
 |--------|-------|-------|---------------|--------|
-| **CLI: Final integration** | 18-CLI | T119-T122 | `npm run start -- <url>` (CRO default) | ⏳ |
-| Agent Integration | 18e | T117-T118 | - | ⏳ |
-| Output Generation | 18d | T112-T116a | - | ⏳ |
-| 10 Heuristic Rules | 18c | T107a-T111c | - | ⏳ |
+| **CLI: Final integration** | 18-CLI | T119-T122 | `npm run start -- <url>` (CRO default) | ✅ |
+| Test Fixtures | 18f | T118a-T118b | - | ✅ |
+| Agent Integration | 18e | T117-T118 | - | ✅ |
+| Output Generation | 18d | T112-T116a | - | ✅ |
+| 10 Heuristic Rules | 18c | T107a-T111c | - | ✅ |
 | Heuristic Engine Core | 18b | T106-T106d | - | ✅ |
 | Models & Types | 18a | T104-T105a | - | ✅ |
 | Control + Integration | 17c | T099-T103 | - | ✅ |
@@ -168,8 +182,9 @@ For any feature/bug fix request:
 Phase 14b: npm run start -- --cro-extract https://carwale.com           ✅
 Phase 15b: npm run start -- --cro-extract --tool analyze_ctas https://carwale.com  ✅
 Phase 16-CLI: npm run start -- --analyze --max-steps 5 https://carwale.com  ✅
-Phase 18-CLI: npm run start -- https://carwale.com  (CRO analysis as default)  ⏳
-            npm run start -- https://carwale.com --output-format markdown --output-file report.md  ⏳
+Phase 18-CLI: npm run start -- https://carwale.com  (CRO analysis as default)  ✅
+            npm run start -- https://carwale.com --output-format markdown --output-file report.md  ✅
+            npm run start -- --legacy https://carwale.com  (old heading mode)  ✅
 ```
 
 ---

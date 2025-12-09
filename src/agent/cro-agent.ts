@@ -2,6 +2,7 @@
  * CRO Agent
  *
  * Phase 16 (T081): Main CRO analysis agent with observe→reason→act loop.
+ * Phase 18e (T117): Added post-processing pipeline integration.
  * Orchestrates browser automation, DOM extraction, LLM interaction, and tool execution.
  */
 
@@ -13,6 +14,8 @@ import type {
   PageState,
   DOMTree,
   StepRecord,
+  BusinessTypeResult,
+  Hypothesis,
 } from '../models/index.js';
 import { DEFAULT_CRO_OPTIONS, parseAgentOutput } from '../models/index.js';
 import { BrowserManager, PageLoader } from '../browser/index.js';
@@ -25,19 +28,58 @@ import { createCRORegistry } from './tools/create-cro-registry.js';
 import { createLogger } from '../utils/index.js';
 import type { DEFAULT_BROWSER_CONFIG } from '../types/index.js';
 
+// Phase 18e: Post-processing imports
+import {
+  BusinessTypeDetector,
+  createHeuristicEngine,
+} from '../heuristics/index.js';
+import {
+  InsightDeduplicator,
+  InsightPrioritizer,
+  HypothesisGenerator,
+  MarkdownReporter,
+  JSONExporter,
+} from '../output/index.js';
+import { ScoreCalculator, type CROScores } from './score-calculator.js';
+
 /**
  * Result of CRO analysis
+ * Phase 18e (T117a): Extended with post-processing fields
  */
 export interface CROAnalysisResult {
+  /** URL that was analyzed */
   url: string;
+  /** Whether analysis completed successfully */
   success: boolean;
+  /** Insights from tool execution (agent loop) */
   insights: CROInsight[];
+  /** Insights from heuristic rules */
+  heuristicInsights: CROInsight[];
+  /** Detected business type */
+  businessType?: BusinessTypeResult;
+  /** Generated A/B test hypotheses */
+  hypotheses: Hypothesis[];
+  /** CRO scores (overall and by category) */
+  scores: CROScores;
+  /** Generated reports (if requested) */
+  report?: {
+    markdown?: string;
+    json?: string;
+  };
+  /** Number of agent loop steps executed */
   stepsExecuted: number;
+  /** Total analysis time in milliseconds */
   totalTimeMs: number;
+  /** Reason for termination */
   terminationReason: string;
+  /** Errors encountered during analysis */
   errors: string[];
+  /** Page title */
   pageTitle?: string;
 }
+
+/** Output format options */
+export type OutputFormat = 'console' | 'markdown' | 'json' | 'all';
 
 /**
  * Options for CROAgent.analyze() method
@@ -49,6 +91,10 @@ export interface AnalyzeOptions {
   registry?: ToolRegistry;
   /** Enable verbose logging */
   verbose?: boolean;
+  /** Output format for reports (default: console - no report generated) */
+  outputFormat?: OutputFormat;
+  /** Skip post-processing pipeline (default: false) */
+  skipPostProcessing?: boolean;
 }
 
 /**
@@ -227,11 +273,113 @@ export class CROAgent {
         }
       }
 
-      // ─── 3. CLEANUP & RETURN ───────────────────────────────────
+      // ─── 3. POST-PROCESSING PIPELINE ─────────────────────────────
+      // Phase 18e (T117): Integrate post-processing after agent loop
+      const toolInsights = stateManager.getInsights();
+      let heuristicInsights: CROInsight[] = [];
+      let businessType: BusinessTypeResult | undefined;
+      let hypotheses: Hypothesis[] = [];
+      let scores: CROScores;
+      let report: { markdown?: string; json?: string } | undefined;
+
+      // Get final page state for heuristics
+      const finalPageState = await this.buildPageState(page, domTree, url, pageTitle);
+
+      if (!analyzeOptions?.skipPostProcessing) {
+        this.logger.info('Starting post-processing pipeline');
+
+        // 3a. Detect business type
+        const businessTypeDetector = new BusinessTypeDetector();
+        businessType = businessTypeDetector.detect(finalPageState);
+        this.logger.debug('Business type detected', {
+          type: businessType.type,
+          confidence: businessType.confidence,
+        });
+
+        // 3b. Run heuristic rules
+        const heuristicEngine = createHeuristicEngine();
+        const heuristicResult = heuristicEngine.run(finalPageState, businessType.type);
+        heuristicInsights = heuristicResult.insights;
+        this.logger.debug('Heuristics executed', {
+          rulesExecuted: heuristicResult.rulesExecuted,
+          insightsFound: heuristicInsights.length,
+        });
+
+        // 3c. Combine and deduplicate insights
+        const allInsights = [...toolInsights, ...heuristicInsights];
+        const deduplicator = new InsightDeduplicator();
+        const uniqueInsights = deduplicator.deduplicate(allInsights);
+
+        // 3d. Prioritize insights by severity and business type
+        const prioritizer = new InsightPrioritizer();
+        const prioritizedInsights = prioritizer.prioritize(uniqueInsights, businessType.type);
+
+        // Update heuristicInsights to be the prioritized heuristic-only insights
+        heuristicInsights = prioritizedInsights.filter(i =>
+          heuristicInsights.some(h => h.id === i.id)
+        );
+
+        // 3e. Generate hypotheses from high/critical insights
+        const hypothesisGenerator = new HypothesisGenerator({ minSeverity: 'high' });
+        hypotheses = hypothesisGenerator.generate(prioritizedInsights);
+        this.logger.debug('Hypotheses generated', { count: hypotheses.length });
+
+        // 3f. Calculate scores
+        const scoreCalculator = new ScoreCalculator();
+        scores = scoreCalculator.calculate(prioritizedInsights);
+        this.logger.debug('Scores calculated', { overall: scores.overall });
+
+        // 3g. Generate reports if requested
+        if (analyzeOptions?.outputFormat && analyzeOptions.outputFormat !== 'console') {
+          report = {};
+          const reportInput = {
+            url,
+            pageTitle,
+            insights: toolInsights,
+            heuristicInsights,
+            businessType,
+            hypotheses,
+            scores,
+            stepsExecuted: stateManager.getStep(),
+            totalTimeMs: Date.now() - startTime,
+          };
+
+          if (
+            analyzeOptions.outputFormat === 'markdown' ||
+            analyzeOptions.outputFormat === 'all'
+          ) {
+            const markdownReporter = new MarkdownReporter();
+            report.markdown = markdownReporter.generate(reportInput);
+            this.logger.debug('Markdown report generated');
+          }
+
+          if (
+            analyzeOptions.outputFormat === 'json' ||
+            analyzeOptions.outputFormat === 'all'
+          ) {
+            const jsonExporter = new JSONExporter();
+            report.json = jsonExporter.export(reportInput);
+            this.logger.debug('JSON report generated');
+          }
+        }
+
+        this.logger.info('Post-processing pipeline complete');
+      } else {
+        // Skip post-processing - just calculate basic scores
+        const scoreCalculator = new ScoreCalculator();
+        scores = scoreCalculator.calculate(toolInsights);
+      }
+
+      // ─── 4. CLEANUP & RETURN ───────────────────────────────────
       const result: CROAnalysisResult = {
         url,
         success: true,
-        insights: stateManager.getInsights(),
+        insights: toolInsights,
+        heuristicInsights,
+        businessType,
+        hypotheses,
+        scores,
+        report,
         stepsExecuted: stateManager.getStep(),
         totalTimeMs: Date.now() - startTime,
         terminationReason: stateManager.getTerminationReason(),
@@ -242,7 +390,10 @@ export class CROAgent {
       this.logger.info('Analysis complete', {
         success: true,
         stepsExecuted: result.stepsExecuted,
-        insightCount: result.insights.length,
+        toolInsightCount: result.insights.length,
+        heuristicInsightCount: result.heuristicInsights.length,
+        hypothesesCount: result.hypotheses.length,
+        overallScore: result.scores.overall,
         terminationReason: result.terminationReason,
         totalTimeMs: result.totalTimeMs,
       });
@@ -252,10 +403,25 @@ export class CROAgent {
       const errMsg = error instanceof Error ? error.message : 'Unknown error';
       this.logger.error('Analysis failed', { error: errMsg });
 
+      // Return error result with empty post-processing fields
+      const emptyScores: CROScores = {
+        overall: 0,
+        byCategory: {},
+        criticalCount: 0,
+        highCount: 0,
+        mediumCount: 0,
+        lowCount: 0,
+      };
+
       return {
         url,
         success: false,
         insights: [],
+        heuristicInsights: [],
+        businessType: undefined,
+        hypotheses: [],
+        scores: emptyScores,
+        report: undefined,
         stepsExecuted: 0,
         totalTimeMs: Date.now() - startTime,
         terminationReason: `Error: ${errMsg}`,
