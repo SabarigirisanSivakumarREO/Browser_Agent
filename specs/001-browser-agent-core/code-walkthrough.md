@@ -1,22 +1,30 @@
 # Code Walkthrough: Browser Agent
 
-**Last Updated**: 2025-01-24
+**Last Updated**: 2025-12-16
 
 ---
 
 ## What Does This Application Do?
 
-A CLI tool that:
+A CLI-based CRO (Conversion Rate Optimization) analysis tool that:
 1. Opens a website in a browser (Chromium)
-2. Extracts all headings (h1-h6) from the page
-3. Sends headings to AI (GPT-4o-mini) for analysis
-4. Displays structured insights in console
+2. Extracts and classifies DOM elements (CTAs, forms, trust signals, value propositions)
+3. Uses AI (GPT-4o) to perform multi-step CRO analysis
+4. Generates insights, hypotheses, and optimization recommendations
+5. Outputs reports in console, markdown, or JSON format
 
-**Example**:
+**Default Mode (CRO Analysis)**:
 ```bash
 npm run start -- https://www.conversion.com/
 ```
-**Output**: Page title, 39 headings found, AI-generated insights about content structure.
+**Output**: CRO score, actionable insights, A/B test hypotheses, severity-prioritized recommendations.
+
+**Scan Modes (Phase 19)**:
+```bash
+npm run start -- --scan-mode=full_page https://in.burberry.com/relaxed-fit-check-cotton-flannel-shirt-p81154981 # 100% page coverage (default)
+npm run start -- --scan-mode=above_fold https://in.burberry.com/relaxed-fit-check-cotton-flannel-shirt-p81154981# Only initial viewport
+npm run start -- --scan-mode=llm_guided https://in.burberry.com/relaxed-fit-check-cotton-flannel-shirt-p81154981# LLM decides scrolling
+```
 
 ---
 
@@ -88,7 +96,7 @@ browser-agent/
 **What it does**: Parses command line arguments, runs the agent.
 
 ```typescript
-// User runs: npm run start -- https://example.com --headless
+// User runs: npm run start -- https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711 --headless
 
 // cli.ts does:
 1. Parse URLs from arguments
@@ -268,7 +276,7 @@ class ResultFormatter {
     // ┌──────────────────────────────────┐
     // │     BROWSER AGENT RESULTS        │
     // ├──────────────────────────────────┤
-    // │ URL: https://example.com         │
+    // │ URL: https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711         │
     // │ Status: SUCCESS                  │
     // │ Headings: 39                     │
     // └──────────────────────────────────┘

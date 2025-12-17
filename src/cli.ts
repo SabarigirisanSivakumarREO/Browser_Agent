@@ -21,8 +21,8 @@ import {
 } from './output/index.js';
 import { createCRORegistry, ToolExecutor } from './agent/tools/index.js';
 import { CROAgent, type CROAnalysisResult, type CROScores } from './agent/index.js';
-import type { CROActionName, PageState } from './models/index.js';
-import { CROActionNames } from './models/index.js';
+import type { CROActionName, PageState, ScanMode, CoverageConfig } from './models/index.js';
+import { CROActionNames, DEFAULT_COVERAGE_CONFIG } from './models/index.js';
 import type { WaitUntilStrategy } from './types/index.js';
 
 // Load environment variables from .env file
@@ -32,6 +32,7 @@ const VALID_WAIT_STRATEGIES: WaitUntilStrategy[] = ['load', 'domcontentloaded', 
 const VALID_TOOL_NAMES = CROActionNames;
 const VALID_OUTPUT_FORMATS = ['console', 'markdown', 'json'] as const;
 type OutputFormat = typeof VALID_OUTPUT_FORMATS[number];
+const VALID_SCAN_MODES: ScanMode[] = ['full_page', 'above_fold', 'llm_guided'];
 
 /**
  * Parses command-line arguments.
@@ -48,6 +49,8 @@ function parseArgs(): {
   outputFile: string | null;
   maxSteps: number;
   toolName: CROActionName | null;
+  scanMode: ScanMode;
+  minCoverage: number;
   verbose: boolean;
   help: boolean;
 } {
@@ -63,6 +66,8 @@ function parseArgs(): {
   let outputFile: string | null = null;
   let maxSteps = 10;
   let toolName: CROActionName | null = null;
+  let scanMode: ScanMode = 'full_page';
+  let minCoverage = 100;
   let verbose = false;
   let help = false;
 
@@ -125,6 +130,38 @@ function parseArgs(): {
       i++;
     } else if (arg === '--no-cookie-dismiss') {
       dismissCookieConsent = false;
+    } else if (arg === '--scan-mode' && args[i + 1]) {
+      const mode = args[i + 1] as ScanMode;
+      if (VALID_SCAN_MODES.includes(mode)) {
+        scanMode = mode;
+      } else {
+        console.error(`Invalid scan mode: ${mode}`);
+        console.error(`Valid modes: ${VALID_SCAN_MODES.join(', ')}`);
+        process.exit(1);
+      }
+      i++;
+    } else if (arg?.startsWith('--scan-mode=')) {
+      const mode = arg.split('=')[1] as ScanMode;
+      if (VALID_SCAN_MODES.includes(mode)) {
+        scanMode = mode;
+      } else {
+        console.error(`Invalid scan mode: ${mode}`);
+        console.error(`Valid modes: ${VALID_SCAN_MODES.join(', ')}`);
+        process.exit(1);
+      }
+    } else if (arg === '--min-coverage' && args[i + 1]) {
+      minCoverage = parseInt(args[i + 1] ?? '100', 10);
+      if (isNaN(minCoverage) || minCoverage < 0 || minCoverage > 100) {
+        console.error('Invalid min-coverage value. Must be between 0 and 100.');
+        process.exit(1);
+      }
+      i++;
+    } else if (arg?.startsWith('--min-coverage=')) {
+      minCoverage = parseInt(arg.split('=')[1] ?? '100', 10);
+      if (isNaN(minCoverage) || minCoverage < 0 || minCoverage > 100) {
+        console.error('Invalid min-coverage value. Must be between 0 and 100.');
+        process.exit(1);
+      }
     } else if (arg && !arg.startsWith('-')) {
       urls.push(arg);
     }
@@ -142,6 +179,8 @@ function parseArgs(): {
     outputFile,
     maxSteps,
     toolName,
+    scanMode,
+    minCoverage,
     verbose,
     help,
   };
@@ -175,6 +214,12 @@ CRO ANALYSIS OPTIONS:
   --output-format <fmt>   Output format: console, markdown, json (default: console)
   --output-file <path>    Write report to file (markdown/json based on format)
   --max-steps <n>         Maximum analysis steps (default: 10, max: 50)
+  --scan-mode <mode>      Page scanning mode (default: full_page)
+                          - full_page: Deterministic scan of every segment (100% coverage)
+                          - above_fold: Quick scan of initial viewport only
+                          - llm_guided: LLM decides scrolling (original behavior)
+  --min-coverage <n>      Minimum coverage percentage required, 0-100 (default: 100)
+                          Only applies to full_page mode
   --tool <name>           Execute specific CRO tool (for debugging)
                           Available: analyze_ctas, analyze_forms, detect_trust_signals,
                           assess_value_prop, check_navigation, find_friction,
@@ -203,14 +248,23 @@ EXAMPLES:
   # CRO analysis with limited steps
   npm run start -- --max-steps 5 https://www.carwale.com
 
+  # Full-page coverage mode (default)
+  npm run start -- --scan-mode=full_page https://www.carwale.com
+
+  # Above-fold only mode (faster)
+  npm run start -- --scan-mode=above_fold https://www.carwale.com
+
+  # LLM-guided mode (original behavior)
+  npm run start -- --scan-mode=llm_guided https://www.carwale.com
+
   # Legacy heading extraction mode
-  npm run start -- --legacy https://example.com
+  npm run start -- --legacy https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711
 
   # Process multiple URLs
-  npm run start -- https://example.com https://github.com
+  npm run start -- https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711 https://github.com
 
   # Headless mode with verbose logging
-  npm run start -- --headless --verbose https://example.com
+  npm run start -- --headless --verbose https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711
 
   # Execute specific tool for debugging
   npm run start -- --tool analyze_ctas https://www.carwale.com
@@ -372,6 +426,8 @@ async function processAnalysis(
     postLoadWait: number;
     dismissCookieConsent: boolean;
     maxSteps: number;
+    scanMode: ScanMode;
+    minCoverage: number;
     verbose: boolean;
   }
 ): Promise<CROAnalysisResult> {
@@ -412,6 +468,12 @@ async function processAnalysis(
   });
 
   try {
+    // Build coverage config based on CLI options
+    const coverageConfig: CoverageConfig = {
+      ...DEFAULT_COVERAGE_CONFIG,
+      minCoveragePercent: options.minCoverage,
+    };
+
     const result = await agent.analyze(url, {
       browserConfig: {
         headless: options.headless,
@@ -422,6 +484,9 @@ async function processAnalysis(
         browserType: 'chromium',
       },
       verbose: options.verbose,
+      skipHeuristics: true,
+      scanMode: options.scanMode,
+      coverageConfig,
     });
 
     return result;
@@ -521,6 +586,8 @@ async function main(): Promise<void> {
     outputFile,
     maxSteps,
     toolName,
+    scanMode,
+    minCoverage,
     verbose,
     help,
   } = parseArgs();
@@ -620,6 +687,8 @@ async function main(): Promise<void> {
       postLoadWait,
       dismissCookieConsent,
       maxSteps,
+      scanMode,
+      minCoverage,
       verbose,
     });
 

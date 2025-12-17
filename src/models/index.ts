@@ -71,3 +71,13 @@ export {
   IMPACT_WEIGHTS,
   SEVERITY_TO_IMPACT,
 } from './hypothesis.js';
+
+// Coverage tracking (Phase 19a)
+export type {
+  PageSegment,
+  ElementCoverage,
+  CoverageState,
+  CoverageConfig,
+  ScanMode,
+} from './coverage.js';
+export { DEFAULT_COVERAGE_CONFIG } from './coverage.js';

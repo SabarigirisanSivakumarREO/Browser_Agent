@@ -14,33 +14,33 @@ describe('validateUrl', () => {
     });
 
     it('should accept valid https URL', () => {
-      const result = validateUrl('https://example.com');
+      const result = validateUrl('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711');
       expect(result.valid).toBe(true);
-      expect(result.normalizedUrl).toBe('https://example.com/');
+      expect(result.normalizedUrl).toBe('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711/');
     });
 
     it('should accept URL with path', () => {
-      const result = validateUrl('https://example.com/path/to/page');
+      const result = validateUrl('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711/path/to/page');
       expect(result.valid).toBe(true);
-      expect(result.normalizedUrl).toBe('https://example.com/path/to/page');
+      expect(result.normalizedUrl).toBe('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711/path/to/page');
     });
 
     it('should accept URL with query parameters', () => {
-      const result = validateUrl('https://example.com/search?q=test');
+      const result = validateUrl('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711/search?q=test');
       expect(result.valid).toBe(true);
-      expect(result.normalizedUrl).toBe('https://example.com/search?q=test');
+      expect(result.normalizedUrl).toBe('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711/search?q=test');
     });
 
     it('should accept URL with port', () => {
-      const result = validateUrl('https://example.com:8080/api');
+      const result = validateUrl('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711:8080/api');
       expect(result.valid).toBe(true);
-      expect(result.normalizedUrl).toBe('https://example.com:8080/api');
+      expect(result.normalizedUrl).toBe('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711:8080/api');
     });
 
     it('should trim whitespace from URL', () => {
-      const result = validateUrl('  https://example.com  ');
+      const result = validateUrl('  https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711  ');
       expect(result.valid).toBe(true);
-      expect(result.normalizedUrl).toBe('https://example.com/');
+      expect(result.normalizedUrl).toBe('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711/');
     });
   });
 

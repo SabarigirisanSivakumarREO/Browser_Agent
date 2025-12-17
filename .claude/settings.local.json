@@ -16,7 +16,9 @@
       "Bash(npm ls:*)",
       "Bash(node -e:*)",
       "WebSearch",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(find:*)",
+      "Bash(npx tsx:*)"
     ],
     "deny": [],
     "ask": []

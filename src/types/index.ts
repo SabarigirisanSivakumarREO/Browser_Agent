@@ -135,7 +135,7 @@ export interface PageLoadResult {
  * Configuration for LangChain/OpenAI processing.
  */
 export interface ProcessingConfig {
-  /** OpenAI model to use (default: 'gpt-4o-mini' per CR-003) */
+  /** OpenAI model to use (default: 'gpt-4') */
   model: string;
 
   /** Maximum tokens for response */
@@ -304,7 +304,7 @@ export const DEFAULT_BROWSER_CONFIG: BrowserConfig = {
 };
 
 export const DEFAULT_PROCESSING_CONFIG: ProcessingConfig = {
-  model: 'gpt-4o-mini', // CR-003: GPT-4o-mini
+  model: 'gpt-4',
   maxTokens: 1000,
   temperature: 0.3, // Low temperature for consistent categorization
 };
@@ -314,3 +314,16 @@ export const DEFAULT_AGENT_CONFIG: AgentConfig = {
   processing: DEFAULT_PROCESSING_CONFIG,
   verbose: false,
 };
+
+// ============================================================================
+// Coverage Types (Phase 19)
+// ============================================================================
+
+/**
+ * Analysis scan modes for CRO agent
+ * - full_page: Deterministic scan of every segment (100% coverage)
+ * - above_fold: Quick scan of initial viewport only
+ * - llm_guided: Original behavior where LLM decides scrolling
+ */
+export type { ScanMode, CoverageConfig } from '../models/coverage.js';
+export { DEFAULT_COVERAGE_CONFIG } from '../models/coverage.js';

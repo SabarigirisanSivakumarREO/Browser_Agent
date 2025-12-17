@@ -18,10 +18,20 @@ function createInsightId(): string {
 }
 
 /**
+ * Helper to coerce string/boolean to boolean (handles LLM passing "true"/"false")
+ */
+const coerceBoolean = z.preprocess((val) => {
+  if (typeof val === 'string') {
+    return val.toLowerCase() === 'true';
+  }
+  return val;
+}, z.boolean());
+
+/**
  * Parameter schema for assess_value_prop tool
  */
 export const AnalyzeValuePropParamsSchema = z.object({
-  checkH1Only: z.boolean().optional().default(false).describe('Only analyze H1 elements, ignore H2-H6'),
+  checkH1Only: coerceBoolean.optional().default(false).describe('Only analyze H1 elements, ignore H2-H6'),
 });
 
 export type AnalyzeValuePropParams = z.infer<typeof AnalyzeValuePropParamsSchema>;

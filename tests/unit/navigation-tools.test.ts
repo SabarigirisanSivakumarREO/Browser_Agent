@@ -61,7 +61,7 @@ function createMockDOMTree(nodes: DOMNode[] = []): DOMTree {
 // Helper to create mock PageState
 function createMockPageState(overrides: Partial<PageState> = {}): PageState {
   return {
-    url: 'https://example.com',
+    url: 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711',
     title: 'Test Page',
     domTree: createMockDOMTree(),
     viewport: { width: 1920, height: 1080, deviceScaleFactor: 1, isMobile: false },
@@ -74,7 +74,7 @@ function createMockPageState(overrides: Partial<PageState> = {}): PageState {
 // Helper to create mock Playwright Page
 function createMockPage(overrides: Partial<Record<string, unknown>> = {}): Page {
   return {
-    url: vi.fn().mockReturnValue('https://example.com'),
+    url: vi.fn().mockReturnValue('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711'),
     evaluate: vi.fn().mockResolvedValue(undefined),
     waitForTimeout: vi.fn().mockResolvedValue(undefined),
     locator: vi.fn().mockReturnValue({
@@ -240,7 +240,7 @@ describe('clickTool', () => {
     const context = createMockContext(
       {
         locator: vi.fn().mockReturnValue(mockLocator),
-        url: vi.fn().mockReturnValue('https://example.com'),
+        url: vi.fn().mockReturnValue('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711'),
       },
       {
         domTree: createMockDOMTree([
@@ -318,7 +318,7 @@ describe('clickTool', () => {
       {
         locator: vi.fn().mockReturnValue(mockLocator),
         waitForNavigation: mockWaitForNavigation,
-        url: vi.fn().mockReturnValue('https://example.com'),
+        url: vi.fn().mockReturnValue('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711'),
       },
       {
         domTree: createMockDOMTree([
@@ -348,8 +348,8 @@ describe('clickTool', () => {
         url: vi.fn().mockImplementation(() => {
           urlCallCount++;
           return urlCallCount === 1
-            ? 'https://example.com'
-            : 'https://example.com/new-page';
+            ? 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711'
+            : 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711/new-page';
         }),
       },
       {
@@ -378,7 +378,7 @@ describe('clickTool', () => {
     const context = createMockContext(
       {
         locator: vi.fn().mockReturnValue(mockLocator),
-        url: vi.fn().mockReturnValue('https://example.com'),
+        url: vi.fn().mockReturnValue('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711'),
       },
       {
         domTree: createMockDOMTree([
@@ -444,14 +444,14 @@ describe('goToUrlTool', () => {
   // Test 16: load time tracked
   it('should track load time in milliseconds', async () => {
     const context = createMockContext({
-      url: vi.fn().mockReturnValue('https://example.com'),
+      url: vi.fn().mockReturnValue('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711'),
       goto: vi.fn().mockImplementation(async () => {
         // Simulate some load time
         await new Promise((resolve) => setTimeout(resolve, 10));
         return { status: vi.fn().mockReturnValue(200) };
       }),
     });
-    context.params = { url: 'https://example.com' };
+    context.params = { url: 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711' };
 
     const result = await goToUrlTool.execute(context);
 
@@ -489,14 +489,14 @@ describe('goToUrlTool', () => {
     });
 
     const context = createMockContext({
-      url: vi.fn().mockReturnValue('https://example.com'),
+      url: vi.fn().mockReturnValue('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711'),
       goto: mockGoto,
     });
-    context.params = { url: 'https://example.com', waitUntil: 'networkidle' };
+    context.params = { url: 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711', waitUntil: 'networkidle' };
 
     await goToUrlTool.execute(context);
 
-    expect(mockGoto).toHaveBeenCalledWith('https://example.com', {
+    expect(mockGoto).toHaveBeenCalledWith('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711', {
       waitUntil: 'networkidle',
       timeout: 60000,
     });
@@ -519,7 +519,7 @@ describe('Parameter Schema Validation', () => {
   });
 
   it('GoToUrlParamsSchema should apply default waitUntil', () => {
-    const result = GoToUrlParamsSchema.parse({ url: 'https://example.com' });
+    const result = GoToUrlParamsSchema.parse({ url: 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711' });
     expect(result.waitUntil).toBe('load');
   });
 });

@@ -335,7 +335,12 @@ describe('DEFAULT_CRO_OPTIONS', () => {
     expect(keys).toContain('failureLimit');
     expect(keys).toContain('tokenBudgetWarning');
     expect(keys).toContain('textTruncateLength');
-    expect(keys.length).toBe(6);
+    expect(keys).toContain('scanMode'); // Phase 19e
+    expect(keys.length).toBe(7);
+  });
+
+  it('should have scanMode = full_page as default (Phase 19e)', () => {
+    expect(DEFAULT_CRO_OPTIONS.scanMode).toBe('full_page');
   });
 });
 
@@ -362,12 +367,12 @@ describe('Type exports compile correctly', () => {
     const memory: CROMemory = {
       stepHistory: [],
       findings: [],
-      pagesSeen: ['https://example.com'],
+      pagesSeen: ['https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711'],
       currentFocus: 'cta_analysis',
       errors: [],
     };
 
-    expect(memory.pagesSeen).toContain('https://example.com');
+    expect(memory.pagesSeen).toContain('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711');
   });
 
   it('should allow creating AgentState objects', () => {

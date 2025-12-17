@@ -18,10 +18,20 @@ function createInsightId(): string {
 }
 
 /**
+ * Helper to coerce string/boolean to boolean (handles LLM passing "true"/"false")
+ */
+const coerceBoolean = z.preprocess((val) => {
+  if (typeof val === 'string') {
+    return val.toLowerCase() === 'true';
+  }
+  return val;
+}, z.boolean());
+
+/**
  * Parameter schema for check_navigation tool
  */
 export const CheckNavigationParamsSchema = z.object({
-  includeFooter: z.boolean().optional().default(true).describe('Include footer navigation in analysis'),
+  includeFooter: coerceBoolean.optional().default(true).describe('Include footer navigation in analysis'),
 });
 
 export type CheckNavigationParams = z.infer<typeof CheckNavigationParamsSchema>;

@@ -197,7 +197,7 @@ describe('End-to-End Workflow', () => {
       });
 
       try {
-        const result = await agentNoCookies.processUrl('https://example.com');
+        const result = await agentNoCookies.processUrl('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711');
 
         // Cookie consent should not be attempted
         expect(result.pageLoad.cookieConsent).toBeUndefined();

@@ -11,10 +11,11 @@ import type { ToolResult } from '../../../models/index.js';
 
 /**
  * Parameter schema for scroll_page tool
+ * Uses coerce to handle LLM passing strings like "500" instead of 500
  */
 export const ScrollPageParamsSchema = z.object({
   direction: z.enum(['up', 'down', 'top', 'bottom']),
-  amount: z.number().positive().optional().default(500),
+  amount: z.coerce.number().positive().optional().default(500),
 });
 
 export type ScrollPageParams = z.infer<typeof ScrollPageParamsSchema>;

@@ -736,17 +736,19 @@
 
     <!-- CLI Modes -->
     <g transform="translate(20, 465)">
-      <rect width="640" height="100" rx="6" fill="#f1f5f9" stroke="#cbd5e1"/>
+      <rect width="640" height="115" rx="6" fill="#f1f5f9" stroke="#cbd5e1"/>
       <text x="320" y="20" class="label-bold" text-anchor="middle">CLI Modes &amp; Options</text>
       <line x1="20" y1="30" x2="620" y2="30" stroke="#cbd5e1"/>
       <text x="20" y="48" class="param-text" fill="#3b82f6">Default:</text>
-      <text x="70" y="48" class="param-text">CRO Analysis (npm run start -- https://example.com)</text>
-      <text x="20" y="63" class="param-text" fill="#64748b">--legacy:</text>
-      <text x="75" y="63" class="param-text">Original heading extraction mode</text>
-      <text x="20" y="78" class="param-text" fill="#64748b">--tool:</text>
-      <text x="60" y="78" class="param-text">Debug specific tool (--tool analyze_ctas)</text>
-      <text x="20" y="93" class="param-text" fill="#64748b">Output:</text>
-      <text x="65" y="93" class="param-text">--output-format console|markdown|json  --output-file &lt;path&gt;  --max-steps &lt;n&gt;</text>
+      <text x="65" y="48" class="param-text">CRO Analysis mode</text>
+      <text x="20" y="61" class="param-text" fill="#64748b">Example:</text>
+      <text x="70" y="61" class="param-text">npm run start -- https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711</text>
+      <text x="20" y="76" class="param-text" fill="#64748b">--legacy:</text>
+      <text x="75" y="76" class="param-text">Original heading extraction mode</text>
+      <text x="320" y="76" class="param-text" fill="#64748b">--tool:</text>
+      <text x="360" y="76" class="param-text">Debug specific tool</text>
+      <text x="20" y="91" class="param-text" fill="#64748b">Output:</text>
+      <text x="65" y="91" class="param-text">--output-format console|markdown|json  --output-file &lt;path&gt;  --max-steps &lt;n&gt;</text>
     </g>
   </g>
 </svg>

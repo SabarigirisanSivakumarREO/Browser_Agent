@@ -7,13 +7,6 @@
 import type { CROAnalysisResult } from '../agent/cro-agent.js';
 import type { CROInsight, Severity } from '../models/index.js';
 
-const SEVERITY_COLORS: Record<Severity, string> = {
-  critical: '\x1b[31m', // Red
-  high: '\x1b[33m',     // Yellow
-  medium: '\x1b[36m',   // Cyan
-  low: '\x1b[37m',      // White
-};
-
 const COLORS = {
   GREEN: '\x1b[32m',
   RED: '\x1b[31m',
@@ -127,41 +120,88 @@ export class AgentProgressFormatter {
       lines.push('');
       lines.push(this.color('ERRORS:', COLORS.RED));
       for (const error of result.errors.slice(0, 5)) {
-        lines.push(`  - ${this.truncate(error, this.width - 6)}`);
+        lines.push(this.color(`  - ${this.truncate(error, this.width - 6)}`, COLORS.RED));
       }
       if (result.errors.length > 5) {
-        lines.push(`  ... and ${result.errors.length - 5} more errors`);
+        lines.push(this.color(`  ... and ${result.errors.length - 5} more errors`, COLORS.RED));
       }
     }
 
-    // Insights
-    lines.push('');
-    lines.push(this.separator.replace(/=/g, '-'));
-    lines.push(`INSIGHTS FOUND: ${result.insights.length}`);
-    lines.push(this.separator.replace(/=/g, '-'));
+    // Tool Insights
+    const allInsights = [...result.insights, ...result.heuristicInsights];
+    if (allInsights.length > 0) {
+      const bySeverity = this.groupBySeverity(allInsights);
 
-    if (result.insights.length === 0) {
       lines.push('');
-      lines.push('  (no insights generated)');
-    } else {
-      // Group by severity
-      const bySeverity = this.groupBySeverity(result.insights);
+      lines.push(this.separator.replace(/=/g, '-'));
+      lines.push(
+        `INSIGHTS: ${result.insights.length} tool + ${result.heuristicInsights.length} heuristic = ${allInsights.length} total`
+      );
+      lines.push(this.separator.replace(/=/g, '-'));
 
-      for (const severity of ['critical', 'high', 'medium', 'low'] as Severity[]) {
-        const insights = bySeverity[severity];
-        if (insights.length === 0) continue;
-
+      // Critical issues
+      if (bySeverity.critical.length > 0) {
         lines.push('');
-        const label = severity.toUpperCase();
-        const colorCode = this.useColors ? SEVERITY_COLORS[severity] : '';
-        const resetCode = this.useColors ? COLORS.RESET : '';
-
-        lines.push(`${colorCode}[${label}] (${insights.length})${resetCode}`);
-
-        for (const insight of insights) {
-          lines.push(this.formatInsight(insight, colorCode, resetCode));
+        lines.push(this.color(`▸ CRITICAL (${bySeverity.critical.length})`, COLORS.RED));
+        for (const insight of bySeverity.critical) {
+          lines.push(this.formatInsightLine(insight, COLORS.RED));
         }
       }
+
+      // High issues
+      if (bySeverity.high.length > 0) {
+        lines.push('');
+        lines.push(this.color(`▸ HIGH (${bySeverity.high.length})`, COLORS.YELLOW));
+        for (const insight of bySeverity.high) {
+          lines.push(this.formatInsightLine(insight, COLORS.YELLOW));
+        }
+      }
+
+      // Medium issues
+      if (bySeverity.medium.length > 0) {
+        lines.push('');
+        lines.push(this.color(`▸ MEDIUM (${bySeverity.medium.length})`, COLORS.CYAN));
+        for (const insight of bySeverity.medium) {
+          lines.push(this.formatInsightLine(insight, COLORS.CYAN));
+        }
+      }
+
+      // Low issues
+      if (bySeverity.low.length > 0) {
+        lines.push('');
+        lines.push(`▸ LOW (${bySeverity.low.length})`);
+        for (const insight of bySeverity.low) {
+          lines.push(this.formatInsightLine(insight, COLORS.DIM));
+        }
+      }
+    } else {
+      lines.push('');
+      lines.push(this.separator.replace(/=/g, '-'));
+      lines.push('INSIGHTS FOUND: 0');
+      lines.push(this.separator.replace(/=/g, '-'));
+    }
+
+    // Hypotheses (if any)
+    if (result.hypotheses && result.hypotheses.length > 0) {
+      lines.push('');
+      lines.push(this.separator.replace(/=/g, '-'));
+      lines.push(`A/B TEST HYPOTHESES (${result.hypotheses.length})`);
+      lines.push(this.separator.replace(/=/g, '-'));
+      for (const hypothesis of result.hypotheses.slice(0, 5)) {
+        lines.push(`  • ${hypothesis.title}`);
+        lines.push(this.color(`    ${this.truncate(hypothesis.hypothesis, this.width - 6)}`, COLORS.DIM));
+      }
+      if (result.hypotheses.length > 5) {
+        lines.push(`  ... and ${result.hypotheses.length - 5} more`);
+      }
+    }
+
+    // Scores
+    if (result.scores) {
+      lines.push('');
+      lines.push(this.separator.replace(/=/g, '-'));
+      lines.push(`CRO SCORE: ${this.formatScore(result.scores.overall)}/100`);
+      lines.push(this.separator.replace(/=/g, '-'));
     }
 
     // Summary
@@ -171,6 +211,28 @@ export class AgentProgressFormatter {
     lines.push(this.separator);
 
     return lines.join('\n');
+  }
+
+  /**
+   * Format a single insight line
+   */
+  private formatInsightLine(insight: CROInsight, colorCode: string): string {
+    const category = insight.category ? `[${insight.category}]` : '';
+    const issue = this.truncate(insight.issue, this.width - 10);
+    return this.color(`  • ${category} ${issue}`, colorCode);
+  }
+
+  /**
+   * Format score with color based on value
+   */
+  private formatScore(score: number): string {
+    if (score >= 80) {
+      return this.color(String(score), COLORS.GREEN);
+    } else if (score >= 60) {
+      return this.color(String(score), COLORS.YELLOW);
+    } else {
+      return this.color(String(score), COLORS.RED);
+    }
   }
 
   /**
@@ -202,31 +264,6 @@ export class AgentProgressFormatter {
     }
 
     return parts.join(' | ');
-  }
-
-  /**
-   * Format a single insight for display
-   */
-  private formatInsight(insight: CROInsight, colorStart: string, colorEnd: string): string {
-    const lines: string[] = [];
-
-    // Issue
-    lines.push(`  ${colorStart}Issue:${colorEnd} ${insight.issue}`);
-
-    // Element (if present)
-    if (insight.element) {
-      lines.push(`  Element: ${this.truncate(insight.element, this.width - 12)}`);
-    }
-
-    // Recommendation
-    lines.push(`  ${colorStart}Fix:${colorEnd} ${insight.recommendation}`);
-
-    // Evidence (if present)
-    if (insight.evidence?.text) {
-      lines.push(`  Evidence: "${this.truncate(insight.evidence.text, 50)}"`);
-    }
-
-    return lines.join('\n');
   }
 
   /**

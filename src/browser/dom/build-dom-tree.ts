@@ -329,10 +329,11 @@ export function generateDOMTreeScript(): string {
         node.index = nodeIndex++;
 
         // Add bounding box for indexed elements
+        // Use absolute page coordinates (rect.y + scrollY) for multi-segment DOM merging
         const rect = element.getBoundingClientRect();
         node.boundingBox = {
-          x: Math.round(rect.x),
-          y: Math.round(rect.y),
+          x: Math.round(rect.x + window.scrollX),
+          y: Math.round(rect.y + window.scrollY),
           width: Math.round(rect.width),
           height: Math.round(rect.height)
         };

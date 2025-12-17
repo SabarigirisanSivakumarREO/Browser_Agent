@@ -29,7 +29,7 @@ describe('CookieConsentHandler Integration', () => {
 
   it('should handle pages without cookie popups', async () => {
     const page = browserManager.getPage();
-    await page.goto('https://example.com', { waitUntil: 'load' });
+    await page.goto('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711', { waitUntil: 'load' });
 
     const result = await cookieHandler.dismiss(page);
 

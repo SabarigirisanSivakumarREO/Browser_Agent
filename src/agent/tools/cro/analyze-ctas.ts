@@ -19,10 +19,11 @@ function createInsightId(): string {
 
 /**
  * Parameter schema for analyze_ctas tool
+ * Uses coerce to handle LLM passing strings instead of numbers
  */
 export const AnalyzeCTAsParamsSchema = z.object({
   focusArea: z.enum(['above_fold', 'full_page']).optional().default('full_page'),
-  minConfidence: z.number().min(0).max(1).optional().default(0.5),
+  minConfidence: z.coerce.number().min(0).max(1).optional().default(0.5),
 });
 
 export type AnalyzeCTAsParams = z.infer<typeof AnalyzeCTAsParamsSchema>;

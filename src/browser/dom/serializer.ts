@@ -2,10 +2,19 @@
  * DOM Serializer - Converts DOM tree to LLM-friendly text format
  */
 
-import type { DOMTree, DOMNode } from '../../models/index.js';
+import type { DOMTree, DOMNode, ScanMode } from '../../models/index.js';
 import { createLogger } from '../../utils/index.js';
 
 const logger = createLogger('DOMSerializer');
+
+/**
+ * Token budgets for different scan modes (CR-025)
+ */
+export const SCAN_MODE_TOKEN_BUDGETS: Record<ScanMode, number> = {
+  full_page: 32000,   // Larger budget for merged full-page DOM
+  above_fold: 8000,   // Quick scan, original budget
+  llm_guided: 8000,   // Original behavior
+};
 
 /**
  * Serialization options
@@ -15,6 +24,7 @@ export interface DOMSerializerOptions {
   tokenWarningThreshold?: number;  // Warn at this % (default: 0.6 per CR-013)
   includeHidden?: boolean;     // Include hidden elements (default: false)
   indentSize?: number;         // Spaces per indent level (default: 2)
+  scanMode?: ScanMode;         // Scan mode for dynamic token budget (default: llm_guided)
 }
 
 const DEFAULT_OPTIONS: DOMSerializerOptions = {
@@ -22,6 +32,7 @@ const DEFAULT_OPTIONS: DOMSerializerOptions = {
   tokenWarningThreshold: 0.6,
   includeHidden: false,
   indentSize: 2,
+  scanMode: 'llm_guided',
 };
 
 /**
@@ -56,12 +67,20 @@ export class DOMSerializer {
   /**
    * Serialize DOM tree to text
    * Format: [index]<tag attrs>text</tag>
+   *
+   * @param tree The DOM tree to serialize
+   * @param mode Optional scan mode override for dynamic token budget
    */
-  serialize(tree: DOMTree): SerializationResult {
+  serialize(tree: DOMTree, mode?: ScanMode): SerializationResult {
     const lines: string[] = [];
     let elementCount = 0;
     let truncated = false;
-    const maxTokens = this.options.maxTokens!;
+    // Use mode parameter if provided, otherwise use options
+    const effectiveScanMode = mode ?? this.options.scanMode ?? 'llm_guided';
+    const maxTokens =
+      this.options.maxTokens !== DEFAULT_OPTIONS.maxTokens
+        ? this.options.maxTokens!
+        : SCAN_MODE_TOKEN_BUDGETS[effectiveScanMode];
     const warningThreshold = this.options.tokenWarningThreshold!;
     this.warningEmitted = false;
 

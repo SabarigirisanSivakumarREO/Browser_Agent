@@ -14,7 +14,7 @@ import type { PageState, CROInsight, BusinessType } from '../../src/models/index
 // Helper to create a mock PageState
 function createMockPageState(overrides: Partial<PageState> = {}): PageState {
   return {
-    url: 'https://example.com',
+    url: 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711',
     title: 'Test Page',
     domTree: {
       root: {

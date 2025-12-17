@@ -18,11 +18,21 @@ function createInsightId(): string {
 }
 
 /**
+ * Helper to coerce string/boolean to boolean (handles LLM passing "true"/"false")
+ */
+const coerceBoolean = z.preprocess((val) => {
+  if (typeof val === 'string') {
+    return val.toLowerCase() === 'true';
+  }
+  return val;
+}, z.boolean());
+
+/**
  * Parameter schema for analyze_forms tool
  */
 export const AnalyzeFormsParamsSchema = z.object({
   formSelector: z.string().optional().describe('Optional CSS selector to filter forms'),
-  includeHiddenFields: z.boolean().optional().default(false).describe('Include hidden form fields in analysis'),
+  includeHiddenFields: coerceBoolean.optional().default(false).describe('Include hidden form fields in analysis'),
 });
 
 export type AnalyzeFormsParams = z.infer<typeof AnalyzeFormsParamsSchema>;

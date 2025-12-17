@@ -236,8 +236,8 @@ describe('StateManager', () => {
 
     // Test 20: Add page seen
     it('should track pages seen', () => {
-      manager.addPageSeen('https://example.com');
-      manager.addPageSeen('https://example.com/products');
+      manager.addPageSeen('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711');
+      manager.addPageSeen('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711/products');
 
       const memory = manager.getMemory();
       expect(memory.pagesSeen).toHaveLength(2);
@@ -245,17 +245,17 @@ describe('StateManager', () => {
 
     // Test 21: Don't duplicate pages
     it('should not add duplicate page URLs', () => {
-      manager.addPageSeen('https://example.com');
-      manager.addPageSeen('https://example.com');
+      manager.addPageSeen('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711');
+      manager.addPageSeen('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711');
 
       expect(manager.getMemory().pagesSeen).toHaveLength(1);
     });
 
     // Test 22: Check has seen page
     it('should check if page has been seen', () => {
-      manager.addPageSeen('https://example.com');
+      manager.addPageSeen('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711');
 
-      expect(manager.hasSeenPage('https://example.com')).toBe(true);
+      expect(manager.hasSeenPage('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711')).toBe(true);
       expect(manager.hasSeenPage('https://other.com')).toBe(false);
     });
   });

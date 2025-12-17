@@ -11,11 +11,12 @@ import type { ToolResult } from '../../../models/index.js';
 
 /**
  * Parameter schema for done tool
+ * Uses coerce to handle LLM passing strings like "0.8" instead of 0.8
  */
 export const DoneParamsSchema = z.object({
   summary: z.string().min(10).max(1000).describe('Brief summary of analysis findings'),
   confidenceScore: z
-    .number()
+    .coerce.number()
     .min(0)
     .max(1)
     .optional()

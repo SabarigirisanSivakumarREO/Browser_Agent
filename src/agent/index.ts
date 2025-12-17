@@ -27,3 +27,6 @@ export {
   type CROScores,
   type ScoreCalculatorOptions,
 } from './score-calculator.js';
+
+// Coverage tracker (Phase 19a)
+export { CoverageTracker } from './coverage-tracker.js';

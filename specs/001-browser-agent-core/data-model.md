@@ -1,7 +1,7 @@
 # Data Model: Browser Agent Core
 
 **Feature**: `001-browser-agent-core`
-**Last Updated**: 2025-11-24
+**Last Updated**: 2025-12-16
 
 ## Core Types
 
@@ -118,7 +118,7 @@ Configuration for LangChain processing.
  * Configuration for LangChain/OpenAI processing.
  */
 interface ProcessingConfig {
-  /** OpenAI model to use (default: 'gpt-4o-mini' per CR-003) */
+  /** OpenAI model to use (default: 'gpt-4o') */
   model: string;
 
   /** Maximum tokens for response */
@@ -311,7 +311,7 @@ const DEFAULT_BROWSER_CONFIG: BrowserConfig = {
 };
 
 const DEFAULT_PROCESSING_CONFIG: ProcessingConfig = {
-  model: 'gpt-4o-mini', // CR-003: GPT-4o-mini
+  model: 'gpt-4o',
   maxTokens: 1000,
   temperature: 0.3      // Low temperature for consistent categorization
 };
@@ -321,4 +321,347 @@ const DEFAULT_AGENT_CONFIG: AgentConfig = {
   processing: DEFAULT_PROCESSING_CONFIG,
   verbose: false
 };
+```
+
+## CRO Agent Types
+
+### AnalyzeOptions
+
+Options for the CROAgent.analyze() method.
+
+```typescript
+/**
+ * Options for CROAgent.analyze() method
+ */
+interface AnalyzeOptions {
+  /** Override browser config (headless, timeout, etc.) */
+  browserConfig?: Partial<BrowserConfig>;
+
+  /** Use a custom tool registry */
+  registry?: ToolRegistry;
+
+  /** Enable verbose logging */
+  verbose?: boolean;
+
+  /** Output format for reports (default: 'console' - no report generated) */
+  outputFormat?: 'console' | 'markdown' | 'json' | 'all';
+
+  /** Skip entire post-processing pipeline (default: false) */
+  skipPostProcessing?: boolean;
+
+  /** Skip only heuristic rules - keeps other post-processing (default: false) */
+  skipHeuristics?: boolean;
+}
+```
+
+### CROAnalysisResult
+
+Result returned by CROAgent.analyze().
+
+```typescript
+/**
+ * Result of CRO analysis
+ */
+interface CROAnalysisResult {
+  /** URL that was analyzed */
+  url: string;
+
+  /** Whether analysis completed successfully */
+  success: boolean;
+
+  /** Insights from tool execution (agent loop) */
+  insights: CROInsight[];
+
+  /** Insights from heuristic rules */
+  heuristicInsights: CROInsight[];
+
+  /** Detected business type */
+  businessType?: BusinessTypeResult;
+
+  /** Generated A/B test hypotheses */
+  hypotheses: Hypothesis[];
+
+  /** CRO scores (overall and by category) */
+  scores: CROScores;
+
+  /** Generated reports (if requested) */
+  report?: {
+    markdown?: string;
+    json?: string;
+  };
+
+  /** Number of agent loop steps executed */
+  stepsExecuted: number;
+
+  /** Total analysis time in milliseconds */
+  totalTimeMs: number;
+
+  /** Reason for termination */
+  terminationReason: string;
+
+  /** Errors encountered during analysis */
+  errors: string[];
+
+  /** Page title */
+  pageTitle?: string;
+}
+```
+
+### Post-Processing Options
+
+The `skipPostProcessing` and `skipHeuristics` options control which parts of Phase 18 run:
+
+| Option | Effect |
+|--------|--------|
+| `skipPostProcessing: true` | Skips ALL of Phase 18 (business detection, heuristics, dedup, hypotheses, reports) |
+| `skipHeuristics: true` | Skips ONLY heuristic rules (H001-H010), keeps other post-processing |
+
+**Usage Examples:**
+
+```typescript
+// Full analysis (default)
+const result = await agent.analyze('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711');
+
+// Skip only heuristics
+const result = await agent.analyze('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711', {
+  skipHeuristics: true
+});
+
+// Skip all post-processing
+const result = await agent.analyze('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711', {
+  skipPostProcessing: true
+});
+
+// Generate markdown report
+const result = await agent.analyze('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711', {
+  outputFormat: 'markdown'
+});
+```
+
+---
+
+## Coverage System Types (Phase 19)
+
+### ScanMode
+
+Controls how the agent scans the page for CRO analysis.
+
+```typescript
+/**
+ * Analysis scan modes
+ */
+type ScanMode =
+  | 'full_page'      // Deterministic: scan every segment (DEFAULT)
+  | 'above_fold'     // Quick: only initial viewport
+  | 'llm_guided';    // Original: LLM decides scrolling
+```
+
+### PageSegment
+
+Represents a vertical segment of the page for coverage tracking.
+
+```typescript
+/**
+ * Represents a vertical segment of the page
+ */
+interface PageSegment {
+  /** Segment index (0-based) */
+  index: number;
+
+  /** Y position where segment starts (px) */
+  startY: number;
+
+  /** Y position where segment ends (px) */
+  endY: number;
+
+  /** Whether this segment has been scanned */
+  scanned: boolean;
+
+  /** Timestamp when segment was scanned */
+  scannedAt?: number;
+
+  /** Number of CRO elements found in this segment */
+  elementsFound: number;
+
+  /** Number of elements analyzed by tools */
+  elementsAnalyzed: number;
+}
+```
+
+### ElementCoverage
+
+Tracks which elements have been discovered and analyzed.
+
+```typescript
+/**
+ * Tracks element discovery and analysis
+ */
+interface ElementCoverage {
+  /** Element XPath */
+  xpath: string;
+
+  /** CRO classification (cta, form, trust, value_prop, navigation, null) */
+  croType: string | null;
+
+  /** Timestamp when element was first discovered */
+  firstSeenAt: number;
+
+  /** Segment index where element was first seen */
+  firstSeenSegment: number;
+
+  /** List of tool names that analyzed this element */
+  analyzedBy: string[];
+
+  /** Number of insights generated for this element */
+  insightsGenerated: number;
+}
+```
+
+### CoverageState
+
+Main coverage tracking state.
+
+```typescript
+/**
+ * Main coverage tracking state
+ */
+interface CoverageState {
+  /** Total page height in pixels */
+  pageHeight: number;
+
+  /** Viewport height in pixels */
+  viewportHeight: number;
+
+  /** Array of page segments */
+  segments: PageSegment[];
+
+  /** Map of xpath → ElementCoverage */
+  elementsDiscovered: Map<string, ElementCoverage>;
+
+  /** Total CRO elements discovered */
+  totalCROElements: number;
+
+  /** Number of CRO elements analyzed by at least one tool */
+  analyzedCROElements: number;
+
+  /** Number of segments scanned */
+  segmentsCovered: number;
+
+  /** Total number of segments */
+  segmentsTotal: number;
+
+  /** Coverage percentage (0-100) */
+  coveragePercent: number;
+
+  /** List of scroll Y positions visited */
+  scrollPositionsVisited: number[];
+
+  /** Current scroll Y position */
+  currentScrollY: number;
+
+  /** Maximum scroll Y position */
+  maxScrollY: number;
+}
+```
+
+### CoverageConfig
+
+Configuration for coverage tracking.
+
+```typescript
+/**
+ * Coverage configuration
+ */
+interface CoverageConfig {
+  /** Minimum coverage percent required to call 'done' (default: 100) */
+  minCoveragePercent: number;
+
+  /** Overlap between segments in pixels (default: 100) */
+  segmentOverlapPx: number;
+
+  /** Require all segments to be scanned (default: true) */
+  requireAllSegments: boolean;
+
+  /** Require all elements to be analyzed (default: true) */
+  requireElementAnalysis: boolean;
+}
+```
+
+### Default Coverage Configuration
+
+```typescript
+const DEFAULT_COVERAGE_CONFIG: CoverageConfig = {
+  minCoveragePercent: 100,
+  segmentOverlapPx: 100,
+  requireAllSegments: true,
+  requireElementAnalysis: true,
+};
+```
+
+### Updated AnalyzeOptions (Phase 19)
+
+```typescript
+/**
+ * Options for CROAgent.analyze() method (Phase 19 additions)
+ */
+interface AnalyzeOptions {
+  /** Override browser config (headless, timeout, etc.) */
+  browserConfig?: Partial<BrowserConfig>;
+
+  /** Use a custom tool registry */
+  registry?: ToolRegistry;
+
+  /** Enable verbose logging */
+  verbose?: boolean;
+
+  /** Output format for reports (default: 'console' - no report generated) */
+  outputFormat?: 'console' | 'markdown' | 'json' | 'all';
+
+  /** Skip entire post-processing pipeline (default: false) */
+  skipPostProcessing?: boolean;
+
+  /** Skip only heuristic rules - keeps other post-processing (default: false) */
+  skipHeuristics?: boolean;
+
+  // ─── Phase 19 Additions ─────────────────────────────────────────
+
+  /** Scan mode for page coverage (default: 'full_page') */
+  scanMode?: ScanMode;
+
+  /** Coverage configuration (only used when scanMode is 'full_page') */
+  coverageConfig?: Partial<CoverageConfig>;
+}
+```
+
+### Usage Examples (Phase 19)
+
+```typescript
+// Full page scan (default) - guarantees 100% coverage
+const result = await agent.analyze('https://example.com');
+
+// Quick above-fold scan only
+const result = await agent.analyze('https://example.com', {
+  scanMode: 'above_fold'
+});
+
+// Original LLM-guided behavior
+const result = await agent.analyze('https://example.com', {
+  scanMode: 'llm_guided'
+});
+
+// Custom coverage threshold (80%)
+const result = await agent.analyze('https://example.com', {
+  scanMode: 'full_page',
+  coverageConfig: {
+    minCoveragePercent: 80
+  }
+});
+
+// Combine options
+const result = await agent.analyze('https://example.com', {
+  scanMode: 'full_page',
+  coverageConfig: { minCoveragePercent: 95 },
+  outputFormat: 'markdown',
+  verbose: true
+});
 ```

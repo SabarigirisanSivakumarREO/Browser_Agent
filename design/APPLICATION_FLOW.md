@@ -38,7 +38,7 @@
 |                                                                                     |
 |  INPUT                                                                              |
 |  +----+                                                                             |
-|  |URL | ---> npm run start -- https://example.com                                   |
+|  |URL | ---> npm run start -- https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711                                   |
 |  +----+                                                                             |
 |    |                                                                                |
 |    v                                                                                |
@@ -533,7 +533,7 @@
 |   LAYER 2: CONSTRUCTOR (Code-level override)                                     |
 |   +---------------------------------------------------------------------+        |
 |   | new CROAgent({                                                      |        |
-|   |   url: 'https://example.com',                                       |        |
+|   |   url: 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711',                                       |        |
 |   |   headless: true,                                                   |        |
 |   |   maxSteps: 15,                                                     |        |
 |   |   outputFormats: ['markdown', 'json']                               |        |
@@ -733,19 +733,19 @@ browser-agent/
 +---------------------------------------------------------------------------------+
 |                                                                                  |
 |  Basic Analysis:                                                                 |
-|  $ npm run start -- https://example.com                                          |
+|  $ npm run start -- https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711                                          |
 |                                                                                  |
 |  With Output Formats:                                                            |
-|  $ npm run start -- --output markdown https://example.com                        |
-|  $ npm run start -- --output json https://example.com                            |
-|  $ npm run start -- --output markdown,json https://example.com                   |
+|  $ npm run start -- --output markdown https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711                        |
+|  $ npm run start -- --output json https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711                            |
+|  $ npm run start -- --output markdown,json https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711                   |
 |                                                                                  |
 |  With Options:                                                                   |
-|  $ npm run start -- --headless https://example.com                               |
-|  $ npm run start -- --verbose https://example.com                                |
-|  $ npm run start -- --timeout 90000 https://example.com                          |
-|  $ npm run start -- --max-steps 15 https://example.com                           |
-|  $ npm run start -- --output-dir ./reports https://example.com                   |
+|  $ npm run start -- --headless https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711                               |
+|  $ npm run start -- --verbose https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711                                |
+|  $ npm run start -- --timeout 90000 https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711                          |
+|  $ npm run start -- --max-steps 15 https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711                           |
+|  $ npm run start -- --output-dir ./reports https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711                   |
 |                                                                                  |
 |  Combined:                                                                       |
 |  $ npm run start -- --headless --verbose --output markdown,json https://site.com |
@@ -772,7 +772,7 @@ browser-agent/
 +---------------------------------------------------------------------------------+
 |  CRO ANALYSIS RESULTS                                                            |
 +---------------------------------------------------------------------------------+
-|  URL: https://example.com                                                        |
+|  URL: https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711                                                        |
 |  Business Type: ecommerce (confidence: 0.85)                                     |
 |  Overall Score: 72/100 (Grade: B)                                                |
 +---------------------------------------------------------------------------------+
@@ -794,7 +794,7 @@ browser-agent/
 # CRO Analysis Report
 
 ## Summary
-- **URL**: https://example.com
+- **URL**: https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711
 - **Business Type**: ecommerce
 - **Score**: 72/100 (B)
 - **Analysis Date**: 2024-01-15 10:30:00
@@ -816,7 +816,7 @@ browser-agent/
 ### JSON Output
 ```json
 {
-  "url": "https://example.com",
+  "url": "https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711",
   "businessType": {
     "type": "ecommerce",
     "confidence": 0.85,

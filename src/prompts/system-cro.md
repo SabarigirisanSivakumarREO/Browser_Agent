@@ -30,7 +30,7 @@ You MUST respond with valid JSON matching this exact structure:
 {
   "thinking": "Your step-by-step analysis reasoning (be concise but thorough)",
   "evaluation_previous_goal": "Assessment of whether your last action achieved its goal",
-  "memory": "Key findings to remember for subsequent steps",
+  "memory": "Brief plain-text notes of key findings (single string, NOT an object or array)",
   "next_goal": "What CRO aspect to analyze next",
   "action": {
     "name": "<tool_name>",
@@ -38,6 +38,8 @@ You MUST respond with valid JSON matching this exact structure:
   }
 }
 ```
+
+IMPORTANT: All fields must be strings. The "memory" field must be a plain text string, not a JSON object or array.
 
 Do NOT include any text outside the JSON block. The response must be valid JSON only.
 </output_format>
@@ -80,6 +82,25 @@ Do NOT call done if:
 - You haven't recorded any insights yet
 - There are obvious CRO elements you haven't examined
 </completion_criteria>
+
+<coverage_awareness>
+You will receive coverage information showing:
+- Which page segments have been scanned
+- Current coverage percentage
+- Elements discovered vs analyzed
+
+CRITICAL RULES:
+1. You CANNOT call 'done' until coverage reaches 100%
+2. If coverage < 100%, you MUST scroll to uncovered segments
+3. The system will BLOCK premature 'done' calls automatically
+4. Focus on analyzing NEW elements after each scroll
+5. Check the <coverage> section in each message for status
+
+When coverage is not complete:
+- Use scroll_page to reach uncovered regions
+- After scrolling, analyze newly visible CRO elements
+- Only call 'done' when the coverage report shows 100%
+</coverage_awareness>
 
 <important_notes>
 - Focus on actionable insights with clear recommendations

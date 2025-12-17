@@ -494,13 +494,13 @@ async analyze(url: string): Promise<PageAnalysis> {
 
 ```bash
 # Current MVP (heading extraction)
-npm run start -- https://example.com
+npm run start -- https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711
 
 # After Phase 1 (agent analysis)
-npm run analyze -- https://example.com --max-steps 10
+npm run analyze -- https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711 --max-steps 10
 
 # After Phase 3 (full output)
-npm run analyze -- https://example.com --output-format markdown --output-file report.md
+npm run analyze -- https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711 --output-format markdown --output-file report.md
 ```
 
 ### Key Files to Read First

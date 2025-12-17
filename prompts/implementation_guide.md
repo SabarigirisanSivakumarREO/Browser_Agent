@@ -427,7 +427,7 @@ const result = await analyzer.analyze('https://acme-saas.com/pricing');
 // → Automatically selects STANDARD_AUDIT, detects SaaS domain
 
 // Example 2: Force quick scan
-const quick = await analyzer.analyze('https://example.com', { 
+const quick = await analyzer.analyze('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711', { 
   mode: 'quick' 
 });
 // → Returns L1 schema only
@@ -440,16 +440,16 @@ const deep = await analyzer.analyze('https://store.com/product/123', {
 // → Returns FULL schema with e-commerce heuristics
 
 // Example 4: Focused CTA analysis
-const ctas = await analyzer.analyze('https://example.com/landing', {
+const ctas = await analyzer.analyze('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711/landing', {
   mode: 'focused',
   focus: 'ctas'
 });
 // → Returns CTA_SCHEMA only
 
 // Example 5: A/B test comparison
-const comparison = await analyzer.analyze('https://example.com/v1', {
+const comparison = await analyzer.analyze('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711/v1', {
   mode: 'compare',
-  compareUrl: 'https://example.com/v2'
+  compareUrl: 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711/v2'
 });
 // → Returns comparative analysis
 

@@ -1,15 +1,15 @@
 # Quickstart: Browser Agent Core
 
 **Feature**: `001-browser-agent-core`
-**Last Updated**: 2025-12-09
+**Last Updated**: 2025-12-16
 
 ---
 
 ## Session Bootstrap (READ THIS FIRST)
 
-**Status**: CRO Agent Implementation - Phase 18-CLI Complete ✅
-- Completed: 153 tasks (100%) ✅
-- All phases complete!
+**Status**: Phase 19 Complete ✅
+- Completed: 174/174 tasks (Phase 19: 21/21)
+- Phase 19: 100% Page Coverage System ✅
 
 **Progress**:
 - Phase 1-12: MVP infrastructure ✅
@@ -29,15 +29,22 @@
 - Phase 18d: Output Generation (21 tests) ✅
 - Phase 18e: Agent Integration (21 tests) ✅
 - Phase 18f: Test Fixtures (5 HTML + expected-results.json) ✅
-- **Phase 18-CLI: Final CLI Integration** ✅ (default CRO mode, report output)
+- Phase 18-CLI: Final CLI Integration ✅ (default CRO mode, report output)
+- **Phase 19a: Coverage Tracking** ✅ (CoverageTracker class, 16 tests)
+- **Phase 19b: DOM Changes** ✅ (DOMMerger, absolute coords, dynamic tokens, 7 tests)
+- **Phase 19c: Agent Integration** ✅ (full-page scan loop, coverage enforcement)
+- **Phase 19d: Prompt Updates** ✅ (coverage awareness in system prompt)
+- **Phase 19e: CLI & Config** ✅ (--scan-mode, --min-coverage flags)
+- **Phase 19f: Testing & Polish** ✅ (11 integration + 4 E2E tests)
 
 **Architecture**:
 - MVP: 5 modules (browser, extraction, langchain, output, orchestrator)
 - CRO Agent: +7 modules (agent, dom, tools, heuristics, models, output extensions, score-calculator)
+- Phase 19: +1 module (coverage-tracker for 100% page coverage)
 
-**Key insight**: Phase 18 restructured into 7 sub-phases for better spec coverage (100% FR/SC mapping)
+**Key insight**: Phase 19 adds deterministic full-page scanning to achieve 100% coverage on long pages
 
-**All milestones complete!** CRO Agent is fully functional with default CRO mode and report output
+**Current milestone**: Phase 19 Complete - CLI ready with scan modes
 
 **Instructions**: Keep it concise. Compromise on grammar. Clear, to the point. No fluff.
 
@@ -123,34 +130,39 @@ For any feature/bug fix request:
 
 ### Recent Changes (keep last 3)
 
-**1. Phase 18-CLI: Final CLI Integration** - ✅ COMPLETE (2025-12-09)
+**1. Phase 19c-f: Full Page Coverage System** - ✅ COMPLETE (2025-12-16)
+- **Phase 19c - Agent Integration**:
+  - Modified src/agent/cro-agent.ts: Full-page scan loop with DOMMerger integration
+  - Modified src/agent/state-manager.ts: Coverage tracking integration, scanMode support
+  - Coverage enforcement: Blocks 'done' until 100% coverage achieved
+  - Dynamic maxSteps calculation based on page segments
+- **Phase 19d - Prompt Updates**:
+  - Updated src/prompts/system-cro.md: Added coverage awareness rules
+  - Modified src/agent/prompt-builder.ts: Coverage report injection into user messages
+- **Phase 19e - CLI & Config**:
+  - Updated src/cli.ts: Added --scan-mode and --min-coverage flags
+  - Added scanMode to DEFAULT_CRO_OPTIONS (default: 'full_page')
+- **Phase 19f - Testing & Polish**:
+  - Created tests/integration/coverage-enforcement.test.ts: 11 tests
+  - Created tests/e2e/coverage-workflow.test.ts: 4 tests
+  - Updated quickstart.md with scan mode CLI documentation
+- See: src/agent/cro-agent.ts, src/agent/state-manager.ts, src/cli.ts
+
+**2. Phase 19a-b: Coverage Tracking Foundation** - ✅ COMPLETE (2025-12-15)
+- Created src/models/coverage.ts: PageSegment, ElementCoverage, CoverageState, CoverageConfig, ScanMode interfaces
+- Created src/agent/coverage-tracker.ts: CoverageTracker class (16 tests)
+- Created src/browser/dom/dom-merger.ts: DOMMerger class for multi-segment merging (7 tests)
+- Updated src/browser/dom/build-dom-tree.ts: Absolute page coordinates
+- Updated src/browser/dom/serializer.ts: Dynamic token budget by scan mode
+- See: src/agent/coverage-tracker.ts, src/browser/dom/dom-merger.ts
+
+**3. Phase 18-CLI: Final CLI Integration** - ✅ COMPLETE (2025-12-09)
 - CRO analysis is now the default mode (no flags needed)
 - New CLI flags:
   - `--output-format <fmt>`: console, markdown, json (default: console)
   - `--output-file <path>`: Write report to file
   - `--legacy`: Use old heading extraction mode (for backwards compatibility)
-- Created src/output/file-writer.ts: Writes reports to files with directory creation
-- Updated src/index.ts with comprehensive exports for CROAgent, tools, heuristics, models
-- 369 unit tests, 4 e2e tests, type check passes
 - See: src/cli.ts, src/output/file-writer.ts
-
-**2. Phase 18f: Test Fixtures** - ✅ COMPLETE (2025-12-09)
-- Created tests/fixtures/test-pages/ with 5 HTML test pages
-- ecommerce-good.html: Well-optimized page (passes all heuristics)
-- ecommerce-bad.html: Poorly optimized (fails H001-H007, H010)
-- saas-landing.html: SaaS patterns with strong value prop
-- form-heavy.html: Insurance quote with 15+ fields (triggers H003)
-- no-cta.html: Corporate page with no CTAs (triggers H002, H005, H007)
-- Created tests/fixtures/expected-results.json: Expected business types, heuristic failures, accuracy targets
-- See: tests/fixtures/
-
-**3. Phase 18e: Agent Integration** - ✅ COMPLETE (2025-12-09)
-- Integrated post-processing pipeline into CROAgent.analyze()
-- Pipeline steps: detect business type → run heuristics → deduplicate → prioritize → generate hypotheses → calculate scores → generate reports
-- Created src/agent/score-calculator.ts: calculates CRO scores (0-100) with severity-based deductions
-- Extended CROAnalysisResult interface with: heuristicInsights, businessType, hypotheses, scores, report
-- 21 new integration tests (468 total), type check passes
-- See: src/agent/cro-agent.ts, src/agent/score-calculator.ts
 
 ---
 
@@ -158,6 +170,12 @@ For any feature/bug fix request:
 
 | Change | Phase | Tasks | CLI Milestone | Status |
 |--------|-------|-------|---------------|--------|
+| **Testing & Polish** | 19f | T143-T146 | - | ✅ |
+| **CLI & Config** | 19e | T141-T142 | `--scan-mode=full_page|above_fold|llm_guided` | ✅ |
+| **Prompt Updates** | 19d | T139-T140 | - | ✅ |
+| **Agent Integration** | 19c | T134-T138 | - | ✅ |
+| **DOM Changes** | 19b | T130-T133 | - | ✅ |
+| **Coverage Tracking** | 19a | T126-T129 | - | ✅ |
 | **CLI: Final integration** | 18-CLI | T119-T122 | `npm run start -- <url>` (CRO default) | ✅ |
 | Test Fixtures | 18f | T118a-T118b | - | ✅ |
 | Agent Integration | 18e | T117-T118 | - | ✅ |
@@ -185,6 +203,9 @@ Phase 16-CLI: npm run start -- --analyze --max-steps 5 https://carwale.com  ✅
 Phase 18-CLI: npm run start -- https://carwale.com  (CRO analysis as default)  ✅
             npm run start -- https://carwale.com --output-format markdown --output-file report.md  ✅
             npm run start -- --legacy https://carwale.com  (old heading mode)  ✅
+Phase 19-CLI: npm run start -- --scan-mode=full_page https://carwale.com  ✅ (100% coverage)
+            npm run start -- --scan-mode=above_fold https://carwale.com  ✅ (faster)
+            npm run start -- --scan-mode=llm_guided https://carwale.com  ✅ (original)
 ```
 
 ---
@@ -224,7 +245,7 @@ export OPENAI_API_KEY=sk-your-api-key-here
 
 ```bash
 # Run the agent on a single URL
-npm run start -- https://example.com
+npm run start -- https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711
 ```
 
 **Expected Output**:
@@ -233,7 +254,7 @@ npm run start -- https://example.com
 ================================================================================
 BROWSER AGENT RESULTS
 ================================================================================
-URL: https://example.com
+URL: https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711
 Status: SUCCESS
 Load Time: 1.2s
 
@@ -257,7 +278,7 @@ Insights:
 
 ```bash
 # Process multiple URLs sequentially
-npm run start -- https://example.com https://developer.mozilla.org
+npm run start -- https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711 https://developer.mozilla.org
 ```
 
 ### Programmatic Usage
@@ -276,7 +297,7 @@ async function main(): Promise<void> {
       dismissCookieConsent: true  // Auto-dismiss cookie popups (default: true)
     },
     processing: {
-      model: 'gpt-4o-mini',
+      model: 'gpt-4o',
       maxTokens: 1000,
       temperature: 0.3
     },
@@ -284,7 +305,7 @@ async function main(): Promise<void> {
   });
 
   try {
-    const result = await agent.processUrl('https://example.com');
+    const result = await agent.processUrl('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711');
 
     if (result.success) {
       console.log('Headings:', result.extraction?.headings);
@@ -312,7 +333,7 @@ async function loadPage(): Promise<void> {
   await browser.launch();
 
   const loader = new PageLoader(browser.getPage(), { timeout: 60000 });
-  const result = await loader.load('https://example.com');
+  const result = await loader.load('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711');
 
   console.log('Title:', result.title);
   console.log('Success:', result.success);
@@ -348,7 +369,7 @@ import { ExtractionResult } from './src/types';
 
 async function processWithAI(extraction: ExtractionResult): Promise<void> {
   const processor = new LangChainProcessor({
-    model: 'gpt-4o-mini',
+    model: 'gpt-4o',
     maxTokens: 1000,
     temperature: 0.3
   });
@@ -376,6 +397,12 @@ Options:
   --post-load-wait <ms> Wait time for JS rendering after load (default: 5000)
                         Set to 0 to disable hybrid waiting
   --no-cookie-dismiss   Disable automatic cookie consent dismissal (default: enabled)
+  --scan-mode <mode>    Page coverage scan mode (default: full_page)
+                        - full_page: Scroll through entire page for 100% coverage
+                        - above_fold: Only analyze initial viewport (faster)
+                        - llm_guided: Let LLM decide scrolling (original behavior)
+  --min-coverage <N>    Minimum coverage percentage required (default: 100)
+                        Only applies to full_page mode
   --verbose, -v         Enable verbose logging
   --help, -h            Show help
 ```
@@ -387,7 +414,7 @@ Options:
 npm run start -- https://www.mrandmrssmith.com/
 
 # Fast mode for static sites (no JS wait)
-npm run start -- --post-load-wait 0 https://example.com
+npm run start -- --post-load-wait 0 https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711
 
 # Heavy JS sites - increase JS wait time
 npm run start -- --post-load-wait 10000 https://heavy-spa-site.com
@@ -404,6 +431,33 @@ npm run start -- https://www.example-with-cookies.com
 
 # Disable cookie consent dismissal
 npm run start -- --no-cookie-dismiss https://www.example.com
+```
+
+### Scan Mode Examples (Phase 19)
+
+```bash
+# Default - full_page mode for 100% page coverage
+npm run start -- https://www.example.com
+# Scrolls through entire page, extracts DOM at each segment
+# Merges all DOM snapshots into complete tree
+# Blocks 'done' until 100% coverage achieved
+
+# Above fold mode - faster, only initial viewport
+npm run start -- --scan-mode=above_fold https://www.example.com
+# Best for quick analysis of hero section and above-fold CTAs
+# No scrolling, single DOM extraction
+
+# LLM-guided mode - original behavior, LLM decides scrolling
+npm run start -- --scan-mode=llm_guided https://www.example.com
+# LLM can choose to scroll or not based on analysis
+# No coverage enforcement
+
+# Custom coverage threshold (full_page mode)
+npm run start -- --scan-mode=full_page --min-coverage=80 https://www.example.com
+# Allows completion at 80% coverage instead of 100%
+
+# Combine with other options
+npm run start -- --scan-mode=full_page --headless --verbose https://www.example.com
 ```
 
 ## Error Handling
@@ -467,7 +521,7 @@ URL: https://slow-site.example.com
 
 ```
 Warning: No headings found on page
-URL: https://example.com/empty-page
+URL: https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711/empty-page
 ```
 
 **Solution**: This is expected for pages without h1-h6 elements. The agent will return empty results.

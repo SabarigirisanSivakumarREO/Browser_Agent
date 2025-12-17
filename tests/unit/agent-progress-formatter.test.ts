@@ -25,9 +25,19 @@ const createMockInsight = (overrides: Partial<CROInsight> = {}): CROInsight => (
 
 // Helper to create a mock CROAnalysisResult
 const createMockResult = (overrides: Partial<CROAnalysisResult> = {}): CROAnalysisResult => ({
-  url: 'https://example.com',
+  url: 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711',
   success: true,
   insights: [],
+  heuristicInsights: [],
+  hypotheses: [],
+  scores: {
+    overall: 75,
+    byCategory: {},
+    criticalCount: 0,
+    highCount: 0,
+    mediumCount: 0,
+    lowCount: 0,
+  },
   stepsExecuted: 5,
   totalTimeMs: 12500,
   terminationReason: 'Agent completed analysis',
@@ -42,10 +52,10 @@ describe('AgentProgressFormatter', () => {
     it('should format analysis start message with URL and max steps', () => {
       const formatter = new AgentProgressFormatter({ useColors: false });
 
-      const output = formatter.formatAnalysisStart('https://example.com', 10);
+      const output = formatter.formatAnalysisStart('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711', 10);
 
       expect(output).toContain('CRO AGENT ANALYSIS');
-      expect(output).toContain('URL: https://example.com');
+      expect(output).toContain('URL: https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711');
       expect(output).toContain('Max Steps: 10');
       expect(output).toContain('Starting analysis...');
     });
@@ -108,22 +118,25 @@ describe('AgentProgressFormatter', () => {
 
       // Header section
       expect(output).toContain('CRO ANALYSIS RESULTS');
-      expect(output).toContain('URL: https://example.com');
+      expect(output).toContain('URL: https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711');
       expect(output).toContain('Title: Example Page');
       expect(output).toContain('SUCCESS');
       expect(output).toContain('Steps Executed: 8');
       expect(output).toContain('Total Time: 25.00s');
 
-      // Insights section
-      expect(output).toContain('INSIGHTS FOUND: 4');
-      expect(output).toContain('[CRITICAL]');
-      expect(output).toContain('[HIGH]');
-      expect(output).toContain('[MEDIUM]');
-      expect(output).toContain('[LOW]');
+      // Insights section - new format
+      expect(output).toContain('INSIGHTS: 4 tool + 0 heuristic = 4 total');
+      expect(output).toContain('CRITICAL (1)');
+      expect(output).toContain('HIGH (1)');
+      expect(output).toContain('MEDIUM (1)');
+      expect(output).toContain('LOW (1)');
 
       // Insight content
       expect(output).toContain('Critical CTA issue');
       expect(output).toContain('High priority form issue');
+
+      // Score section
+      expect(output).toContain('CRO SCORE:');
     });
 
     // Test 6: Format failed result with errors
@@ -133,6 +146,7 @@ describe('AgentProgressFormatter', () => {
       const result = createMockResult({
         success: false,
         insights: [],
+        heuristicInsights: [],
         stepsExecuted: 2,
         totalTimeMs: 5000,
         terminationReason: 'Too many failures',
@@ -148,7 +162,7 @@ describe('AgentProgressFormatter', () => {
       expect(output).toContain('LLM timeout');
       expect(output).toContain('Parse error: Invalid JSON');
       expect(output).toContain('INSIGHTS FOUND: 0');
-      expect(output).toContain('(no insights generated)');
+      expect(output).toContain('No CRO issues found');
     });
   });
 });

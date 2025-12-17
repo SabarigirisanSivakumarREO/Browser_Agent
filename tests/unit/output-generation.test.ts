@@ -243,7 +243,7 @@ describe('MarkdownReporter', () => {
 
   it('includes all required sections', () => {
     const result = {
-      url: 'https://example.com',
+      url: 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711',
       pageTitle: 'Example Page',
       insights: createInsightSet(),
     };
@@ -260,7 +260,7 @@ describe('MarkdownReporter', () => {
 
   it('handles empty insights gracefully', () => {
     const result = {
-      url: 'https://example.com',
+      url: 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711',
       insights: [],
     };
     const markdown = reporter.generate(result);
@@ -285,7 +285,7 @@ describe('MarkdownReporter', () => {
       },
     ];
     const result = {
-      url: 'https://example.com',
+      url: 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711',
       insights: [],
       hypotheses,
     };
@@ -298,7 +298,7 @@ describe('MarkdownReporter', () => {
 
   it('displays scores in executive summary', () => {
     const result = {
-      url: 'https://example.com',
+      url: 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711',
       insights: createInsightSet(),
       scores: {
         overall: 75,
@@ -328,7 +328,7 @@ describe('JSONExporter', () => {
 
   it('exports valid JSON', () => {
     const result = {
-      url: 'https://example.com',
+      url: 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711',
       insights: createInsightSet(),
     };
     const json = exporter.export(result);
@@ -338,14 +338,14 @@ describe('JSONExporter', () => {
 
   it('includes all required fields', () => {
     const result = {
-      url: 'https://example.com',
+      url: 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711',
       pageTitle: 'Test Page',
       insights: createInsightSet(),
       hypotheses: [],
     };
     const data = exporter.exportAsObject(result);
 
-    expect(data.meta.url).toBe('https://example.com');
+    expect(data.meta.url).toBe('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711');
     expect(data.meta.pageTitle).toBe('Test Page');
     expect(data.meta.analysisDate).toBeDefined();
     expect(data.scores.overall).toBeDefined();
@@ -362,7 +362,7 @@ describe('JSONExporter', () => {
       createInsight({ id: 'INS-003', category: 'form' }),
     ];
     const result = {
-      url: 'https://example.com',
+      url: 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711',
       insights,
     };
     const data = exporter.exportAsObject(result);

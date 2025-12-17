@@ -10,11 +10,21 @@ import type { Tool, ToolContext } from '../types.js';
 import type { ToolResult, DOMNode } from '../../../models/index.js';
 
 /**
+ * Helper to coerce string/boolean to boolean (handles LLM passing "true"/"false")
+ */
+const coerceBoolean = z.preprocess((val) => {
+  if (typeof val === 'string') {
+    return val.toLowerCase() === 'true';
+  }
+  return val;
+}, z.boolean());
+
+/**
  * Parameter schema for click tool
  */
 export const ClickParamsSchema = z.object({
-  elementIndex: z.number().int().nonnegative(),
-  waitForNavigation: z.boolean().optional().default(false),
+  elementIndex: z.coerce.number().int().nonnegative(),
+  waitForNavigation: coerceBoolean.optional().default(false),
 });
 
 export type ClickParams = z.infer<typeof ClickParamsSchema>;

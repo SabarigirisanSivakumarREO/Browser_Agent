@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import type { ToolRegistry } from './tools/index.js';
 import type { PageState, CROMemory } from '../models/index.js';
+import type { CoverageTracker } from './coverage-tracker.js';
 import { DOMSerializer } from '../browser/dom/index.js';
 
 // Get directory path for loading template
@@ -54,20 +55,28 @@ export class PromptBuilder {
 
   /**
    * Build user message with current page state and memory context
+   * @param state - Current page state
+   * @param memory - Agent memory
+   * @param coverageTracker - Optional coverage tracker for full_page mode (Phase 19d)
    */
-  buildUserMessage(state: PageState, memory: CROMemory): string {
+  buildUserMessage(
+    state: PageState,
+    memory: CROMemory,
+    coverageTracker?: CoverageTracker
+  ): string {
     const serialized = this.serializer.serialize(state.domTree);
 
     const memorySection = this.formatMemorySection(memory);
     const warningSection = serialized.warning
       ? `\n<warning>${serialized.warning}</warning>\n`
       : '';
+    const coverageSection = this.formatCoverageSection(coverageTracker);
 
     return `<page_url>${state.url}</page_url>
 <page_title>${state.title}</page_title>
 <viewport>${state.viewport.width}x${state.viewport.height}</viewport>
 <scroll_position>x:${state.scrollPosition.x}, y:${state.scrollPosition.y}, maxY:${state.scrollPosition.maxY}</scroll_position>
-${warningSection}
+${warningSection}${coverageSection}
 <cro_elements count="${serialized.elementCount}" tokens="${serialized.estimatedTokens}">
 ${serialized.text}
 </cro_elements>
@@ -75,6 +84,22 @@ ${serialized.text}
 ${memorySection}
 
 Analyze the page and decide your next action. Respond with valid JSON only.`;
+  }
+
+  /**
+   * Format coverage section for user message (Phase 19d)
+   */
+  private formatCoverageSection(coverageTracker?: CoverageTracker): string {
+    if (!coverageTracker) {
+      return '';
+    }
+
+    const report = coverageTracker.getCoverageReport();
+    return `
+<coverage>
+${report}
+</coverage>
+`;
   }
 
   /**
@@ -194,10 +219,11 @@ Respond with valid JSON:
 {
   "thinking": "Your analysis reasoning",
   "evaluation_previous_goal": "Assessment of last action",
-  "memory": "Key findings to remember",
+  "memory": "Brief plain-text notes of key findings (single string, NOT an object)",
   "next_goal": "What to analyze next",
   "action": { "name": "<tool_name>", "params": { } }
 }
+IMPORTANT: The "memory" field must be a plain text string, not an object or array.
 </output_format>
 
 <available_tools>

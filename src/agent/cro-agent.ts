@@ -3,6 +3,7 @@
  *
  * Phase 16 (T081): Main CRO analysis agent with observe→reason→act loop.
  * Phase 18e (T117): Added post-processing pipeline integration.
+ * Phase 19c (T135-T138): Added full-page coverage scan mode.
  * Orchestrates browser automation, DOM extraction, LLM interaction, and tool execution.
  */
 
@@ -13,17 +14,21 @@ import type {
   CROInsight,
   PageState,
   DOMTree,
+  DOMNode,
   StepRecord,
   BusinessTypeResult,
   Hypothesis,
+  ScanMode,
+  CoverageConfig,
 } from '../models/index.js';
-import { DEFAULT_CRO_OPTIONS, parseAgentOutput } from '../models/index.js';
+import { DEFAULT_CRO_OPTIONS, parseAgentOutput, DEFAULT_COVERAGE_CONFIG } from '../models/index.js';
 import { BrowserManager, PageLoader } from '../browser/index.js';
-import { DOMExtractor } from '../browser/dom/index.js';
+import { DOMExtractor, DOMMerger } from '../browser/dom/index.js';
 import { ToolRegistry, ToolExecutor } from './tools/index.js';
 import { PromptBuilder } from './prompt-builder.js';
 import { MessageManager } from './message-manager.js';
 import { StateManager } from './state-manager.js';
+import { CoverageTracker } from './coverage-tracker.js';
 import { createCRORegistry } from './tools/create-cro-registry.js';
 import { createLogger } from '../utils/index.js';
 import type { DEFAULT_BROWSER_CONFIG } from '../types/index.js';
@@ -41,6 +46,48 @@ import {
   JSONExporter,
 } from '../output/index.js';
 import { ScoreCalculator, type CROScores } from './score-calculator.js';
+
+/**
+ * ANSI color codes for console output
+ */
+const colors = {
+  reset: '\x1b[0m',
+  bold: '\x1b[1m',
+  dim: '\x1b[2m',
+
+  // Foreground colors
+  red: '\x1b[31m',
+  green: '\x1b[32m',
+  yellow: '\x1b[33m',
+  blue: '\x1b[34m',
+  magenta: '\x1b[35m',
+  cyan: '\x1b[36m',
+  white: '\x1b[37m',
+
+  // Background colors
+  bgRed: '\x1b[41m',
+  bgGreen: '\x1b[42m',
+  bgYellow: '\x1b[43m',
+};
+
+/** Helper functions for colored output */
+const c = {
+  error: (text: string) => `${colors.red}${text}${colors.reset}`,
+  warn: (text: string) => `${colors.yellow}${text}${colors.reset}`,
+  success: (text: string) => `${colors.green}${text}${colors.reset}`,
+  info: (text: string) => `${colors.cyan}${text}${colors.reset}`,
+  bold: (text: string) => `${colors.bold}${text}${colors.reset}`,
+  dim: (text: string) => `${colors.dim}${text}${colors.reset}`,
+  severity: (severity: string) => {
+    switch (severity) {
+      case 'critical': return `${colors.bgRed}${colors.white}${colors.bold} ${severity.toUpperCase()} ${colors.reset}`;
+      case 'high': return `${colors.red}${colors.bold}[${severity}]${colors.reset}`;
+      case 'medium': return `${colors.yellow}[${severity}]${colors.reset}`;
+      case 'low': return `${colors.dim}[${severity}]${colors.reset}`;
+      default: return `[${severity}]`;
+    }
+  },
+};
 
 /**
  * Result of CRO analysis
@@ -83,6 +130,7 @@ export type OutputFormat = 'console' | 'markdown' | 'json' | 'all';
 
 /**
  * Options for CROAgent.analyze() method
+ * Phase 19c: Added scanMode and coverageConfig
  */
 export interface AnalyzeOptions {
   /** Override browser config (headless, timeout, etc.) */
@@ -95,6 +143,27 @@ export interface AnalyzeOptions {
   outputFormat?: OutputFormat;
   /** Skip post-processing pipeline (default: false) */
   skipPostProcessing?: boolean;
+  /** Skip only heuristic rules - keeps other post-processing (default: false) */
+  skipHeuristics?: boolean;
+  /** Scan mode: 'full_page' (default), 'above_fold', or 'llm_guided' */
+  scanMode?: ScanMode;
+  /** Coverage configuration for full_page mode */
+  coverageConfig?: Partial<CoverageConfig>;
+}
+
+/**
+ * Calculate required steps for full page coverage (T138)
+ * Formula: segments + analysisToolCount(6) + synthesisSteps(2)
+ */
+function calculateRequiredSteps(pageHeight: number, viewportHeight: number, config: CoverageConfig): number {
+  const effectiveHeight = Math.max(
+    viewportHeight - config.segmentOverlapPx,
+    viewportHeight / 2
+  );
+  const segmentCount = Math.ceil(pageHeight / effectiveHeight);
+  const analysisToolCount = 6; // analyze_ctas, analyze_forms, detect_trust, assess_value, check_nav, find_friction
+  const synthesisSteps = 2;    // record_insight, done
+  return segmentCount + analysisToolCount + synthesisSteps;
 }
 
 /**
@@ -139,43 +208,215 @@ export class CROAgent {
     this.logger.info('Starting CRO analysis', { url, options: this.options });
 
     try {
-      // ─── 1. INITIALIZE ─────────────────────────────────────────
+      // ═══════════════════════════════════════════════════════════════════════════
+      // PHASE 3: Browser Initialization & Page Loading
+      // ═══════════════════════════════════════════════════════════════════════════
+      console.log('\n' + '═'.repeat(80));
+      console.log('  PHASE 3: BROWSER INITIALIZATION & PAGE LOADING');
+      console.log('═'.repeat(80));
+      console.log(`  → Launching Playwright browser (chromium)`);
+      console.log(`  → Target URL: ${url}`);
+
       const { page, pageTitle } = await this.initializeBrowser(url, analyzeOptions);
 
+      console.log(`  ${c.success('✓')} Browser launched successfully`);
+      console.log(`  ${c.success('✓')} Page loaded: "${pageTitle}"`);
+      console.log(`  ${c.success('✓')} Viewport: ${page.viewportSize()?.width}x${page.viewportSize()?.height}`);
+      console.log('  OUTPUT → Page object, pageTitle passed to Phase 14/19');
+      console.log('═'.repeat(80) + '\n');
+
+      // ═══════════════════════════════════════════════════════════════════════════
+      // PHASE 19: Coverage Tracking Setup (T135, T138)
+      // ═══════════════════════════════════════════════════════════════════════════
+      const scanMode: ScanMode = analyzeOptions?.scanMode ?? 'full_page';
+      const coverageConfig: CoverageConfig = {
+        ...DEFAULT_COVERAGE_CONFIG,
+        ...analyzeOptions?.coverageConfig,
+      };
+
+      // Get page dimensions for coverage tracking
+      const pageDimensions = await page.evaluate(`(() => ({
+        pageHeight: document.documentElement.scrollHeight,
+        viewportHeight: window.innerHeight,
+      }))()`);
+      const { pageHeight, viewportHeight } = pageDimensions as { pageHeight: number; viewportHeight: number };
+
+      // Initialize coverage tracker
+      let coverageTracker: CoverageTracker | undefined;
+      if (scanMode === 'full_page') {
+        console.log('═'.repeat(80));
+        console.log('  PHASE 19: COVERAGE TRACKING SETUP (full_page mode)');
+        console.log('═'.repeat(80));
+        coverageTracker = new CoverageTracker(coverageConfig);
+        coverageTracker.initialize(pageHeight, viewportHeight);
+        const segments = coverageTracker.getState().segmentsTotal;
+        console.log(`  ${c.success('✓')} Page height: ${pageHeight}px, Viewport: ${viewportHeight}px`);
+        console.log(`  ${c.success('✓')} Segments to scan: ${segments}`);
+        console.log(`  ${c.success('✓')} Target coverage: ${coverageConfig.minCoveragePercent}%`);
+        console.log('═'.repeat(80) + '\n');
+      }
+
+      // ═══════════════════════════════════════════════════════════════════════════
+      // PHASE 14: DOM Extraction & CRO Classification
+      // ═══════════════════════════════════════════════════════════════════════════
+      console.log('═'.repeat(80));
+      console.log('  PHASE 14: DOM EXTRACTION & CRO CLASSIFICATION');
+      console.log('═'.repeat(80));
+      console.log('  → Injecting DOM tree extraction script');
+      console.log('  → Classifying elements (cta, form, trust, value_prop, navigation)');
+
       const domExtractor = new DOMExtractor();
-      let domTree = await domExtractor.extract(page);
+      let domTree: DOMTree;
+
+      // Full-page scan: extract DOM from all segments and merge (T135)
+      if (scanMode === 'full_page' && coverageTracker) {
+        console.log(`  → Full-page scan mode: extracting DOM from all segments...`);
+        const domMerger = new DOMMerger();
+        const snapshots: DOMTree[] = [];
+
+        // Scroll to top first
+        await page.evaluate('window.scrollTo(0, 0)');
+        await this.sleep(200);
+
+        // Extract DOM at each segment
+        const segments = coverageTracker.getState().segments;
+        for (let i = 0; i < segments.length; i++) {
+          const segment = segments[i]!;
+          // Scroll to segment start
+          await page.evaluate(`window.scrollTo(0, ${segment.startY})`);
+          await this.sleep(300); // Wait for content to render
+
+          // Extract DOM
+          const snapshot = await domExtractor.extract(page);
+          snapshots.push(snapshot);
+
+          // Mark segment as scanned
+          coverageTracker.markSegmentScanned(segment.startY, snapshot.croElementCount);
+          console.log(`    [${i + 1}/${segments.length}] Segment ${segment.startY}-${segment.endY}px: ${snapshot.croElementCount} CRO elements`);
+        }
+
+        // Merge all snapshots
+        domTree = domMerger.merge(snapshots);
+        console.log(`  ${c.success('✓')} Merged ${snapshots.length} segments into complete DOM`);
+
+        // Scroll back to top for analysis
+        await page.evaluate('window.scrollTo(0, 0)');
+      } else {
+        // Standard single extraction (above_fold or llm_guided)
+        domTree = await domExtractor.extract(page);
+        if (scanMode === 'above_fold' && coverageTracker) {
+          coverageTracker.markSegmentScanned(0, domTree.croElementCount);
+        }
+      }
+
+      console.log(`  ${c.success('✓')} Total nodes extracted: ${domTree.totalNodeCount}`);
+      console.log(`  ${c.success('✓')} Interactive elements: ${domTree.interactiveCount}`);
+      console.log(`  ${c.success('✓')} CRO-classified elements: ${domTree.croElementCount}`);
+      if (coverageTracker) {
+        console.log(`  ${c.success('✓')} Coverage: ${coverageTracker.getCoveragePercent()}%`);
+      }
+      console.log('  OUTPUT → DOMTree with classified nodes passed to Phase 15, 16');
+      console.log('═'.repeat(80) + '\n');
+
+      // Log extracted DOM information
+      this.logExtractedElements(domTree, verbose);
+
+      // ═══════════════════════════════════════════════════════════════════════════
+      // PHASE 15: Tool System Initialization
+      // ═══════════════════════════════════════════════════════════════════════════
+      console.log('═'.repeat(80));
+      console.log('  PHASE 15: TOOL SYSTEM INITIALIZATION');
+      console.log('═'.repeat(80));
 
       const registry = analyzeOptions?.registry ?? createCRORegistry();
       const toolExecutor = new ToolExecutor(registry);
-      const stateManager = new StateManager(this.options);
+
+      console.log(`  ${c.success('✓')} Tool Registry created with ${registry.size} tools:`);
+      console.log(`    - Analysis: analyze_ctas, analyze_forms, detect_trust_signals,`);
+      console.log(`                assess_value_prop, check_navigation, find_friction`);
+      console.log(`    - Navigation: scroll_page, click, go_to_url`);
+      console.log(`    - Control: record_insight, done`);
+      console.log(`  ${c.success('✓')} Tool Executor ready with Zod validation`);
+      console.log('  OUTPUT → ToolRegistry, ToolExecutor passed to Phase 16');
+      console.log('═'.repeat(80) + '\n');
+
+      // ═══════════════════════════════════════════════════════════════════════════
+      // PHASE 16: Agent Core Setup (State, Messages, LLM)
+      // ═══════════════════════════════════════════════════════════════════════════
+      console.log('═'.repeat(80));
+      console.log('  PHASE 16: AGENT CORE SETUP');
+      console.log('═'.repeat(80));
+
+      // Calculate dynamic maxSteps for full_page mode (T138)
+      let effectiveMaxSteps = this.options.maxSteps;
+      if (scanMode === 'full_page') {
+        const requiredSteps = calculateRequiredSteps(pageHeight, viewportHeight, coverageConfig);
+        effectiveMaxSteps = Math.max(this.options.maxSteps, requiredSteps);
+        if (effectiveMaxSteps > this.options.maxSteps) {
+          console.log(`  ${c.info('ℹ')} Dynamic maxSteps: ${this.options.maxSteps} → ${effectiveMaxSteps} (page requires ${requiredSteps})`);
+        }
+      }
+
+      const stateManager = new StateManager({ ...this.options, maxSteps: effectiveMaxSteps }, scanMode);
       const promptBuilder = new PromptBuilder(registry);
       const messageManager = new MessageManager(promptBuilder.buildSystemPrompt());
 
+      // Set coverage tracker on state manager
+      if (coverageTracker) {
+        stateManager.setCoverageTracker(coverageTracker);
+      }
+
       const llm = new ChatOpenAI({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o',
         temperature: 0,
         timeout: this.options.llmTimeoutMs,
       });
 
       stateManager.addPageSeen(url);
 
+      console.log(`  ${c.success('✓')} StateManager initialized (maxSteps: ${effectiveMaxSteps}, scanMode: ${scanMode})`);
+      console.log(`  ${c.success('✓')} PromptBuilder created with CRO expert system prompt`);
+      console.log(`  ${c.success('✓')} MessageManager ready for conversation history`);
+      console.log(`  ${c.success('✓')} LLM initialized: GPT-4o (temperature: 0)`);
+      if (coverageTracker) {
+        console.log(`  ${c.success('✓')} CoverageTracker attached to StateManager`);
+      }
+      console.log('  OUTPUT → Agent components ready for observe→reason→act loop');
+      console.log('═'.repeat(80) + '\n');
+
       this.logger.info('Initialization complete', {
         toolCount: registry.size,
         elementCount: domTree.croElementCount,
       });
 
-      // ─── 2. AGENT LOOP ─────────────────────────────────────────
+      // ═══════════════════════════════════════════════════════════════════════════
+      // PHASE 16-17: AGENT LOOP (Observe → Reason → Act)
+      // ═══════════════════════════════════════════════════════════════════════════
+      console.log('═'.repeat(80));
+      console.log('  PHASE 16-17: AGENT LOOP (OBSERVE → REASON → ACT)');
+      console.log('═'.repeat(80));
+      console.log(`  Max steps: ${this.options.maxSteps}`);
+      console.log('─'.repeat(80));
+
       while (!stateManager.shouldTerminate()) {
         const step = stateManager.getStep();
+        console.log(`\n  ┌─ STEP ${step + 1}/${this.options.maxSteps} ${'─'.repeat(60)}`);
         this.logger.info(`Step ${step + 1}/${this.options.maxSteps}`, {
           focus: stateManager.getMemory().currentFocus,
         });
 
         // a. OBSERVE: Build PageState
+        console.log(`  │ OBSERVE: Building PageState from DOM...`);
         const pageState = await this.buildPageState(page, domTree, url, pageTitle);
+        console.log(`  │   → ${pageState.domTree.croElementCount} CRO elements, scroll: ${pageState.scrollPosition.y}px`);
 
-        // b. REASON: Call LLM
-        const userMsg = promptBuilder.buildUserMessage(pageState, stateManager.getMemory());
+        // b. REASON: Call LLM (Phase 19d: pass coverageTracker for coverage-aware prompts)
+        console.log(`  │ REASON: Sending state to GPT-4...`);
+        const userMsg = promptBuilder.buildUserMessage(
+          pageState,
+          stateManager.getMemory(),
+          coverageTracker
+        );
         messageManager.addUserMessage(userMsg);
 
         let llmResponse: string;
@@ -206,12 +447,16 @@ export class CROAgent {
         messageManager.addAssistantMessage(output);
         stateManager.updateFocus(output.next_goal);
 
+        console.log(`  │   → LLM thinking: "${output.thinking.slice(0, 80)}..."`);
+        console.log(`  │   → Next goal: "${output.next_goal}"`);
+
         this.logger.info('LLM decision', {
           action: output.action.name,
           nextGoal: output.next_goal,
         });
 
         // c. ACT: Execute tool
+        console.log(`  │ ACT: Executing tool "${output.action.name}"...`);
         const toolResult = await toolExecutor.execute(
           output.action.name,
           output.action.params || {},
@@ -221,6 +466,16 @@ export class CROAgent {
         if (toolResult.success) {
           stateManager.resetFailures();
           stateManager.addInsights(toolResult.insights);
+          console.log(`  │   ${c.success('✓')} Tool succeeded (${toolResult.executionTimeMs}ms)`);
+          console.log(`  │   → Insights found: ${toolResult.insights.length}`);
+          if (toolResult.insights.length > 0) {
+            for (const insight of toolResult.insights.slice(0, 3)) {
+              console.log(`  │     • ${c.severity(insight.severity)} ${insight.issue.slice(0, 50)}...`);
+            }
+            if (toolResult.insights.length > 3) {
+              console.log(`  │     ... and ${toolResult.insights.length - 3} more`);
+            }
+          }
           this.logger.info('Tool success', {
             tool: output.action.name,
             insights: toolResult.insights.length,
@@ -229,6 +484,7 @@ export class CROAgent {
         } else {
           stateManager.recordFailure(toolResult.error || 'Tool failed');
           errors.push(`Tool error: ${toolResult.error}`);
+          console.log(`  │   ${c.error('✗ Tool failed:')} ${c.error(toolResult.error || 'Unknown error')}`);
           this.logger.warn('Tool failed', {
             tool: output.action.name,
             error: toolResult.error,
@@ -246,11 +502,28 @@ export class CROAgent {
         };
         stateManager.recordStep(stepRecord);
 
-        // d. CHECK: Done action?
+        // d. CHECK: Done action? (T136: Coverage enforcement)
         if (output.action.name === 'done') {
-          stateManager.setDone('Agent completed analysis');
-          this.logger.info('Agent signaled completion');
+          // In full_page mode, check coverage before allowing done
+          if (stateManager.isFullPageMode() && !stateManager.isFullyCovered()) {
+            const coveragePercent = stateManager.getCoveragePercent();
+            console.log(`  │ ${c.warn('⚠ COVERAGE ENFORCEMENT:')} Cannot complete - only ${coveragePercent}% covered`);
+            console.log(`  │ ${c.info('→')} Agent will continue with remaining analysis`);
+            this.logger.warn('Done blocked by coverage enforcement', {
+              coverage: coveragePercent,
+              required: 100,
+            });
+            // Don't set done - agent will continue
+          } else {
+            stateManager.setDone('Agent completed analysis');
+            console.log(`  │ ${c.success('✓ Agent signaled DONE')} - analysis complete`);
+            if (coverageTracker) {
+              console.log(`  │   Coverage: ${coverageTracker.getCoveragePercent()}%`);
+            }
+            this.logger.info('Agent signaled completion');
+          }
         }
+        console.log(`  └${'─'.repeat(75)}`);
 
         // e. WAIT (CR-011)
         await this.sleep(this.options.actionWaitMs);
@@ -273,6 +546,15 @@ export class CROAgent {
         }
       }
 
+      // ═══════════════════════════════════════════════════════════════════════════
+      // PHASE 16-17: AGENT LOOP COMPLETE
+      // ═══════════════════════════════════════════════════════════════════════════
+      console.log('\n' + '─'.repeat(80));
+      console.log(`  Agent loop completed after ${stateManager.getStep()} steps`);
+      console.log(`  Total insights from tools: ${stateManager.getInsights().length}`);
+      console.log('  OUTPUT → Tool insights passed to Phase 18 (Post-Processing)');
+      console.log('═'.repeat(80) + '\n');
+
       // ─── 3. POST-PROCESSING PIPELINE ─────────────────────────────
       // Phase 18e (T117): Integrate post-processing after agent loop
       const toolInsights = stateManager.getInsights();
@@ -286,33 +568,64 @@ export class CROAgent {
       const finalPageState = await this.buildPageState(page, domTree, url, pageTitle);
 
       if (!analyzeOptions?.skipPostProcessing) {
+        // ═══════════════════════════════════════════════════════════════════════════
+        // PHASE 18: POST-PROCESSING PIPELINE
+        // ═══════════════════════════════════════════════════════════════════════════
+        console.log('═'.repeat(80));
+        console.log('  PHASE 18: POST-PROCESSING PIPELINE');
+        console.log('═'.repeat(80));
         this.logger.info('Starting post-processing pipeline');
 
         // 3a. Detect business type
+        console.log('\n  ┌─ PHASE 18a: Business Type Detection ─────────────────────────');
         const businessTypeDetector = new BusinessTypeDetector();
         businessType = businessTypeDetector.detect(finalPageState);
+        console.log(`  │ ${c.success('✓')} Detected: ${businessType.type} (confidence: ${(businessType.confidence * 100).toFixed(0)}%)`);
+        console.log(`  │ → Signals: ${businessType.signals.slice(0, 3).join(', ')}${businessType.signals.length > 3 ? '...' : ''}`);
+        console.log(`  └${'─'.repeat(60)}`);
         this.logger.debug('Business type detected', {
           type: businessType.type,
           confidence: businessType.confidence,
         });
 
-        // 3b. Run heuristic rules
-        const heuristicEngine = createHeuristicEngine();
-        const heuristicResult = heuristicEngine.run(finalPageState, businessType.type);
-        heuristicInsights = heuristicResult.insights;
-        this.logger.debug('Heuristics executed', {
-          rulesExecuted: heuristicResult.rulesExecuted,
-          insightsFound: heuristicInsights.length,
-        });
+        // 3b. Run heuristic rules (optional)
+        if (!analyzeOptions?.skipHeuristics) {
+          console.log('\n  ┌─ PHASE 18b-c: Heuristic Rules Engine ────────────────────────');
+          const heuristicEngine = createHeuristicEngine();
+          const heuristicResult = heuristicEngine.run(finalPageState, businessType.type);
+          heuristicInsights = heuristicResult.insights;
+          console.log(`  │ ${c.success('✓')} Rules executed: ${heuristicResult.rulesExecuted}`);
+          console.log(`  │ → Heuristic insights found: ${heuristicInsights.length}`);
+          if (heuristicInsights.length > 0) {
+            for (const insight of heuristicInsights.slice(0, 3)) {
+              console.log(`  │   • ${c.severity(insight.severity)} ${insight.type}: ${insight.issue.slice(0, 40)}...`);
+            }
+          }
+          console.log(`  └${'─'.repeat(60)}`);
+          this.logger.debug('Heuristics executed', {
+            rulesExecuted: heuristicResult.rulesExecuted,
+            insightsFound: heuristicInsights.length,
+          });
+        } else {
+          console.log('\n  ┌─ PHASE 18b-c: Heuristic Rules Engine ────────────────────────');
+          console.log(`  │ ${c.warn('⏭ SKIPPED')} (skipHeuristics: true)`);
+          console.log(`  └${'─'.repeat(60)}`);
+          this.logger.info('Heuristics skipped by user option');
+        }
 
         // 3c. Combine and deduplicate insights
+        console.log('\n  ┌─ PHASE 18d: Insight Processing ──────────────────────────────');
         const allInsights = [...toolInsights, ...heuristicInsights];
+        console.log(`  │ → Combined insights: ${allInsights.length} (${toolInsights.length} tool + ${heuristicInsights.length} heuristic)`);
         const deduplicator = new InsightDeduplicator();
         const uniqueInsights = deduplicator.deduplicate(allInsights);
+        console.log(`  │ ${c.success('✓')} After deduplication: ${uniqueInsights.length} unique insights`);
 
         // 3d. Prioritize insights by severity and business type
         const prioritizer = new InsightPrioritizer();
         const prioritizedInsights = prioritizer.prioritize(uniqueInsights, businessType.type);
+        console.log(`  │ ${c.success('✓')} Prioritized by severity + business type`);
+        console.log(`  └${'─'.repeat(60)}`);
 
         // Update heuristicInsights to be the prioritized heuristic-only insights
         heuristicInsights = prioritizedInsights.filter(i =>
@@ -320,17 +633,33 @@ export class CROAgent {
         );
 
         // 3e. Generate hypotheses from high/critical insights
+        console.log('\n  ┌─ PHASE 18d: Hypothesis Generation ──────────────────────────');
         const hypothesisGenerator = new HypothesisGenerator({ minSeverity: 'high' });
         hypotheses = hypothesisGenerator.generate(prioritizedInsights);
+        console.log(`  │ ${c.success('✓')} Generated ${hypotheses.length} A/B test hypotheses`);
+        if (hypotheses.length > 0) {
+          for (const h of hypotheses.slice(0, 2)) {
+            console.log(`  │   • ${h.title.slice(0, 50)}...`);
+          }
+        }
+        console.log(`  └${'─'.repeat(60)}`);
         this.logger.debug('Hypotheses generated', { count: hypotheses.length });
 
         // 3f. Calculate scores
+        console.log('\n  ┌─ PHASE 18d: Score Calculation ───────────────────────────────');
         const scoreCalculator = new ScoreCalculator();
         scores = scoreCalculator.calculate(prioritizedInsights);
+        console.log(`  │ ${c.success('✓')} Overall CRO Score: ${c.bold(String(scores.overall))}/100`);
+        const criticalStr = scores.criticalCount > 0 ? c.error(`Critical: ${scores.criticalCount}`) : `Critical: ${scores.criticalCount}`;
+        const highStr = scores.highCount > 0 ? c.error(`High: ${scores.highCount}`) : `High: ${scores.highCount}`;
+        const mediumStr = scores.mediumCount > 0 ? c.warn(`Medium: ${scores.mediumCount}`) : `Medium: ${scores.mediumCount}`;
+        console.log(`  │ → ${criticalStr}, ${highStr}, ${mediumStr}, Low: ${scores.lowCount}`);
+        console.log(`  └${'─'.repeat(60)}`);
         this.logger.debug('Scores calculated', { overall: scores.overall });
 
         // 3g. Generate reports if requested
         if (analyzeOptions?.outputFormat && analyzeOptions.outputFormat !== 'console') {
+          console.log('\n  ┌─ PHASE 18d: Report Generation ──────────────────────────────');
           report = {};
           const reportInput = {
             url,
@@ -350,6 +679,7 @@ export class CROAgent {
           ) {
             const markdownReporter = new MarkdownReporter();
             report.markdown = markdownReporter.generate(reportInput);
+            console.log(`  │ ${c.success('✓')} Markdown report generated`);
             this.logger.debug('Markdown report generated');
           }
 
@@ -359,10 +689,15 @@ export class CROAgent {
           ) {
             const jsonExporter = new JSONExporter();
             report.json = jsonExporter.export(reportInput);
+            console.log(`  │ ${c.success('✓')} JSON report generated`);
             this.logger.debug('JSON report generated');
           }
+          console.log(`  └${'─'.repeat(60)}`);
         }
 
+        console.log('\n' + '═'.repeat(80));
+        console.log('  PHASE 18: POST-PROCESSING COMPLETE');
+        console.log('═'.repeat(80) + '\n');
         this.logger.info('Post-processing pipeline complete');
       } else {
         // Skip post-processing - just calculate basic scores
@@ -386,6 +721,26 @@ export class CROAgent {
         errors,
         pageTitle,
       };
+
+      // ═══════════════════════════════════════════════════════════════════════════
+      // FINAL SUMMARY: All Phases Complete
+      // ═══════════════════════════════════════════════════════════════════════════
+      console.log('╔' + '═'.repeat(78) + '╗');
+      console.log('║' + '                        ANALYSIS COMPLETE - SUMMARY                          '.slice(0, 78) + '║');
+      console.log('╠' + '═'.repeat(78) + '╣');
+      console.log(`║  URL: ${url.slice(0, 68).padEnd(70)} ║`);
+      console.log(`║  Time: ${(result.totalTimeMs / 1000).toFixed(1)}s | Steps: ${result.stepsExecuted} | Score: ${result.scores.overall}/100`.padEnd(79) + '║');
+      console.log('╠' + '═'.repeat(78) + '╣');
+      console.log('║  PHASE OUTPUTS FLOW:                                                        ║');
+      console.log('║    Phase 3  (Browser)    → Page loaded                                      ║');
+      console.log('║    Phase 14 (DOM)        → ' + `${domTree.croElementCount} CRO elements extracted`.padEnd(49) + '║');
+      console.log('║    Phase 15 (Tools)      → 11 tools registered                              ║');
+      console.log('║    Phase 16 (Agent)      → ' + `${result.stepsExecuted} steps executed`.padEnd(49) + '║');
+      console.log('║    Phase 17 (Execution)  → ' + `${result.insights.length} tool insights`.padEnd(49) + '║');
+      console.log('║    Phase 18a (Business)  → ' + `${result.businessType?.type || 'unknown'} detected`.padEnd(49) + '║');
+      console.log('║    Phase 18b (Heuristic) → ' + `${result.heuristicInsights.length} rule-based insights`.padEnd(49) + '║');
+      console.log('║    Phase 18d (Output)    → ' + `${result.hypotheses.length} hypotheses, score ${result.scores.overall}`.padEnd(49) + '║');
+      console.log('╚' + '═'.repeat(78) + '╝\n');
 
       this.logger.info('Analysis complete', {
         success: true,
@@ -514,6 +869,87 @@ export class CROAgent {
       await this.browserManager.close();
       this.browserManager = undefined;
     }
+  }
+
+  /**
+   * Log extracted DOM elements to console
+   */
+  private logExtractedElements(domTree: DOMTree, verbose: boolean): void {
+    console.log('\n' + '='.repeat(80));
+    console.log('                         EXTRACTED DOM ELEMENTS');
+    console.log('='.repeat(80));
+    console.log(`Total Nodes: ${domTree.totalNodeCount}`);
+    console.log(`Interactive Elements: ${domTree.interactiveCount}`);
+    console.log(`CRO Elements: ${domTree.croElementCount}`);
+    console.log('-'.repeat(80));
+
+    // Count elements by CRO type
+    const typeCounts: Record<string, number> = {
+      cta: 0,
+      form: 0,
+      trust: 0,
+      value_prop: 0,
+      navigation: 0,
+    };
+
+    // Collect elements for display
+    const elements: Array<{
+      index: number;
+      type: string;
+      tag: string;
+      text: string;
+      xpath: string;
+    }> = [];
+
+    const collectElements = (node: DOMNode): void => {
+      if (node.index !== undefined && node.isVisible) {
+        if (node.croType) {
+          typeCounts[node.croType] = (typeCounts[node.croType] || 0) + 1;
+        }
+        elements.push({
+          index: node.index,
+          type: node.croType || 'interactive',
+          tag: node.tagName,
+          text: node.text?.slice(0, 50) || '',
+          xpath: node.xpath,
+        });
+      }
+      for (const child of node.children) {
+        collectElements(child);
+      }
+    };
+
+    collectElements(domTree.root);
+
+    // Print type summary
+    console.log('CRO Element Types:');
+    for (const [type, count] of Object.entries(typeCounts)) {
+      if (count > 0) {
+        console.log(`  ${type}: ${count}`);
+      }
+    }
+    console.log('-'.repeat(80));
+
+    // Print elements (limit to first 30 for readability, or all if verbose)
+    const displayLimit = verbose ? elements.length : 30;
+    const displayElements = elements.slice(0, displayLimit);
+
+    console.log(`Indexed Elements (showing ${displayElements.length}/${elements.length}):\n`);
+
+    for (const el of displayElements) {
+      const typeTag = el.type ? `[${el.type}]` : '';
+      const textPreview = el.text ? ` "${el.text}"` : '';
+      console.log(`  [${el.index}] <${el.tag}>${textPreview} ${typeTag}`);
+      if (verbose) {
+        console.log(`       xpath: ${el.xpath}`);
+      }
+    }
+
+    if (elements.length > displayLimit) {
+      console.log(`\n  ... and ${elements.length - displayLimit} more elements (use --verbose to see all)`);
+    }
+
+    console.log('='.repeat(80) + '\n');
   }
 
   /**

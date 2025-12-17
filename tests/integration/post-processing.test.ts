@@ -81,7 +81,7 @@ function createMockPageState(options: {
   };
 
   return {
-    url: options.url || 'https://example.com',
+    url: options.url || 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711',
     title: options.title || 'Example Page',
     domTree,
     viewport,
@@ -184,7 +184,7 @@ describe('Post-Processing Pipeline Integration Tests', () => {
   describe('Heuristics Execution', () => {
     it('should run all 10 heuristic rules and return results', () => {
       const pageState = createMockPageState({
-        url: 'https://example.com',
+        url: 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711',
         elements: [
           { tagName: 'button', text: 'Submit', croType: 'cta' },
         ],
@@ -491,7 +491,7 @@ describe('Post-Processing Pipeline Integration Tests', () => {
 
       const reporter = new MarkdownReporter();
       const report = reporter.generate({
-        url: 'https://example.com',
+        url: 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711',
         pageTitle: 'Example Page',
         insights: [],
         heuristicInsights: insights,
@@ -503,7 +503,7 @@ describe('Post-Processing Pipeline Integration Tests', () => {
       });
 
       expect(report).toContain('# CRO Analysis Report');
-      expect(report).toContain('https://example.com');
+      expect(report).toContain('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711');
       expect(report).toContain('Executive Summary');
       expect(report).toContain('High Priority');
     });

@@ -12,11 +12,11 @@ describe('ResultFormatter', () => {
   describe('formatResult', () => {
     it('should format successful result', () => {
       const result: AgentResult = {
-        url: 'https://example.com',
+        url: 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711',
         pageLoad: {
           success: true,
           title: 'Example Domain',
-          url: 'https://example.com/',
+          url: 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711/',
           loadTimeMs: 1234,
         },
         extraction: {
@@ -39,7 +39,7 @@ describe('ResultFormatter', () => {
       const output = formatter.formatResult(result);
 
       expect(output).toContain('BROWSER AGENT RESULTS');
-      expect(output).toContain('https://example.com');
+      expect(output).toContain('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711');
       expect(output).toContain('SUCCESS');
       expect(output).toContain('1.23s');
       expect(output).toContain('HEADINGS FOUND: 2');
@@ -79,8 +79,8 @@ describe('ResultFormatter', () => {
     it('should truncate long headings', () => {
       const longHeading = 'A'.repeat(100);
       const result: AgentResult = {
-        url: 'https://example.com',
-        pageLoad: { success: true, url: 'https://example.com/' },
+        url: 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711',
+        pageLoad: { success: true, url: 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711/' },
         extraction: {
           headings: [{ level: 1, text: longHeading, index: 0 }],
           totalCount: 1,
@@ -107,8 +107,8 @@ describe('ResultFormatter', () => {
       }));
 
       const result: AgentResult = {
-        url: 'https://example.com',
-        pageLoad: { success: true, url: 'https://example.com/' },
+        url: 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711',
+        pageLoad: { success: true, url: 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711/' },
         extraction: {
           headings,
           totalCount: 15,

@@ -18,13 +18,40 @@ function createInsightId(): string {
 }
 
 /**
+ * Normalize focusArea parameter to handle LLM variations
+ * Moved above schema to be available for execute function
+ */
+function normalizeAreaParam(value: string | undefined): 'above_fold' | 'full_page' {
+  if (!value) return 'full_page';
+  const normalized = value.toLowerCase().replace(/[-\s]/g, '_');
+  if (normalized.includes('above') || normalized.includes('fold')) {
+    return 'above_fold';
+  }
+  return 'full_page';
+}
+
+/**
  * Parameter schema for detect_trust_signals tool
+ * Note: No .transform() - JSON Schema compatible. Normalization happens in execute().
  */
 export const AnalyzeTrustParamsSchema = z.object({
-  focusArea: z.enum(['above_fold', 'full_page']).optional().default('full_page').describe('Area to analyze'),
+  focusArea: z.string().optional().default('full_page').describe('Area to analyze: "above_fold" or "full_page"'),
 });
 
-export type AnalyzeTrustParams = z.infer<typeof AnalyzeTrustParamsSchema>;
+/** Raw params from Zod validation */
+type RawAnalyzeTrustParams = z.infer<typeof AnalyzeTrustParamsSchema>;
+
+/** Normalized params used in execute */
+export interface AnalyzeTrustParams {
+  focusArea: 'above_fold' | 'full_page';
+}
+
+/** Normalize raw params to typed params */
+function normalizeParams(raw: RawAnalyzeTrustParams): AnalyzeTrustParams {
+  return {
+    focusArea: normalizeAreaParam(raw.focusArea),
+  };
+}
 
 /**
  * Insight type constants for trust analysis
@@ -56,7 +83,8 @@ export const analyzeTrustTool: Tool = {
   parameters: AnalyzeTrustParamsSchema,
 
   async execute(context: ToolContext): Promise<ToolResult> {
-    const params = context.params as AnalyzeTrustParams;
+    // Normalize params (handles LLM variations like "above-fold", "aboveFold", etc.)
+    const params = normalizeParams(context.params as RawAnalyzeTrustParams);
     const insights: CROInsight[] = [];
     const trustElements: DOMNode[] = [];
 

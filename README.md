@@ -63,7 +63,7 @@ OPENAI_API_KEY=sk-your-api-key-here
 | `headless` | `false` | Run browser in visible mode |
 | `timeout` | `60000` | Page load timeout (ms) |
 | `browserType` | `chromium` | Browser engine |
-| `model` | `gpt-4o-mini` | OpenAI model |
+| `model` | `gpt-4` | OpenAI model |
 | `maxTokens` | `1000` | Max response tokens |
 | `temperature` | `0.3` | LLM temperature |
 
@@ -73,16 +73,16 @@ OPENAI_API_KEY=sk-your-api-key-here
 
 ```bash
 # Analyze a single URL for CRO opportunities
-npm run start -- https://example.com
+npm run start -- https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711
 
 # Analyze multiple URLs
 npm run start -- https://site1.com https://site2.com https://site3.com
 
 # Generate markdown report
-npm run start -- https://example.com --output-format markdown --output-file report.md
+npm run start -- https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711 --output-format markdown --output-file report.md
 
 # Generate JSON export
-npm run start -- https://example.com --output-format json --output-file analysis.json
+npm run start -- https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711 --output-format json --output-file analysis.json
 ```
 
 ### CLI Options
@@ -120,13 +120,13 @@ npm run start -- https://www.example.com --output-format markdown --output-file 
 npm run start -- --max-steps 5 https://www.example.com
 
 # Headless mode with JSON output
-npm run start -- --headless --output-format json --output-file analysis.json https://example.com
+npm run start -- --headless --output-format json --output-file analysis.json https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711
 
 # Execute specific tool for debugging
 npm run start -- --tool analyze_ctas https://www.example.com
 
 # Legacy heading extraction mode
-npm run start -- --legacy https://example.com
+npm run start -- --legacy https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711
 
 # Custom wait strategy for dynamic sites
 npm run start -- --wait-until networkidle --post-load-wait 10000 https://spa-site.com
@@ -145,7 +145,7 @@ const croAgent = new CROAgent({
   failureLimit: 3,
 });
 
-const result = await croAgent.analyze('https://example.com', {
+const result = await croAgent.analyze('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711', {
   browserConfig: {
     headless: true,
     timeout: 60000,
@@ -168,7 +168,7 @@ const legacyAgent = new BrowserAgent({
 });
 
 legacyAgent.validateEnvironment();
-const legacyResult = await legacyAgent.processUrl('https://example.com');
+const legacyResult = await legacyAgent.processUrl('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711');
 console.log(legacyAgent.formatResult(legacyResult));
 await legacyAgent.close();
 ```
@@ -338,7 +338,7 @@ browser-agent/
 ╔══════════════════════════════════════════════════════════════════════════╗
 ║                        CRO ANALYSIS RESULTS                              ║
 ╠══════════════════════════════════════════════════════════════════════════╣
-║ URL: https://example.com                                                 ║
+║ URL: https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711                                                 ║
 ║ Status: SUCCESS                                                          ║
 ║ Steps Executed: 8                                                        ║
 ║ Total Time: 45.2s                                                        ║
@@ -380,7 +380,7 @@ browser-agent/
 ┌──────────────────────────────────────────────────────────────────────────┐
 │                       BROWSER AGENT RESULTS                              │
 ├──────────────────────────────────────────────────────────────────────────┤
-│ URL: https://example.com                                                 │
+│ URL: https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711                                                 │
 │ Status: SUCCESS                                                          │
 │ Load Time: 2.34s                                                         │
 ├──────────────────────────────────────────────────────────────────────────┤

@@ -53,7 +53,7 @@ describe('DOM Extraction Integration', () => {
       const page = browserManager.getPage();
       const loader = new PageLoader(page, { timeout: 30000 });
 
-      await loader.load('https://example.com');
+      await loader.load('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711');
       const tree = await extractor.extract(page);
 
       expect(tree).toBeDefined();
@@ -195,7 +195,7 @@ describe('DOM Extraction Integration', () => {
       const page = browserManager.getPage();
       const loader = new PageLoader(page, { timeout: 30000 });
 
-      await loader.load('https://example.com');
+      await loader.load('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711');
 
       const startTime = Date.now();
       await extractor.extract(page);
@@ -345,7 +345,7 @@ describe('DOM Extraction Integration', () => {
       const page = browserManager.getPage();
       const loader = new PageLoader(page, { timeout: 30000 });
 
-      await loader.load('https://example.com');
+      await loader.load('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711');
       const tree = await extractor.extract(page);
 
       const customSerializer = new DOMSerializer({ maxTokens: 2000 });

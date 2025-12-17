@@ -2,6 +2,7 @@
  * State Manager
  *
  * Phase 16 (T080): Manages CRO agent state transitions and termination conditions.
+ * Phase 19c (T137): Added coverage tracking integration.
  * Handles step counting, failure tracking, insights collection, and memory management.
  */
 
@@ -11,8 +12,10 @@ import type {
   CROInsight,
   StepRecord,
   CROMemory,
+  ScanMode,
 } from '../models/index.js';
 import { DEFAULT_CRO_OPTIONS, createInitialState } from '../models/index.js';
+import type { CoverageTracker } from './coverage-tracker.js';
 
 /**
  * StateManager - Manages agent state throughout analysis
@@ -23,18 +26,21 @@ import { DEFAULT_CRO_OPTIONS, createInitialState } from '../models/index.js';
  * - Manage termination conditions (FR-045, CR-010)
  * - Collect and store insights
  * - Maintain memory for context across steps
+ * - Phase 19c: Coverage tracking integration
  */
 export class StateManager {
   private state: AgentState;
   private readonly options: CROAgentOptions;
+  private coverageTracker?: CoverageTracker;
 
   /**
    * Create a StateManager with optional custom options
    * @param options - Partial options to override defaults
+   * @param scanMode - Scan mode for coverage tracking (default: 'full_page')
    */
-  constructor(options?: Partial<CROAgentOptions>) {
+  constructor(options?: Partial<CROAgentOptions>, scanMode: ScanMode = 'full_page') {
     this.options = { ...DEFAULT_CRO_OPTIONS, ...options };
-    this.state = createInitialState();
+    this.state = createInitialState(scanMode);
   }
 
   // ─── State Accessors ───────────────────────────────────────────
@@ -157,13 +163,27 @@ export class StateManager {
   /**
    * Check if agent should terminate
    * Conditions: maxSteps reached OR too many consecutive failures OR done
+   * Phase 19c: In full_page mode, also check if coverage is complete
    */
   shouldTerminate(): boolean {
-    return (
-      this.state.step >= this.options.maxSteps ||
-      this.state.consecutiveFailures >= this.options.failureLimit ||
-      this.state.isDone
-    );
+    // Basic termination conditions
+    if (this.state.step >= this.options.maxSteps) {
+      return true;
+    }
+    if (this.state.consecutiveFailures >= this.options.failureLimit) {
+      return true;
+    }
+
+    // If agent is done, check coverage in full_page mode
+    if (this.state.isDone) {
+      // In full_page mode, only terminate if coverage is also complete
+      if (this.state.scanMode === 'full_page' && this.coverageTracker) {
+        return this.coverageTracker.isFullyCovered();
+      }
+      return true;
+    }
+
+    return false;
   }
 
   /**
@@ -171,6 +191,12 @@ export class StateManager {
    */
   getTerminationReason(): string {
     if (this.state.isDone) {
+      // Check if coverage blocked termination
+      if (this.state.scanMode === 'full_page' && this.coverageTracker) {
+        if (!this.coverageTracker.isFullyCovered()) {
+          return `Coverage incomplete (${this.coverageTracker.getCoveragePercent()}%)`;
+        }
+      }
       return this.state.doneReason || 'Agent completed analysis';
     }
     if (this.state.step >= this.options.maxSteps) {
@@ -291,13 +317,75 @@ export class StateManager {
    * Reset state to initial values (keeps options)
    */
   reset(): void {
-    this.state = createInitialState();
+    this.state = createInitialState(this.state.scanMode);
+    this.coverageTracker = undefined;
+  }
+
+  // ─── Coverage Tracking (Phase 19c) ──────────────────────────────
+
+  /**
+   * Set coverage tracker instance
+   * @param tracker - CoverageTracker to use for coverage tracking
+   */
+  setCoverageTracker(tracker: CoverageTracker): void {
+    this.coverageTracker = tracker;
+  }
+
+  /**
+   * Get coverage tracker if set
+   */
+  getCoverageTracker(): CoverageTracker | undefined {
+    return this.coverageTracker;
+  }
+
+  /**
+   * Check if coverage tracking is enabled
+   */
+  hasCoverageTracking(): boolean {
+    return this.coverageTracker !== undefined;
+  }
+
+  /**
+   * Get current coverage percentage
+   * @returns Coverage percentage (0-100) or 100 if no tracker
+   */
+  getCoveragePercent(): number {
+    return this.coverageTracker?.getCoveragePercent() ?? 100;
+  }
+
+  /**
+   * Check if coverage requirements are met
+   */
+  isFullyCovered(): boolean {
+    return this.coverageTracker?.isFullyCovered() ?? true;
+  }
+
+  /**
+   * Get scan mode
+   */
+  getScanMode(): ScanMode {
+    return this.state.scanMode;
+  }
+
+  /**
+   * Check if running in full_page mode
+   */
+  isFullPageMode(): boolean {
+    return this.state.scanMode === 'full_page';
+  }
+
+  /**
+   * Get coverage report string for LLM context
+   */
+  getCoverageReport(): string | undefined {
+    return this.coverageTracker?.getCoverageReport();
   }
 
   // ─── Summary ───────────────────────────────────────────────────
 
   /**
    * Get a summary of current state (for logging/debugging)
+   * Phase 19c: Added scanMode and coveragePercent
    */
   getSummary(): {
     step: number;
@@ -308,6 +396,8 @@ export class StateManager {
     insightCount: number;
     focus: string;
     elapsedMs: number;
+    scanMode: ScanMode;
+    coveragePercent: number;
   } {
     return {
       step: this.state.step,
@@ -318,6 +408,8 @@ export class StateManager {
       insightCount: this.state.insights.length,
       focus: this.state.memory.currentFocus,
       elapsedMs: this.getElapsedTimeMs(),
+      scanMode: this.state.scanMode,
+      coveragePercent: this.getCoveragePercent(),
     };
   }
 }

@@ -2,7 +2,7 @@
 
 **Feature Branch**: `001-browser-agent-core`
 **Created**: 2025-01-23
-**Status**: Draft
+**Status**: Complete (Phase 19 - 100% Page Coverage)
 **Input**: User description: "Build a browser agent that can navigate websites and extract data using LangChain for intelligent processing"
 
 ## User Scenarios & Testing *(mandatory)*
@@ -477,3 +477,77 @@ As a CRO analyst, I want insights transformed into A/B test hypotheses and struc
 **Test Totals**:
 - **SC-058**: Phase 18 adds 88 tests (70 unit + 18 integration)
 - **SC-059**: E2E test completes full workflow on real URL with report generation
+
+---
+
+### User Story 11 - Full Page Coverage (Priority: P1)
+
+As a CRO analyst, I want the agent to guarantee 100% page content analysis regardless of page length, so that no conversion opportunities are missed on long pages.
+
+**Why this priority**: Current LLM-dependent scrolling leads to incomplete coverage (20-60% on long pages). This is a critical reliability issue that undermines the entire analysis.
+
+**Independent Test**: Run analysis on a 10+ viewport page, verify all segments scanned and all CRO elements discovered.
+
+**Acceptance Scenarios**:
+
+1. **Given** a page that is 3 viewports tall, **When** full_page scan mode runs, **Then** all 3 segments are scanned with 100% coverage
+2. **Given** agent tries to call 'done' at 50% coverage, **When** coverage enforcer checks, **Then** 'done' is blocked and agent scrolls to next uncovered segment
+3. **Given** full_page scan completes, **When** DOM is serialized, **Then** all CRO elements from all segments are included
+4. **Given** scanMode is 'llm_guided', **When** analysis runs, **Then** original LLM-dependent scrolling behavior is preserved
+5. **Given** scanMode is 'above_fold', **When** analysis runs, **Then** only initial viewport is analyzed (quick mode)
+
+---
+
+### Coverage System Requirements (Phase 19)
+
+**Functional Requirements**:
+- **FR-098**: System MUST provide ScanMode type with values: 'full_page' (default), 'above_fold', 'llm_guided'
+- **FR-099**: System MUST provide CoverageTracker class that tracks page segments and element discovery
+- **FR-100**: System MUST initialize segments based on page height with configurable overlap (default 100px)
+- **FR-101**: System MUST track which segments have been scanned and calculate coverage percentage
+- **FR-102**: System MUST record all discovered CRO elements with their first-seen segment
+- **FR-103**: System MUST block 'done' action when coverage < minCoveragePercent (default 100%)
+- **FR-104**: System MUST auto-scroll to next uncovered segment when 'done' is blocked
+- **FR-105**: System MUST provide DOMMerger class that merges DOM snapshots from multiple segments
+- **FR-106**: System MUST convert bounding box coordinates from viewport-relative to page-absolute
+- **FR-107**: System MUST calculate dynamic maxSteps based on page height and viewport size
+- **FR-108**: System MUST include coverage report in LLM prompts showing scanned/unscanned regions
+- **FR-109**: System MUST provide getCoverageReport() for human-readable coverage status
+
+**Configuration Requirements**:
+- **CR-022**: ScanMode MUST default to 'full_page' for guaranteed coverage
+- **CR-023**: minCoveragePercent MUST default to 100 (full coverage required)
+- **CR-024**: segmentOverlapPx MUST default to 100 for seamless element capture
+- **CR-025**: Token budget MUST be 32000 for full_page mode (vs 8000 for llm_guided)
+- **CR-026**: Dynamic maxSteps MUST be calculated as: segments + analysisTools + 2
+
+**CLI Requirements**:
+- **FR-110**: CLI MUST support --scan-mode flag with values: full_page, above_fold, llm_guided
+- **FR-111**: CLI MUST support --min-coverage flag (0-100, default 100)
+- **FR-112**: CLI MUST default to full_page scan mode when no --scan-mode specified
+
+### Success Criteria (Phase 19)
+
+**Coverage Tracker**:
+- **SC-060**: CoverageTracker initializes correct segment count for page dimensions
+- **SC-061**: CoverageTracker marks segments scanned and updates coverage percentage
+- **SC-062**: CoverageTracker returns next unscanned segment correctly
+- **SC-063**: CoverageTracker generates accurate coverage report for LLM
+- **SC-064**: Coverage enforcement blocks premature 'done' calls
+- **SC-065**: Coverage enforcement forces scroll to uncovered segment
+
+**DOM Handling**:
+- **SC-066**: Bounding boxes use page-absolute coordinates (include scrollY)
+- **SC-067**: DOMMerger correctly merges snapshots from multiple segments
+- **SC-068**: DOMMerger deduplicates elements by xpath
+- **SC-069**: DOMMerger recalculates element indices after merge
+
+**Integration**:
+- **SC-070**: full_page mode achieves 100% coverage on 3-viewport test page
+- **SC-071**: full_page mode achieves 100% coverage on 10-viewport test page
+- **SC-072**: above_fold mode only scans initial viewport
+- **SC-073**: llm_guided mode preserves original behavior
+- **SC-074**: Dynamic maxSteps adjusts for page height
+
+**Test Totals**:
+- **SC-075**: Phase 19 adds 26 tests (16 unit + 6 integration + 4 e2e)
