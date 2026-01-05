@@ -50,7 +50,7 @@ function createMockDOMTree(root: DOMNode): DOMTree {
 // Helper to create a mock PageState
 function createMockPageState(rootNode: DOMNode, overrides: Partial<PageState> = {}): PageState {
   return {
-    url: 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711',
+    url: 'https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy',
     title: 'Test Page',
     domTree: createMockDOMTree(rootNode),
     viewport: {

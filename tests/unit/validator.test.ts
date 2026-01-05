@@ -14,33 +14,33 @@ describe('validateUrl', () => {
     });
 
     it('should accept valid https URL', () => {
-      const result = validateUrl('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711');
+      const result = validateUrl('https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy');
       expect(result.valid).toBe(true);
-      expect(result.normalizedUrl).toBe('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711/');
+      expect(result.normalizedUrl).toBe('https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy/');
     });
 
     it('should accept URL with path', () => {
-      const result = validateUrl('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711/path/to/page');
+      const result = validateUrl('https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy/path/to/page');
       expect(result.valid).toBe(true);
-      expect(result.normalizedUrl).toBe('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711/path/to/page');
+      expect(result.normalizedUrl).toBe('https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy/path/to/page');
     });
 
     it('should accept URL with query parameters', () => {
-      const result = validateUrl('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711/search?q=test');
+      const result = validateUrl('https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy/search?q=test');
       expect(result.valid).toBe(true);
-      expect(result.normalizedUrl).toBe('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711/search?q=test');
+      expect(result.normalizedUrl).toBe('https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy/search?q=test');
     });
 
     it('should accept URL with port', () => {
-      const result = validateUrl('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711:8080/api');
+      const result = validateUrl('https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy:8080/api');
       expect(result.valid).toBe(true);
-      expect(result.normalizedUrl).toBe('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711:8080/api');
+      expect(result.normalizedUrl).toBe('https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy:8080/api');
     });
 
     it('should trim whitespace from URL', () => {
-      const result = validateUrl('  https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711  ');
+      const result = validateUrl('  https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy  ');
       expect(result.valid).toBe(true);
-      expect(result.normalizedUrl).toBe('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711/');
+      expect(result.normalizedUrl).toBe('https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy/');
     });
   });
 

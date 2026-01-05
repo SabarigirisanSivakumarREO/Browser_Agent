@@ -22,7 +22,14 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 1. **Setup**: Run `.specify/scripts/powershell/setup-plan.ps1 -Json` from repo root and parse JSON for FEATURE_SPEC, IMPL_PLAN, SPECS_DIR, BRANCH. For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
 
-2. **Load context**: Read FEATURE_SPEC and `.specify/memory/constitution.md`. Load IMPL_PLAN template (already copied).
+   **Detect Structure Type** (split vs monolithic):
+   - If `SPECS_DIR/spec/` directory exists → SPLIT structure
+   - If only `SPECS_DIR/spec.md` file exists → MONOLITHIC structure
+
+2. **Load context**: Read spec and `.specify/memory/constitution.md`. Load IMPL_PLAN template (already copied).
+
+   For **MONOLITHIC** structure: Read FEATURE_SPEC (spec.md)
+   For **SPLIT** structure: Read spec/index.md, spec/user-stories.md, and all spec/requirements-*.md files
 
 3. **Execute plan workflow**: Follow the structure in IMPL_PLAN template to:
    - Fill Technical Context (mark unknowns as "NEEDS CLARIFICATION")
@@ -33,7 +40,15 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Phase 1: Update agent context by running the agent script
    - Re-evaluate Constitution Check post-design
 
-4. **Stop and report**: Command ends after Phase 2 planning. Report branch, IMPL_PLAN path, and generated artifacts.
+   **Output format decision** (for plan files):
+   - For small projects: Generate single plan.md file
+   - For large projects (>10 phases) OR if split structure already exists: Generate split structure
+     - plan/index.md - Overview and navigation
+     - plan/overview.md - Summary, technical context, constitution check
+     - plan/architecture.md - Project structure, modules
+     - plan/phase-*.md - Individual phase files
+
+4. **Stop and report**: Command ends after Phase 2 planning. Report branch, IMPL_PLAN path (or plan/ directory for split), and generated artifacts.
 
 ## Phases
 

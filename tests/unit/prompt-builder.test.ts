@@ -52,7 +52,7 @@ const createMockDOMTree = (): DOMTree => ({
 
 // Mock PageState for testing
 const createMockPageState = (): PageState => ({
-  url: 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711/products',
+  url: 'https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy/products',
   title: 'Example Products - Buy Online',
   domTree: createMockDOMTree(),
   viewport: { width: 1280, height: 720, deviceScaleFactor: 1, isMobile: false },
@@ -64,7 +64,7 @@ const createMockPageState = (): PageState => ({
 const createMockMemory = (overrides?: Partial<CROMemory>): CROMemory => ({
   stepHistory: [],
   findings: [],
-  pagesSeen: ['https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711'],
+  pagesSeen: ['https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy'],
   currentFocus: 'initial_scan',
   errors: [],
   ...overrides,
@@ -164,7 +164,7 @@ describe('PromptBuilder', () => {
       const memory = createMockMemory();
 
       const message = builder.buildUserMessage(state, memory);
-      expect(message).toContain('<page_url>https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711/products</page_url>');
+      expect(message).toContain('<page_url>https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy/products</page_url>');
     });
 
     // Test 10: User message contains page title

@@ -46,8 +46,20 @@ You **MUST** consider the user input before proceeding (if not empty).
      - Automatically proceed to step 3
 
 3. Load and analyze the implementation context:
+
+   **Detect Structure Type** (split vs monolithic):
+   - If `FEATURE_DIR/spec/` directory exists → SPLIT structure
+   - If only `FEATURE_DIR/spec.md` file exists → MONOLITHIC structure
+
+   For **MONOLITHIC** structure:
    - **REQUIRED**: Read tasks.md for the complete task list and execution plan
    - **REQUIRED**: Read plan.md for tech stack, architecture, and file structure
+
+   For **SPLIT** structure:
+   - **REQUIRED**: Read tasks/index.md for task summary, then load phase files (tasks/phases-*.md, tasks/phase-*.md)
+   - **REQUIRED**: Read plan/index.md for overview, then plan/architecture.md and relevant plan/phase-*.md files
+
+   **Common files (both structures)**:
    - **IF EXISTS**: Read data-model.md for entities and relationships
    - **IF EXISTS**: Read contracts/ for API specifications and test requirements
    - **IF EXISTS**: Read research.md for technical decisions and constraints
@@ -97,7 +109,12 @@ You **MUST** consider the user input before proceeding (if not empty).
    - **Terraform**: `.terraform/`, `*.tfstate*`, `*.tfvars`, `.terraform.lock.hcl`
    - **Kubernetes/k8s**: `*.secret.yaml`, `secrets/`, `.kube/`, `kubeconfig*`, `*.key`, `*.crt`
 
-5. Parse tasks.md structure and extract:
+5. Parse tasks structure and extract:
+
+   For **MONOLITHIC**: Parse tasks.md
+   For **SPLIT**: Parse tasks/index.md for summary, then each tasks/phase-*.md file
+
+   Extract from all task files:
    - **Task phases**: Setup, Tests, Core, Integration, Polish
    - **Task dependencies**: Sequential vs parallel execution rules
    - **Task details**: ID, description, file paths, parallel markers [P]
@@ -123,7 +140,9 @@ You **MUST** consider the user input before proceeding (if not empty).
    - For parallel tasks [P], continue with successful tasks, report failed ones
    - Provide clear error messages with context for debugging
    - Suggest next steps if implementation cannot proceed
-   - **IMPORTANT** For completed tasks, make sure to mark the task off as [X] in the tasks file.
+   - **IMPORTANT** For completed tasks, mark the task off as [X] in the appropriate tasks file:
+     - MONOLITHIC: Update tasks.md directly
+     - SPLIT: Update the specific tasks/phase-*.md file containing that task
 
 9. Completion validation:
    - Verify all required tasks are completed
@@ -132,4 +151,4 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Confirm the implementation follows the technical plan
    - Report final status with summary of completed work
 
-Note: This command assumes a complete task breakdown exists in tasks.md. If tasks are incomplete or missing, suggest running `/speckit.tasks` first to regenerate the task list.
+Note: This command assumes a complete task breakdown exists (either in tasks.md for monolithic structure, or in tasks/ directory for split structure). If tasks are incomplete or missing, suggest running `/speckit.tasks` first to regenerate the task list.

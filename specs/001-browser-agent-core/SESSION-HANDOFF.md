@@ -1,6 +1,6 @@
 # Session Handoff - CRO Browser Agent
 
-**Last Updated**: 2025-12-17
+**Last Updated**: 2026-01-05
 
 ---
 
@@ -19,9 +19,37 @@ Automatically analyze websites for CRO issues (CTAs, forms, trust signals, value
 
 ## Current State
 
-**Phase**: All 19 Phases Complete ✅
-**Status**: 177/177 tasks complete
-**Tests**: 468+ tests passing (389 unit, 83 integration, 4 E2E)
+**Phase**: Phase 19 Complete ✅ | Phase 12b & 20 Planned 📋
+**Status**: 177/312 tasks complete (Phases 1-19 done)
+**Tests**: 476 tests passing (389 unit, 83 integration, 4 E2E)
+
+### NEXT ACTION: Implement Phase 12b (Enhanced Cookie Detection)
+
+**Priority**: Phase 12b should be implemented BEFORE Phase 20
+
+**Problem**: Cookie banner on Peregrine Clothing (Shopify + Alpine.js) not detected despite visible "Accept" button.
+
+**Root Cause**: Banner uses `aria-label="cookie banner"` and `x-data="consent(false)"` which current patterns don't match.
+
+**Tasks** (T275-T281, 7 tasks, 18 tests):
+- T275: Add 3 new CMP patterns to cookie-patterns.ts
+- T276: Create `tryAriaLabeledBanner()` method
+- T277: Create `tryContainerHeuristic()` method
+- T278: Extend heuristic element types
+- T279: Refactor `tryHeuristic()` priority chain
+- T280: Update integration tests
+- T281: Add Peregrine Clothing e2e test
+
+**Files to modify**:
+- `src/browser/cookie-patterns.ts` - Add 3 new patterns
+- `src/browser/cookie-handler.ts` - Add new methods, refactor heuristic
+- `tests/integration/cookie-handler.test.ts` - Add tests
+- `tests/e2e/workflow.test.ts` - Add Peregrine test case
+
+**Spec Kit References**:
+- Requirements: `spec/requirements-foundation.md` (Phase 12b section)
+- Tasks: `tasks/phases-10-12.md` (Phase 12b section)
+- Architecture: `plan/architecture.md` (CookieConsentHandler component)
 
 ---
 
@@ -43,19 +71,19 @@ npm run test:integration   # Integration tests
 npm run test:e2e           # E2E tests
 
 # Run CRO analysis (default: full_page mode)
-npm run start -- https://in.burberry.com/relaxed-fit-check-cotton-flannel-shirt-p81154981
+npm run start -- https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy
 
 # Scan modes
-npm run start -- --scan-mode=full_page https://in.burberry.com/relaxed-fit-check-cotton-flannel-shirt-p81154981   # 100% coverage
-npm run start -- --scan-mode=above_fold https://in.burberry.com/relaxed-fit-check-cotton-flannel-shirt-p81154981  # First viewport only
-npm run start -- --scan-mode=llm_guided https://in.burberry.com/relaxed-fit-check-cotton-flannel-shirt-p81154981  # LLM decides scrolling
+npm run start -- --scan-mode=full_page https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy   # 100% coverage
+npm run start -- --scan-mode=above_fold https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy  # First viewport only
+npm run start -- --scan-mode=llm_guided https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy  # LLM decides scrolling
 
 # Output formats
-npm run start -- --output-format markdown https://in.burberry.com/relaxed-fit-check-cotton-flannel-shirt-p81154981
-npm run start -- --output-format json --output-file report.json https://in.burberry.com/relaxed-fit-check-cotton-flannel-shirt-p81154981
+npm run start -- --output-format markdown https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy
+npm run start -- --output-format json --output-file report.json https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy
 
 # Verbose mode
-npm run start -- --verbose https://in.burberry.com/relaxed-fit-check-cotton-flannel-shirt-p81154981
+npm run start -- --verbose https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy
 ```
 
 ---
@@ -170,9 +198,17 @@ Browser_Agent/
 │   └── fixtures/                # Test HTML pages
 └── specs/
     └── 001-browser-agent-core/
-        ├── tasks.md             # All 177 tasks
-        ├── plan.md              # Implementation plan
-        ├── spec.md              # Requirements spec
+        ├── spec/                # Requirements (split)
+        │   ├── index.md
+        │   ├── user-stories.md
+        │   └── requirements-*.md
+        ├── plan/                # Implementation plan (split)
+        │   ├── index.md
+        │   ├── architecture.md
+        │   └── phase-*.md
+        ├── tasks/               # Tasks (split)
+        │   ├── index.md
+        │   └── phase-*.md
         ├── data-model.md        # Data structures
         └── SESSION-HANDOFF.md   # This file
 ```
@@ -183,7 +219,7 @@ Browser_Agent/
 
 For a new session, read these files in order:
 
-1. **`specs/001-browser-agent-core/tasks.md`** - Complete task breakdown (177 tasks)
+1. **`specs/001-browser-agent-core/tasks/index.md`** - Task overview and summary
 2. **`src/agent/cro-agent.ts`** - Main agent implementation
 3. **`src/types/index.ts`** - All TypeScript interfaces
 4. **`src/prompts/system-cro.md`** - LLM system prompt
@@ -305,17 +341,17 @@ OPENAI_API_KEY=sk-...
 
 ### 1. Run Full Analysis
 ```bash
-npm run start -- https://in.burberry.com/relaxed-fit-check-cotton-flannel-shirt-p81154981
+npm run start -- https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy
 ```
 
 ### 2. Debug Tool Execution
 ```bash
-npm run start -- --verbose --max-steps 5 https://in.burberry.com/relaxed-fit-check-cotton-flannel-shirt-p81154981
+npm run start -- --verbose --max-steps 5 https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy
 ```
 
 ### 3. Generate Report
 ```bash
-npm run start -- --output-format markdown --output-file report.md https://in.burberry.com/relaxed-fit-check-cotton-flannel-shirt-p81154981
+npm run start -- --output-format markdown --output-file report.md https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy
 ```
 
 ### 4. Test Specific Component
@@ -330,9 +366,16 @@ npx tsc --noEmit
 
 ---
 
+## Next Phase
+
+- **Phase 20**: Unified Extraction Pipeline (58 tasks planned)
+  - Layered extraction with strict token budgets
+  - Multi-strategy selectors (CSS, role, text, nth, xpath)
+  - Constraint detection (cookie, shadow DOM, iframes, lazy, sticky, modal)
+  - See: `plan/phase-20.md`, `tasks/phase-20.md`
+
 ## Potential Future Work
 
-- **Phase 20**: Screenshot capture and visual comparison
 - **Phase 21**: Multi-page journey analysis
 - **Phase 22**: Historical tracking and trend analysis
 - **Phase 23**: Custom heuristic rule configuration

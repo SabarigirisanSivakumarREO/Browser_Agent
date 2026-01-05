@@ -95,7 +95,19 @@ Given that feature description, do this:
     7. Identify Key Entities (if data involved)
     8. Return: SUCCESS (spec ready for planning)
 
-5. Write the specification to SPEC_FILE using the template structure, replacing placeholders with concrete details derived from the feature description (arguments) while preserving section order and headings.
+5. Write the specification using the template structure, replacing placeholders with concrete details derived from the feature description (arguments) while preserving section order and headings.
+
+   **Output format decision**:
+   - For small specs (≤10 user stories, ≤50 requirements): Write single SPEC_FILE (spec.md)
+   - For large specs (>10 user stories OR >50 requirements): Generate split structure
+     - spec/index.md - Overview + navigation
+     - spec/user-stories.md - All user stories
+     - spec/requirements-foundation.md - Core/foundation requirements
+     - spec/requirements-[category].md - Category-specific requirements (if needed)
+
+   **If generating split structure**:
+   - Create spec/ directory in FEATURE_DIR
+   - Create a redirect spec.md file pointing to spec/index.md for backward compatibility
 
 6. **Specification Quality Validation**: After writing the initial spec, validate it against quality criteria:
 
@@ -189,7 +201,12 @@ Given that feature description, do this:
 
    d. **Update Checklist**: After each validation iteration, update the checklist file with current pass/fail status
 
-7. Report completion with branch name, spec file path, checklist results, and readiness for the next phase (`/speckit.clarify` or `/speckit.plan`).
+7. Report completion with:
+   - Branch name
+   - Spec file path (or spec/ directory path for split structure)
+   - Structure type used (monolithic or split)
+   - Checklist results
+   - Readiness for the next phase (`/speckit.clarify` or `/speckit.plan`)
 
 **NOTE:** The script creates and checks out the new branch and initializes the spec file before writing.
 

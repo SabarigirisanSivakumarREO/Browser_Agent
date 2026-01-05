@@ -67,4 +67,37 @@ export const COOKIE_CONSENT_PATTERNS: CookieConsentPattern[] = [
     detectSelector: '.consent-manager, #consent-manager',
     acceptSelector: '.cm-btn-accept, button[data-action="accept"]',
   },
+
+  // Alpine.js + Tailwind cookie banners (Shopify themes)
+  {
+    id: 'alpine-tailwind',
+    detectSelector: '[x-data*="consent"], [x-data*="cookie"]',
+    acceptSelector:
+      '[x-data*="consent"] button:has-text("accept"), [x-data*="cookie"] button:has-text("accept"), [x-data*="consent"] a:has-text("accept"), [x-data*="cookie"] a:has-text("accept")',
+  },
+
+  // Aria-labeled cookie banners (accessibility-focused sites)
+  {
+    id: 'aria-cookie-banner',
+    detectSelector:
+      '[aria-label*="cookie" i], [role="region"][aria-label*="cookie" i], [aria-label*="cookie banner" i]',
+    acceptSelector:
+      '[aria-label*="cookie" i] button:has-text("accept"), [role="region"][aria-label*="cookie" i] button:has-text("accept"), [aria-label*="cookie banner" i] button:has-text("accept")',
+  },
+
+  // Fixed position cookie banners (Tailwind/utility class patterns)
+  {
+    id: 'fixed-cookie-banner',
+    detectSelector: '.fixed[class*="cookie"], .fixed.bottom-0[class*="cookie"], .fixed.bottom-0[class*="consent"]',
+    acceptSelector:
+      '.fixed[class*="cookie"] button:has-text("accept"), .fixed.bottom-0 button:has-text("accept"), .fixed[class*="consent"] button:has-text("accept")',
+  },
+
+  // Shopify default cookie banner (uses exact class="cookies")
+  {
+    id: 'shopify-cookies',
+    detectSelector: '.cookies, div.cookies, section.cookies',
+    acceptSelector:
+      '.cookies button:has-text("accept"), .cookies a:has-text("accept"), .cookies button:has-text("allow"), .cookies button:has-text("ok")',
+  },
 ];

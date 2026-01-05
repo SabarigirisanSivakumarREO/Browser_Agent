@@ -70,7 +70,7 @@ function createMockDOMTree(children: DOMNode[] = []): DOMTree {
  */
 function createMockPageState(overrides: Partial<PageState> = {}): PageState {
   return {
-    url: 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711',
+    url: 'https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy',
     title: 'Test Page',
     domTree: createMockDOMTree(),
     viewport: { width: 1920, height: 1080, deviceScaleFactor: 1, isMobile: false },
@@ -85,7 +85,7 @@ function createMockPageState(overrides: Partial<PageState> = {}): PageState {
  */
 function createMockPage(): Page {
   return {
-    url: vi.fn().mockReturnValue('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711'),
+    url: vi.fn().mockReturnValue('https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy'),
     evaluate: vi.fn().mockResolvedValue(undefined),
   } as unknown as Page;
 }

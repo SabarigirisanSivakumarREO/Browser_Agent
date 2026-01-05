@@ -14,8 +14,15 @@ You **MUST** consider the user input before proceeding (if not empty).
 ## Outline
 
 1. Run `.specify/scripts/powershell/check-prerequisites.ps1 -Json -RequireTasks -IncludeTasks` from repo root and parse FEATURE_DIR and AVAILABLE_DOCS list. All paths must be absolute. For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
-1. From the executed script, extract the path to **tasks**.
-1. Get the Git remote by running:
+
+2. **Detect Structure Type** and extract tasks:
+   - If `FEATURE_DIR/tasks/` directory exists → SPLIT structure
+     - Read tasks/index.md for task summary
+     - Load all tasks/phase-*.md and tasks/phases-*.md files
+   - If only `FEATURE_DIR/tasks.md` exists → MONOLITHIC structure
+     - Read tasks.md directly
+
+3. Get the Git remote by running:
 
 ```bash
 git config --get remote.origin.url
@@ -23,6 +30,6 @@ git config --get remote.origin.url
 
 **ONLY PROCEED TO NEXT STEPS IF THE REMOTE IS A GITHUB URL**
 
-1. For each task in the list, use the GitHub MCP server to create a new issue in the repository that is representative of the Git remote.
+4. For each task in the list (aggregated from all task files if split), use the GitHub MCP server to create a new issue in the repository that is representative of the Git remote.
 
 **UNDER NO CIRCUMSTANCES EVER CREATE ISSUES IN REPOSITORIES THAT DO NOT MATCH THE REMOTE URL**

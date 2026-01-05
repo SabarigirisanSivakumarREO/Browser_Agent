@@ -105,7 +105,7 @@ function countTotalNodes(node: DOMNode): number {
  */
 function createMockPageState(overrides: Partial<PageState> = {}): PageState {
   return {
-    url: 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711',
+    url: 'https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy',
     title: 'Test Page',
     domTree: createMockDOMTree(),
     viewport: { width: 1920, height: 1080, deviceScaleFactor: 1, isMobile: false },
@@ -120,7 +120,7 @@ function createMockPageState(overrides: Partial<PageState> = {}): PageState {
  */
 function createMockPage(): Page {
   return {
-    url: vi.fn().mockReturnValue('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711'),
+    url: vi.fn().mockReturnValue('https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy'),
     evaluate: vi.fn().mockResolvedValue(undefined),
   } as unknown as Page;
 }
@@ -896,7 +896,7 @@ describe('checkNavigationTool', () => {
   it('should not flag page with breadcrumbs', async () => {
     const nav = createNavElement({ hasNav: true, hasBreadcrumbs: true });
     const context = createMockContext({
-      url: 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711/products/item-123',
+      url: 'https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy/products/item-123',
       domTree: createMockDOMTree([nav]),
     });
     context.params = {};
@@ -912,7 +912,7 @@ describe('checkNavigationTool', () => {
   it('should detect missing breadcrumbs on non-home page', async () => {
     const nav = createNavElement({ hasNav: true, hasBreadcrumbs: false });
     const context = createMockContext({
-      url: 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711/products/item-123',
+      url: 'https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy/products/item-123',
       domTree: createMockDOMTree([nav]),
     });
     context.params = {};

@@ -420,20 +420,20 @@ The `skipPostProcessing` and `skipHeuristics` options control which parts of Pha
 
 ```typescript
 // Full analysis (default)
-const result = await agent.analyze('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711');
+const result = await agent.analyze('https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy');
 
 // Skip only heuristics
-const result = await agent.analyze('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711', {
+const result = await agent.analyze('https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy', {
   skipHeuristics: true
 });
 
 // Skip all post-processing
-const result = await agent.analyze('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711', {
+const result = await agent.analyze('https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy', {
   skipPostProcessing: true
 });
 
 // Generate markdown report
-const result = await agent.analyze('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711', {
+const result = await agent.analyze('https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy', {
   outputFormat: 'markdown'
 });
 ```

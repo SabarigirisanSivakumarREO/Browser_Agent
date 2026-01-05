@@ -526,7 +526,7 @@
 
     <!-- CLI Examples -->
     <text x="20" y="85" class="small-text" fill="#64748b">CLI:</text>
-    <text x="45" y="85" class="small-text" fill="#1e293b">npm run start -- https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711</text>
+    <text x="45" y="85" class="small-text" fill="#1e293b">npm run start -- https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy</text>
 
     <text x="20" y="100" class="small-text" fill="#64748b">Modes:</text>
     <text x="55" y="100" class="small-text" fill="#1e293b">Default: CRO Analysis | --legacy: Heading extraction | --tool &lt;name&gt;: Debug tool</text>

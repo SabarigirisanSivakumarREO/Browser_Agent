@@ -21,9 +21,9 @@ npm run start -- https://www.conversion.com/
 
 **Scan Modes (Phase 19)**:
 ```bash
-npm run start -- --scan-mode=full_page https://in.burberry.com/relaxed-fit-check-cotton-flannel-shirt-p81154981 # 100% page coverage (default)
-npm run start -- --scan-mode=above_fold https://in.burberry.com/relaxed-fit-check-cotton-flannel-shirt-p81154981# Only initial viewport
-npm run start -- --scan-mode=llm_guided https://in.burberry.com/relaxed-fit-check-cotton-flannel-shirt-p81154981# LLM decides scrolling
+npm run start -- --scan-mode=full_page https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy # 100% page coverage (default)
+npm run start -- --scan-mode=above_fold https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy# Only initial viewport
+npm run start -- --scan-mode=llm_guided https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy# LLM decides scrolling
 ```
 
 ---
@@ -96,7 +96,7 @@ browser-agent/
 **What it does**: Parses command line arguments, runs the agent.
 
 ```typescript
-// User runs: npm run start -- https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711 --headless
+// User runs: npm run start -- https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy --headless
 
 // cli.ts does:
 1. Parse URLs from arguments
@@ -276,7 +276,7 @@ class ResultFormatter {
     // ┌──────────────────────────────────┐
     // │     BROWSER AGENT RESULTS        │
     // ├──────────────────────────────────┤
-    // │ URL: https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711         │
+    // │ URL: https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy         │
     // │ Status: SUCCESS                  │
     // │ Headings: 39                     │
     // └──────────────────────────────────┘
@@ -338,37 +338,37 @@ When making changes, update these files:
 ### 1. Adding New Feature
 
 ```bash
-# Update tasks.md - add new phase/tasks
-specs/001-browser-agent-core/tasks.md
+# Update tasks/ - add new phase/tasks in appropriate phase file
+specs/001-browser-agent-core/tasks/phase-*.md
 
 # Example:
-## Phase 11: New Feature Name
-- [ ] T040 Description of task
-- [ ] T041 Another task
+## Phase 21: New Feature Name
+- [ ] T205 Description of task
+- [ ] T206 Another task
 ```
 
 ### 2. Bug Fixes
 
 ```bash
-# Add to Phase 10 in tasks.md
-- [x] T040 Fix description - what it fixes
+# Add to appropriate phase in tasks/
+- [x] T205 Fix description - what it fixes
 ```
 
 ### 3. Architecture Changes
 
 ```bash
-# Update plan.md - module architecture section
-specs/001-browser-agent-core/plan.md
+# Update plan/ - module architecture section
+specs/001-browser-agent-core/plan/architecture.md
 ```
 
 ### 4. New Requirements
 
 ```bash
-# Update spec.md - add to Functional Requirements
-specs/001-browser-agent-core/spec.md
+# Update spec/ - add to appropriate requirements file
+specs/001-browser-agent-core/spec/requirements-*.md
 
 # Example:
-- **FR-011**: System MUST support new capability
+- **FR-142**: System MUST support new capability
 ```
 
 ### 5. Usage Changes
@@ -381,23 +381,26 @@ specs/001-browser-agent-core/quickstart.md
 ### Spec Kit Update Checklist
 
 When making changes:
-- [ ] Update `tasks.md` with new/completed tasks
+- [ ] Update `tasks/` with new/completed tasks in appropriate phase file
 - [ ] Update `quickstart.md` if usage changes
-- [ ] Update `plan.md` if architecture changes
-- [ ] Update `spec.md` if requirements change
+- [ ] Update `plan/` if architecture changes
+- [ ] Update `spec/` if requirements change
 - [ ] Mark tasks as `[x]` when complete
-- [ ] Add bug fixes to Phase 10
+- [ ] Add bug fixes to appropriate phase
 
 ---
 
 ## Quick Reference
 
+> **Note**: spec, plan, and tasks are split into subdirectories. Use index.md files for navigation.
+
 | I want to... | Read this file |
 |--------------|----------------|
 | Understand what app does | `quickstart.md` |
-| See all requirements | `spec.md` |
-| Understand architecture | `plan.md` |
-| See task status | `tasks.md` |
+| See all requirements | `spec/index.md` → `spec/requirements-*.md` |
+| Understand architecture | `plan/index.md` → `plan/architecture.md` |
+| See task status | `tasks/index.md` → `tasks/phase-*.md` |
+| Technical deep-dive (types, components) | `SESSION-HANDOFF.md` |
 | Learn the code | `code-walkthrough.md` (this file) |
 
 ---

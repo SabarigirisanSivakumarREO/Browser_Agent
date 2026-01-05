@@ -1,9 +1,20 @@
 # Feature Specification: [FEATURE NAME]
 
-**Feature Branch**: `[###-feature-name]`  
-**Created**: [DATE]  
-**Status**: Draft  
+**Feature Branch**: `[###-feature-name]`
+**Created**: [DATE]
+**Status**: Draft
 **Input**: User description: "$ARGUMENTS"
+
+<!--
+  STRUCTURE NOTE: For large projects, spec can be split into multiple files:
+  - spec/index.md - Overview + navigation
+  - spec/user-stories.md - User stories (US1-USn)
+  - spec/requirements-foundation.md - Foundation requirements
+  - spec/requirements-[category].md - Category-specific requirements
+
+  Split when: >100 requirements, >10 user stories, or file becomes unwieldy
+  Commands auto-detect split structure if spec/ directory exists.
+-->
 
 ## User Scenarios & Testing *(mandatory)*
 

@@ -1,18 +1,29 @@
 # Quickstart: Browser Agent Core
 
 **Feature**: `001-browser-agent-core`
-**Last Updated**: 2025-12-16
+**Last Updated**: 2026-01-05
+
+---
+
+## New Session Prompt (Copy-Paste This)
+
+```
+Read specs/001-browser-agent-core/quickstart.md to get the complete project context.
+```
 
 ---
 
 ## Session Bootstrap (READ THIS FIRST)
 
-**Status**: Phase 19 Complete ✅
-- Completed: 174/174 tasks (Phase 19: 21/21)
-- Phase 19: 100% Page Coverage System ✅
+**Status**: Phase 12c Complete ✅ | Phase 20 Planned 📋
+- Completed: 187/315 tasks (Phases 1-19, 12b, 12c complete)
+- Phase 12c: Peregrine Cookie Banner Fix - 3 tasks complete ✅
+- Phase 20: Unified Extraction Pipeline - 128 tasks planned
 
 **Progress**:
 - Phase 1-12: MVP infrastructure ✅
+- **Phase 12b: Enhanced Cookie Detection** ✅ (Shopify/Alpine.js banners)
+- **Phase 12c: Peregrine Cookie Banner Fix** ✅ (two-step dismiss: Accept + Close)
 - Phase 13a-13b: Data models ✅
 - Phase 14: DOM extraction ✅
 - Phase 14b: CLI `--cro-extract` flag ✅
@@ -30,21 +41,23 @@
 - Phase 18e: Agent Integration (21 tests) ✅
 - Phase 18f: Test Fixtures (5 HTML + expected-results.json) ✅
 - Phase 18-CLI: Final CLI Integration ✅ (default CRO mode, report output)
-- **Phase 19a: Coverage Tracking** ✅ (CoverageTracker class, 16 tests)
-- **Phase 19b: DOM Changes** ✅ (DOMMerger, absolute coords, dynamic tokens, 7 tests)
-- **Phase 19c: Agent Integration** ✅ (full-page scan loop, coverage enforcement)
-- **Phase 19d: Prompt Updates** ✅ (coverage awareness in system prompt)
-- **Phase 19e: CLI & Config** ✅ (--scan-mode, --min-coverage flags)
-- **Phase 19f: Testing & Polish** ✅ (11 integration + 4 E2E tests)
+- Phase 19a: Coverage Tracking ✅ (CoverageTracker class, 16 tests)
+- Phase 19b: DOM Changes ✅ (DOMMerger, absolute coords, dynamic tokens, 7 tests)
+- Phase 19c: Agent Integration ✅ (full-page scan loop, coverage enforcement)
+- Phase 19d: Prompt Updates ✅ (coverage awareness in system prompt)
+- Phase 19e: CLI & Config ✅ (--scan-mode, --min-coverage flags)
+- Phase 19f: Testing & Polish ✅ (11 integration + 4 E2E tests)
+- **Phase 20: Unified Extraction Pipeline** 📋 (58 tasks, 181 tests planned)
 
 **Architecture**:
 - MVP: 5 modules (browser, extraction, langchain, output, orchestrator)
 - CRO Agent: +7 modules (agent, dom, tools, heuristics, models, output extensions, score-calculator)
 - Phase 19: +1 module (coverage-tracker for 100% page coverage)
+- Phase 20 (planned): +1 module (extraction - unified pipeline with layered architecture)
 
-**Key insight**: Phase 19 adds deterministic full-page scanning to achieve 100% coverage on long pages
+**Key insight**: Phase 20 introduces layered extraction with strict token budgets, multi-strategy selectors, and constraint reporting
 
-**Current milestone**: Phase 19 Complete - CLI ready with scan modes
+**Current milestone**: Phase 20 Planned - Unified Extraction Pipeline (awaiting approval)
 
 **Instructions**: Keep it concise. Compromise on grammar. Clear, to the point. No fluff.
 
@@ -58,25 +71,58 @@
 **Excluded folders** (DO NOT analyze unless explicitly requested):
 - `browser-use/` - Reference codebase only (545 files), not part of this project
 
-### What to Read Next
+### Spec Kit Structure
+
+```
+specs/001-browser-agent-core/
+├── spec/                    # Requirements (split from spec.md)
+│   ├── index.md             # Overview + navigation
+│   ├── user-stories.md      # US1-US14
+│   ├── requirements-foundation.md
+│   ├── requirements-cro.md
+│   └── requirements-phase19-20.md
+├── plan/                    # Implementation plan (split from plan.md)
+│   ├── index.md             # Overview + navigation
+│   ├── overview.md, architecture.md, dependencies.md
+│   └── phase-13-15.md ... phase-20.md
+├── tasks/                   # Tasks (split from tasks.md)
+│   ├── index.md             # Overview + summary
+│   └── phases-01-09.md ... phase-20.md
+├── quickstart.md            # THIS FILE - start here
+├── data-model.md            # TypeScript interfaces
+├── SESSION-HANDOFF.md       # Technical deep-dive for handoffs
+└── code-walkthrough.md      # Code structure explanation
+```
+
+### What to Read (Priority Order)
+
+| Priority | File | Purpose |
+|----------|------|---------|
+| 1 | `quickstart.md` | Project overview, status, usage (this file) |
+| 2 | `tasks/index.md` | Task summary, what's done/pending |
+| 3 | `plan/index.md` | Architecture overview |
+| 4 | `spec/index.md` | Requirements overview |
+| 5 | Phase-specific files | Only when working on specific phase |
+
+### What to Read by Task
 
 | Need | Read |
 |------|------|
-| Add new feature | spec.md → plan.md → tasks.md (follow Change Workflow) |
-| Fix a bug | tasks.md (add to current phase, follow Change Workflow) |
-| Understand architecture | plan.md (Module Architecture section) |
-| Check requirements | spec.md (User Stories, Requirements) |
-| See implementation details | tasks.md (full task history with checkpoints) |
-| Investigate past decisions | research.md (tech decisions) + tasks.md (specific phase) |
+| Add new feature | spec/index.md → plan/index.md → tasks/index.md (follow Change Workflow) |
+| Fix a bug | tasks/index.md (add to current phase, follow Change Workflow) |
+| Understand architecture | plan/architecture.md (Module Architecture section) |
+| Check requirements | spec/user-stories.md, spec/requirements-*.md |
+| See implementation details | tasks/phase-*.md (full task history with checkpoints) |
+| Technical deep-dive | SESSION-HANDOFF.md (types, components, architecture) |
 
 ### Change Workflow (MUST FOLLOW)
 
 For any feature/bug fix request:
 
 ```
-1. Update spec.md       → Add/modify requirements & user stories
-2. Update plan.md       → Update architecture & design if needed
-3. Update tasks.md      → Add new tasks with proper phase/ID
+1. Update spec/         → Add/modify requirements in appropriate file
+2. Update plan/         → Update architecture & design if needed
+3. Update tasks/        → Add new tasks in appropriate phase file
 4. Update quickstart.md → Sync recent changes section
 5. Get user approval    → Present changes, wait for confirmation
 6. Implement            → Write code only after approval
@@ -84,10 +130,13 @@ For any feature/bug fix request:
 8. Update design/       → Update ALL design diagrams to reflect changes
 ```
 
-**Rules**:
-- Spec kit is the source of truth - update BEFORE coding
-- Never implement without approval
-- quickstart.md must always reflect latest spec kit state
+**Important Rules**:
+1. **Spec kit is source of truth** - Update BEFORE coding
+2. **Never implement without approval** - Present plan first
+3. **Use split files** - Don't look for monolithic spec.md/plan.md/tasks.md
+4. **Read phase-specific files** - When working on specific phase, read that phase's plan and tasks file
+5. **Check tasks/index.md** - For task summary and current status
+6. **quickstart.md must always reflect latest spec kit state**
 - **CRITICAL**: After implementation, update ALL files in `design/` folder:
   - `APPLICATION_FLOW.md` - ASCII flow diagrams
   - `architecture-overview.svg` - High-level architecture
@@ -130,7 +179,38 @@ For any feature/bug fix request:
 
 ### Recent Changes (keep last 3)
 
-**1. Phase 19c-f: Full Page Coverage System** - ✅ COMPLETE (2025-12-16)
+**1. Phase 12c: Peregrine Cookie Banner Fix** - ✅ COMPLETE (2026-01-05)
+- **Purpose**: Fix cookie banner dismissal for Peregrine Clothing (Shopify site)
+- **Root Cause**: Banner uses plain `<div>` container with no identifying classes/attributes
+  - Accept button saves preferences but doesn't close banner visually
+  - Close (X) button required to dismiss banner after accepting
+- **Solution**:
+  - Added `trySiblingButtonSearch()` - finds Accept button near Cookie preferences button
+  - Two-step dismissal: click Accept, then click Close if banner still visible
+  - Added `shopify-cookies` CMP pattern for `.cookies` class (fallback)
+  - Improved `tryBroadButtonSearch()` with force-click for non-visible elements
+  - Priority chain: aria → container → sibling → broad search
+- **Tasks**: T282-T284 (3 tasks) - All complete ✅
+- **Tests**: 17 unit + 12 integration (29 total)
+- See: src/browser/cookie-handler.ts, src/browser/cookie-patterns.ts
+
+**2. Phase 20: Unified Extraction Pipeline** - 📋 PLANNED (2025-12-18)
+- **Purpose**: Layered, reusable extraction with strict token budgets and constraint reporting
+- **Layers**:
+  - Layer 0: Types, schemas, budgets, multi-strategy selectors
+  - Layer 1: PageSnapshot (meta, screenshot, landmarks, nodes, forms, prices, constraints)
+  - Layer 2: PageCoverage (state capture, merge with fingerprint deduplication)
+  - Layer 3: LLM context preparation with progressive disclosure
+- **Key improvements**:
+  - Hard caps: maxNodesTotal=250, maxInteractive=120, etc.
+  - SelectorBundle: preferred CSS + fallback strategies (role, text, nth, xpath)
+  - Fingerprint anchoring: prevents false deduplication on PLPs
+  - Constraint detection: 6 types (cookie, shadow DOM, iframes, lazy, sticky, modal)
+  - Token targets: snapshot < 4k, standard coverage < 12k
+- **Tasks**: T147-T204 (58 tasks, 181 tests)
+- See: spec/requirements-phase19-20.md, plan/phase-20.md, tasks/phase-20.md
+
+**3. Phase 19c-f: Full Page Coverage System** - ✅ COMPLETE (2025-12-16)
 - **Phase 19c - Agent Integration**:
   - Modified src/agent/cro-agent.ts: Full-page scan loop with DOMMerger integration
   - Modified src/agent/state-manager.ts: Coverage tracking integration, scanMode support
@@ -148,28 +228,15 @@ For any feature/bug fix request:
   - Updated quickstart.md with scan mode CLI documentation
 - See: src/agent/cro-agent.ts, src/agent/state-manager.ts, src/cli.ts
 
-**2. Phase 19a-b: Coverage Tracking Foundation** - ✅ COMPLETE (2025-12-15)
-- Created src/models/coverage.ts: PageSegment, ElementCoverage, CoverageState, CoverageConfig, ScanMode interfaces
-- Created src/agent/coverage-tracker.ts: CoverageTracker class (16 tests)
-- Created src/browser/dom/dom-merger.ts: DOMMerger class for multi-segment merging (7 tests)
-- Updated src/browser/dom/build-dom-tree.ts: Absolute page coordinates
-- Updated src/browser/dom/serializer.ts: Dynamic token budget by scan mode
-- See: src/agent/coverage-tracker.ts, src/browser/dom/dom-merger.ts
-
-**3. Phase 18-CLI: Final CLI Integration** - ✅ COMPLETE (2025-12-09)
-- CRO analysis is now the default mode (no flags needed)
-- New CLI flags:
-  - `--output-format <fmt>`: console, markdown, json (default: console)
-  - `--output-file <path>`: Write report to file
-  - `--legacy`: Use old heading extraction mode (for backwards compatibility)
-- See: src/cli.ts, src/output/file-writer.ts
-
 ---
 
 ### Change History (trimmed entries - cross-reference)
 
 | Change | Phase | Tasks | CLI Milestone | Status |
 |--------|-------|-------|---------------|--------|
+| **Peregrine Cookie Banner Fix** | 12c | T282-T284 | - | ✅ |
+| **Enhanced Cookie Detection** | 12b | T275-T281 | - | ✅ |
+| **Unified Extraction Pipeline** | 20 | T147-T204 | - | 📋 Planned |
 | **Testing & Polish** | 19f | T143-T146 | - | ✅ |
 | **CLI & Config** | 19e | T141-T142 | `--scan-mode=full_page|above_fold|llm_guided` | ✅ |
 | **Prompt Updates** | 19d | T139-T140 | - | ✅ |
@@ -245,7 +312,7 @@ export OPENAI_API_KEY=sk-your-api-key-here
 
 ```bash
 # Run the agent on a single URL
-npm run start -- https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711
+npm run start -- https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy
 ```
 
 **Expected Output**:
@@ -254,7 +321,7 @@ npm run start -- https://in.burberry.com/relaxed-fit-gabardine-overshirt-p811087
 ================================================================================
 BROWSER AGENT RESULTS
 ================================================================================
-URL: https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711
+URL: https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy
 Status: SUCCESS
 Load Time: 1.2s
 
@@ -278,7 +345,7 @@ Insights:
 
 ```bash
 # Process multiple URLs sequentially
-npm run start -- https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711 https://developer.mozilla.org
+npm run start -- https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy https://developer.mozilla.org
 ```
 
 ### Programmatic Usage
@@ -305,7 +372,7 @@ async function main(): Promise<void> {
   });
 
   try {
-    const result = await agent.processUrl('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711');
+    const result = await agent.processUrl('https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy');
 
     if (result.success) {
       console.log('Headings:', result.extraction?.headings);
@@ -333,7 +400,7 @@ async function loadPage(): Promise<void> {
   await browser.launch();
 
   const loader = new PageLoader(browser.getPage(), { timeout: 60000 });
-  const result = await loader.load('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711');
+  const result = await loader.load('https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy');
 
   console.log('Title:', result.title);
   console.log('Success:', result.success);
@@ -414,7 +481,7 @@ Options:
 npm run start -- https://www.mrandmrssmith.com/
 
 # Fast mode for static sites (no JS wait)
-npm run start -- --post-load-wait 0 https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711
+npm run start -- --post-load-wait 0 https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy
 
 # Heavy JS sites - increase JS wait time
 npm run start -- --post-load-wait 10000 https://heavy-spa-site.com
@@ -521,7 +588,7 @@ URL: https://slow-site.example.com
 
 ```
 Warning: No headings found on page
-URL: https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711/empty-page
+URL: https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy/empty-page
 ```
 
 **Solution**: This is expected for pages without h1-h6 elements. The agent will return empty results.

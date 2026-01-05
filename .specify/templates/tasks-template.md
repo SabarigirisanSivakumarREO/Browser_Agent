@@ -8,6 +8,16 @@ description: "Task list template for feature implementation"
 **Input**: Design documents from `/specs/[###-feature-name]/`
 **Prerequisites**: plan.md (required), spec.md (required for user stories), research.md, data-model.md, contracts/
 
+<!--
+  STRUCTURE NOTE: For large projects, tasks can be split into multiple files:
+  - tasks/index.md - Overview, format, summary table
+  - tasks/phases-01-09.md - Grouped phase files
+  - tasks/phase-17.md - Individual phase files for large phases
+
+  Split when: >50 tasks, >10 phases, or files become unwieldy
+  Commands auto-detect split structure if tasks/ directory exists.
+-->
+
 **Tests**: The examples below include test tasks. Tests are OPTIONAL - only include them if explicitly requested in the feature specification.
 
 **Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.

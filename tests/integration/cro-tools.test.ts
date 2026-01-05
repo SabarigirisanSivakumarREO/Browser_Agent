@@ -90,7 +90,7 @@ function createMockDOMTree(children: DOMNode[] = []): DOMTree {
  */
 function createMockPageState(overrides: Partial<PageState> = {}): PageState {
   return {
-    url: 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711',
+    url: 'https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy',
     title: 'Test Page',
     domTree: createMockDOMTree([
       createMockDOMNode({
@@ -132,7 +132,7 @@ function createMockPage(options: { scrollY?: number; maxScrollY?: number } = {})
   let currentScrollY = scrollY;
 
   return {
-    url: vi.fn().mockReturnValue('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711'),
+    url: vi.fn().mockReturnValue('https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy'),
     evaluate: vi.fn().mockImplementation((fn: unknown) => {
       if (typeof fn === 'function') {
         // Handle scroll evaluation

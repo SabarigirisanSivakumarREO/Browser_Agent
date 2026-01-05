@@ -73,16 +73,16 @@ OPENAI_API_KEY=sk-your-api-key-here
 
 ```bash
 # Analyze a single URL for CRO opportunities
-npm run start -- https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711
+npm run start -- https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy
 
 # Analyze multiple URLs
 npm run start -- https://site1.com https://site2.com https://site3.com
 
 # Generate markdown report
-npm run start -- https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711 --output-format markdown --output-file report.md
+npm run start -- https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy --output-format markdown --output-file report.md
 
 # Generate JSON export
-npm run start -- https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711 --output-format json --output-file analysis.json
+npm run start -- https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy --output-format json --output-file analysis.json
 ```
 
 ### CLI Options
@@ -120,13 +120,13 @@ npm run start -- https://www.example.com --output-format markdown --output-file 
 npm run start -- --max-steps 5 https://www.example.com
 
 # Headless mode with JSON output
-npm run start -- --headless --output-format json --output-file analysis.json https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711
+npm run start -- --headless --output-format json --output-file analysis.json https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy
 
 # Execute specific tool for debugging
 npm run start -- --tool analyze_ctas https://www.example.com
 
 # Legacy heading extraction mode
-npm run start -- --legacy https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711
+npm run start -- --legacy https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy
 
 # Custom wait strategy for dynamic sites
 npm run start -- --wait-until networkidle --post-load-wait 10000 https://spa-site.com
@@ -145,7 +145,7 @@ const croAgent = new CROAgent({
   failureLimit: 3,
 });
 
-const result = await croAgent.analyze('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711', {
+const result = await croAgent.analyze('https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy', {
   browserConfig: {
     headless: true,
     timeout: 60000,
@@ -168,7 +168,7 @@ const legacyAgent = new BrowserAgent({
 });
 
 legacyAgent.validateEnvironment();
-const legacyResult = await legacyAgent.processUrl('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711');
+const legacyResult = await legacyAgent.processUrl('https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy');
 console.log(legacyAgent.formatResult(legacyResult));
 await legacyAgent.close();
 ```
@@ -338,7 +338,7 @@ browser-agent/
 ╔══════════════════════════════════════════════════════════════════════════╗
 ║                        CRO ANALYSIS RESULTS                              ║
 ╠══════════════════════════════════════════════════════════════════════════╣
-║ URL: https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711                                                 ║
+║ URL: https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy                                                 ║
 ║ Status: SUCCESS                                                          ║
 ║ Steps Executed: 8                                                        ║
 ║ Total Time: 45.2s                                                        ║
@@ -380,7 +380,7 @@ browser-agent/
 ┌──────────────────────────────────────────────────────────────────────────┐
 │                       BROWSER AGENT RESULTS                              │
 ├──────────────────────────────────────────────────────────────────────────┤
-│ URL: https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711                                                 │
+│ URL: https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy                                                 │
 │ Status: SUCCESS                                                          │
 │ Load Time: 2.34s                                                         │
 ├──────────────────────────────────────────────────────────────────────────┤

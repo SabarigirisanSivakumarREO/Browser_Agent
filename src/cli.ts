@@ -258,13 +258,13 @@ EXAMPLES:
   npm run start -- --scan-mode=llm_guided https://www.carwale.com
 
   # Legacy heading extraction mode
-  npm run start -- --legacy https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711
+  npm run start -- --legacy https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy
 
   # Process multiple URLs
-  npm run start -- https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711 https://github.com
+  npm run start -- https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy https://github.com
 
   # Headless mode with verbose logging
-  npm run start -- --headless --verbose https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711
+  npm run start -- --headless --verbose https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy
 
   # Execute specific tool for debugging
   npm run start -- --tool analyze_ctas https://www.carwale.com

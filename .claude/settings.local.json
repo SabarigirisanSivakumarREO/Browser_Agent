@@ -18,7 +18,11 @@
       "WebSearch",
       "Bash(ls:*)",
       "Bash(find:*)",
-      "Bash(npx tsx:*)"
+      "Bash(npx tsx:*)",
+      "Bash(grep:*)",
+      "Bash(xargs sed:*)",
+      "WebFetch(domain:www.peregrineclothing.co.uk)",
+      "WebFetch(domain:shopify.dev)"
     ],
     "deny": [],
     "ask": []

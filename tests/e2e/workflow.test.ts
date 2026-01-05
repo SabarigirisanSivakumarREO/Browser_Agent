@@ -197,7 +197,7 @@ describe('End-to-End Workflow', () => {
       });
 
       try {
-        const result = await agentNoCookies.processUrl('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711');
+        const result = await agentNoCookies.processUrl('https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy');
 
         // Cookie consent should not be attempted
         expect(result.pageLoad.cookieConsent).toBeUndefined();
@@ -208,5 +208,47 @@ describe('End-to-End Workflow', () => {
         await agentNoCookies.close();
       }
     }, 60000);
+
+    // T281: Phase 12b - Peregrine Clothing e2e test
+    it('should handle Peregrine Clothing Alpine.js cookie banner before extraction', async () => {
+      // Create agent with fresh context (no cookies)
+      const freshAgent = new BrowserAgent({
+        browser: {
+          ...DEFAULT_BROWSER_CONFIG,
+          headless: true,
+          dismissCookieConsent: true, // Enable cookie dismissal
+        },
+      });
+
+      try {
+        const result = await freshAgent.processUrl(
+          'https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy'
+        );
+
+        // Page should load successfully
+        expect(result.pageLoad.success).toBe(true);
+
+        // Cookie consent handling should be attempted
+        expect(result.pageLoad.cookieConsent).toBeDefined();
+
+        // If banner was present, it should be detected via alpine-tailwind or heuristic
+        if (result.pageLoad.cookieConsent?.dismissed) {
+          expect(['cmp', 'heuristic']).toContain(result.pageLoad.cookieConsent.mode);
+          if (result.pageLoad.cookieConsent.mode === 'cmp') {
+            // Phase 12b: Alpine.js/Tailwind patterns should detect this
+            expect(['alpine-tailwind', 'aria-cookie-banner', 'fixed-cookie-banner']).toContain(
+              result.pageLoad.cookieConsent.cmpId
+            );
+          }
+        }
+
+        // Extraction should succeed regardless of cookie banner
+        expect(result.success).toBe(true);
+        expect(result.extraction).toBeDefined();
+        expect(result.extraction?.totalCount).toBeGreaterThan(0);
+      } finally {
+        await freshAgent.close();
+      }
+    }, 90000);
   });
 });

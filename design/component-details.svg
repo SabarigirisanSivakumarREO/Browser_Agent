@@ -269,10 +269,10 @@
       <text x="10" y="100" class="return-text">→ ToolResult</text>
     </g>
 
-    <!-- 9 Tools List -->
+    <!-- 11 Tools List -->
     <g transform="translate(15, 180)">
       <rect width="430" height="100" rx="6" fill="#f0fdfa" stroke="#5eead4"/>
-      <text x="215" y="18" class="label-bold" text-anchor="middle" fill="#0d9488">9 CRO Analysis Tools</text>
+      <text x="215" y="18" class="label-bold" text-anchor="middle" fill="#0d9488">11 CRO Analysis Tools (Phase 17)</text>
       <line x1="10" y1="28" x2="420" y2="28" stroke="#5eead4"/>
       <text x="15" y="45" class="param-text" fill="#0d9488">Analysis:</text>
       <text x="70" y="45" class="param-text">analyze_ctas, analyze_forms, detect_trust_signals</text>
@@ -280,7 +280,7 @@
       <text x="15" y="75" class="param-text" fill="#0d9488">Navigation:</text>
       <text x="85" y="75" class="param-text">scroll_page, click, go_to_url</text>
       <text x="15" y="92" class="param-text" fill="#0d9488">Control:</text>
-      <text x="70" y="92" class="param-text">done (terminate with summary)</text>
+      <text x="70" y="92" class="param-text">record_insight, done</text>
     </g>
   </g>
 
@@ -571,7 +571,7 @@
       <text y="168" class="param-text">|   |       +-- tool-registry.ts</text>
       <text y="183" class="param-text">|   |       +-- tool-executor.ts</text>
       <text y="198" class="param-text">|   |       +-- cro/</text>
-      <text y="198" class="file-path" x="200">9 analysis tools</text>
+      <text y="198" class="file-path" x="200">11 CRO tools</text>
       <text y="213" class="param-text">|   +-- browser/</text>
       <text y="213" class="file-path" x="200" fill="#10b981">Browser module</text>
       <text y="228" class="param-text">|   |   +-- browser-manager.ts</text>
@@ -602,7 +602,7 @@
       <text y="513" class="param-text">|   +-- utils/</text>
       <text y="513" class="file-path" x="200">Utilities</text>
       <text y="528" class="param-text">+-- tests/</text>
-      <text y="528" class="file-path" x="200">408+ test cases</text>
+      <text y="528" class="file-path" x="200">476 test cases</text>
       <text y="543" class="param-text">+-- specs/</text>
       <text y="543" class="file-path" x="200">Specifications</text>
       <text y="558" class="param-text">+-- design/</text>
@@ -742,7 +742,7 @@
       <text x="20" y="48" class="param-text" fill="#3b82f6">Default:</text>
       <text x="65" y="48" class="param-text">CRO Analysis mode</text>
       <text x="20" y="61" class="param-text" fill="#64748b">Example:</text>
-      <text x="70" y="61" class="param-text">npm run start -- https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711</text>
+      <text x="70" y="61" class="param-text">npm run start -- https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy</text>
       <text x="20" y="76" class="param-text" fill="#64748b">--legacy:</text>
       <text x="75" y="76" class="param-text">Original heading extraction mode</text>
       <text x="320" y="76" class="param-text" fill="#64748b">--tool:</text>

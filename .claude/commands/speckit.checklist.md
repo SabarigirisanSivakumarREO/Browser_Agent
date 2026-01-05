@@ -76,12 +76,24 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Infer any missing context from spec/plan/tasks (do NOT hallucinate)
 
 4. **Load feature context**: Read from FEATURE_DIR:
+
+   **Detect Structure Type** (split vs monolithic):
+   - If `FEATURE_DIR/spec/` directory exists → SPLIT structure
+   - If only `FEATURE_DIR/spec.md` file exists → MONOLITHIC structure
+
+   For **MONOLITHIC** structure:
    - spec.md: Feature requirements and scope
    - plan.md (if exists): Technical details, dependencies
    - tasks.md (if exists): Implementation tasks
 
+   For **SPLIT** structure:
+   - spec/index.md + spec/user-stories.md + spec/requirements-*.md: Feature requirements and scope
+   - plan/index.md + plan/overview.md + plan/architecture.md (if exists): Technical details, dependencies
+   - tasks/index.md + tasks/phase-*.md (if exists): Implementation tasks
+
    **Context Loading Strategy**:
    - Load only necessary portions relevant to active focus areas (avoid full-file dumping)
+   - For split structure: Start with index.md files, then load specific files as needed
    - Prefer summarizing long sections into concise scenario/requirement bullets
    - Use progressive disclosure: add follow-on retrieval only if gaps detected
    - If source docs are large, generate interim summary items instead of embedding raw text

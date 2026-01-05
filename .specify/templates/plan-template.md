@@ -37,15 +37,54 @@
 
 ### Documentation (this feature)
 
+<!--
+  Two structure options are available:
+  - MONOLITHIC: Single files (spec.md, plan.md, tasks.md) - default for small projects
+  - SPLIT: Subdirectories (spec/, plan/, tasks/) - for large projects (>50 tasks, >10 phases, or >100 requirements)
+
+  The split structure is auto-detected by commands. If spec/ directory exists, split is assumed.
+-->
+
+**Option A: Monolithic Structure** (default for small projects)
+
 ```text
 specs/[###-feature]/
-├── plan.md              # This file (/speckit.plan command output)
+├── spec.md              # Feature specification (/speckit.specify output)
+├── plan.md              # This file (/speckit.plan output)
+├── tasks.md             # Implementation tasks (/speckit.tasks output)
 ├── research.md          # Phase 0 output (/speckit.plan command)
 ├── data-model.md        # Phase 1 output (/speckit.plan command)
 ├── quickstart.md        # Phase 1 output (/speckit.plan command)
-├── contracts/           # Phase 1 output (/speckit.plan command)
-└── tasks.md             # Phase 2 output (/speckit.tasks command - NOT created by /speckit.plan)
+└── contracts/           # Phase 1 output (/speckit.plan command)
 ```
+
+**Option B: Split Structure** (for large projects)
+
+```text
+specs/[###-feature]/
+├── spec/                      # Requirements (split from spec.md)
+│   ├── index.md               # Overview + navigation
+│   ├── user-stories.md        # User stories
+│   └── requirements-*.md      # Functional requirements by category
+├── plan/                      # Implementation plan (split from plan.md)
+│   ├── index.md               # Overview + navigation
+│   ├── overview.md            # Summary, tech context, constitution
+│   ├── architecture.md        # Project structure, modules
+│   └── phase-*.md             # Individual phase details
+├── tasks/                     # Tasks (split from tasks.md)
+│   ├── index.md               # Overview, format, summary table
+│   └── phase-*.md             # Tasks by phase
+├── research.md                # Phase 0 output
+├── data-model.md              # Phase 1 output
+├── quickstart.md              # Phase 1 output
+└── contracts/                 # Phase 1 output
+```
+
+**When to split**: Consider splitting when any of:
+- Total tasks exceed 50
+- Total phases exceed 10
+- Total requirements exceed 100
+- Files become unwieldy for context loading
 
 ### Source Code (repository root)
 <!--

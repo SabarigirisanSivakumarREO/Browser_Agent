@@ -31,7 +31,7 @@ function createMockPageState(options: {
   title?: string;
   nodes?: Partial<DOMNode>[];
 } = {}): PageState {
-  const { url = 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711', title = 'Test Page', nodes = [] } = options;
+  const { url = 'https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy', title = 'Test Page', nodes = [] } = options;
 
   const childNodes = nodes.map((n) => createMockDOMNode(n));
 
@@ -98,7 +98,7 @@ describe('BusinessTypeDetector', () => {
 
     it('should detect ecommerce from element selectors', () => {
       const state = createMockPageState({
-        url: 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711/page',
+        url: 'https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy/page',
         title: 'Products',
         nodes: [
           { tagName: 'button', attributes: { class: 'add-to-cart-button cart-btn' }, text: 'Add to Cart' },
@@ -115,7 +115,7 @@ describe('BusinessTypeDetector', () => {
 
     it('should detect ecommerce from keywords', () => {
       const state = createMockPageState({
-        url: 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711',
+        url: 'https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy',
         title: 'Shop Now - Best Deals',
         nodes: [
           { text: 'Add to cart now' },
@@ -161,7 +161,7 @@ describe('BusinessTypeDetector', () => {
       const strictDetector = createBusinessTypeDetector({ confidenceThreshold: 0.9 });
 
       const state = createMockPageState({
-        url: 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711',
+        url: 'https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy',
         title: 'Welcome',
         nodes: [{ text: 'Hello World' }],
       });
@@ -204,7 +204,7 @@ describe('BusinessTypeDetector', () => {
   describe('signal capture', () => {
     it('should capture signals that led to detection', () => {
       const state = createMockPageState({
-        url: 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711/checkout',
+        url: 'https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy/checkout',
         title: 'Checkout',
         nodes: [
           { text: 'Complete your purchase' },

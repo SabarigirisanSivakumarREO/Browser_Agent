@@ -72,7 +72,7 @@
 
   <!-- ChatOpenAI -->
   <rect x="510" y="75" width="80" height="40" class="external"/>
-  <text x="550" y="98" class="external-text">GPT-4</text>
+  <text x="550" y="98" class="external-text">GPT-4o</text>
 
   <!-- ToolExecutor -->
   <rect x="610" y="75" width="80" height="40" class="actor-box"/>
@@ -80,7 +80,7 @@
 
   <!-- Tools -->
   <rect x="710" y="75" width="80" height="40" class="actor-box"/>
-  <text x="750" y="98" class="actor-text">9 Tools</text>
+  <text x="750" y="98" class="actor-text">11 Tools</text>
 
   <!-- HeuristicEngine -->
   <rect x="810" y="75" width="80" height="40" class="actor-box"/>
@@ -270,11 +270,11 @@
   <line x1="150" y1="1000" x2="150" y2="1030" stroke="#8b5cf6" stroke-width="2" marker-end="url(#arrowhead-loop)"/>
   <text x="160" y="1020" class="message-text" fill="#7c3aed">exit loop</text>
 
-  <!-- 9 Tools Reference -->
+  <!-- 11 Tools Reference -->
   <rect x="1110" y="460" width="280" height="280" fill="white" stroke="#06b6d4" stroke-width="2" rx="8"/>
   <rect x="1110" y="460" width="280" height="30" fill="#06b6d4" rx="8"/>
   <rect x="1110" y="480" width="280" height="10" fill="#06b6d4"/>
-  <text x="1250" y="480" fill="white" font-size="12" font-weight="bold" text-anchor="middle">9 CRO TOOLS</text>
+  <text x="1250" y="480" fill="white" font-size="12" font-weight="bold" text-anchor="middle">11 CRO TOOLS</text>
 
   <text x="1125" y="510" class="note-text-tool" font-weight="bold">Analysis (6):</text>
   <text x="1125" y="525" class="note-text">analyze_ctas</text>
@@ -289,8 +289,8 @@
   <text x="1250" y="540" class="note-text">click</text>
   <text x="1250" y="555" class="note-text">go_to_url</text>
 
-  <text x="1250" y="585" class="note-text-tool" font-weight="bold">Control:</text>
-  <text x="1250" y="600" class="note-text">done (terminate)</text>
+  <text x="1250" y="585" class="note-text-tool" font-weight="bold">Control (2):</text>
+  <text x="1250" y="600" class="note-text">record_insight, done</text>
 
   <rect x="1120" y="620" width="260" height="110" fill="#f0fdfa" stroke="#5eead4" rx="5"/>
   <text x="1250" y="640" class="note-text-tool" text-anchor="middle" font-weight="bold">ToolResult</text>
@@ -379,13 +379,13 @@
   <text x="450" y="1633" class="actor-text">Prompt</text>
 
   <rect x="510" y="1610" width="80" height="40" class="external"/>
-  <text x="550" y="1633" class="external-text">GPT-4</text>
+  <text x="550" y="1633" class="external-text">GPT-4o</text>
 
   <rect x="610" y="1610" width="80" height="40" class="actor-box"/>
   <text x="650" y="1633" class="actor-text">ToolExec</text>
 
   <rect x="710" y="1610" width="80" height="40" class="actor-box"/>
-  <text x="750" y="1633" class="actor-text">9 Tools</text>
+  <text x="750" y="1633" class="actor-text">11 Tools</text>
 
   <rect x="810" y="1610" width="80" height="40" class="actor-box"/>
   <text x="850" y="1633" class="actor-text">Heuristic</text>

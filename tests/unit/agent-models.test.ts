@@ -367,12 +367,12 @@ describe('Type exports compile correctly', () => {
     const memory: CROMemory = {
       stepHistory: [],
       findings: [],
-      pagesSeen: ['https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711'],
+      pagesSeen: ['https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy'],
       currentFocus: 'cta_analysis',
       errors: [],
     };
 
-    expect(memory.pagesSeen).toContain('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711');
+    expect(memory.pagesSeen).toContain('https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy');
   });
 
   it('should allow creating AgentState objects', () => {

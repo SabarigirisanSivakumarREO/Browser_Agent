@@ -25,7 +25,7 @@ const createMockInsight = (overrides: Partial<CROInsight> = {}): CROInsight => (
 
 // Helper to create a mock CROAnalysisResult
 const createMockResult = (overrides: Partial<CROAnalysisResult> = {}): CROAnalysisResult => ({
-  url: 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711',
+  url: 'https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy',
   success: true,
   insights: [],
   heuristicInsights: [],
@@ -52,10 +52,10 @@ describe('AgentProgressFormatter', () => {
     it('should format analysis start message with URL and max steps', () => {
       const formatter = new AgentProgressFormatter({ useColors: false });
 
-      const output = formatter.formatAnalysisStart('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711', 10);
+      const output = formatter.formatAnalysisStart('https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy', 10);
 
       expect(output).toContain('CRO AGENT ANALYSIS');
-      expect(output).toContain('URL: https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711');
+      expect(output).toContain('URL: https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy');
       expect(output).toContain('Max Steps: 10');
       expect(output).toContain('Starting analysis...');
     });
@@ -118,7 +118,7 @@ describe('AgentProgressFormatter', () => {
 
       // Header section
       expect(output).toContain('CRO ANALYSIS RESULTS');
-      expect(output).toContain('URL: https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711');
+      expect(output).toContain('URL: https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy');
       expect(output).toContain('Title: Example Page');
       expect(output).toContain('SUCCESS');
       expect(output).toContain('Steps Executed: 8');

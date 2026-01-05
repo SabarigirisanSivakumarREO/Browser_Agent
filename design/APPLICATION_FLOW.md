@@ -1,10 +1,13 @@
 # CRO Browser Agent Application Flow
 
+**Last Updated**: 2025-12-23 | **Phase**: 19 Complete | **Phase 20**: Planned
+
 ## High-Level Architecture
 
 ```
 +-----------------------------------------------------------------------------------+
 |                           CRO BROWSER AGENT SYSTEM                                 |
+|                        Phase 19: 100% Page Coverage System                         |
 +-----------------------------------------------------------------------------------+
 |                                                                                    |
 |    +--------+     +-------------------+     +-----------------+                    |
@@ -17,15 +20,21 @@
 |         v                  v                  v                  v                  |
 |   +-----------+    +-------------+    +------------+    +---------------+          |
 |   | Browser   |    | DOM         |    | Agent Core |    | Heuristic     |          |
-|   | Module    |    | Extraction  |    | (GPT-4)    |    | Engine        |          |
+|   | Module    |    | Extraction  |    | (GPT-4o)   |    | Engine        |          |
 |   +-----------+    +-------------+    +------------+    +---------------+          |
 |         |                |                  |                  |                   |
 |         v                v                  v                  v                   |
 |   +-----------+    +-------------+    +------------+    +---------------+          |
 |   | Playwright|    | CRO         |    | Tool       |    | 10 Heuristic  |          |
 |   | Browser   |    | Classifier  |    | System     |    | Rules (H001-  |          |
-|   +-----------+    +-------------+    | (9 Tools)  |    | H010)         |          |
-|                                       +------------+    +---------------+          |
+|   +-----------+    +-------------+    | (11 Tools) |    | H010)         |          |
+|         |                |            +------------+    +---------------+          |
+|         v                v                  |                                      |
+|   +-----------+    +-------------+          v                                      |
+|   | Cookie    |    | DOMMerger   |    +------------+                               |
+|   | Handler   |    | (Multi-seg) |    | Coverage   |                               |
+|   +-----------+    +-------------+    | Tracker    |                               |
+|                                       +------------+                               |
 |                                                                                    |
 +-----------------------------------------------------------------------------------+
 ```
@@ -38,7 +47,7 @@
 |                                                                                     |
 |  INPUT                                                                              |
 |  +----+                                                                             |
-|  |URL | ---> npm run start -- https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711                                   |
+|  |URL | ---> npm run start -- https://example.com                                   |
 |  +----+                                                                             |
 |    |                                                                                |
 |    v                                                                                |
@@ -51,6 +60,8 @@
 |  |  | --output    |    |             |    |             |               |           |
 |  |  | --max-steps |    |             |    |             |               |           |
 |  |  | --timeout   |    |             |    |             |               |           |
+|  |  | --scan-mode |    |             |    |             |               |           |
+|  |  | --min-cover |    |             |    |             |               |           |
 |  |  +-------------+    +-------------+    +-------------+               |           |
 |  +----------------------------------------------------------------------+           |
 |    |                                                                                |
@@ -62,13 +73,13 @@
 |  |   analyze(url) -> CROAnalysisResult                                  |           |
 |  +----------------------------------------------------------------------+           |
 |    |                                                                                |
-|    +----------------+----------------+----------------+----------------+             |
-|    |                |                |                |                |             |
-|    v                v                v                v                v             |
-|  +-------+    +-----------+    +-----------+    +------------+    +-----------+     |
-|  |BROWSER|    | DOM       |    | AGENT     |    | HEURISTIC  |    | OUTPUT    |     |
-|  |MODULE |    | EXTRACTION|    | CORE      |    | ENGINE     |    | MODULE    |     |
-|  +-------+    +-----------+    +-----------+    +------------+    +-----------+     |
+|    +----------+----------+----------+----------+----------+                         |
+|    |          |          |          |          |          |                         |
+|    v          v          v          v          v          v                         |
+|  +-------+ +-------+ +--------+ +--------+ +--------+ +--------+                    |
+|  |BROWSER| | DOM   | |COVERAGE| | AGENT  | |HEURIST | | OUTPUT |                    |
+|  |MODULE | | MERGE | |TRACKER | | CORE   | |ENGINE  | | MODULE |                    |
+|  +-------+ +-------+ +--------+ +--------+ +--------+ +--------+                    |
 |                                                                                     |
 +------------------------------------------------------------------------------------+
 ```
@@ -91,7 +102,7 @@
 |   | - Create Context    |         | - Navigate to URL     |                       |
 |   |   (ignoreHTTPS:true)|         | - Wait for page load  |                       |
 |   | - Set Viewport      |         | - Handle timeouts     |                       |
-|   |   (1280x720)        |         |                       |                       |
+|   |   (1280x720)        |         | - Dismiss cookies     |                       |
 |   | - Set Timeout (60s) |         |                       |                       |
 |   +---------------------+         +-----------------------+                       |
 |                                                                                   |
@@ -101,11 +112,11 @@
                                         v
 
 +==================================================================================+
-|                       STAGE 2: DOM EXTRACTION                                     |
+|                       STAGE 2: DOM EXTRACTION + COVERAGE                          |
 +==================================================================================+
 |                                                                                   |
 |   +-------------------------------------------------------------------------+     |
-|   |                    DOMExtractor (extraction/)                           |     |
+|   |                    DOMExtractor (browser/dom/)                          |     |
 |   +-------------------------------------------------------------------------+     |
 |                                     |                                             |
 |                                     v                                             |
@@ -117,6 +128,27 @@
 |        |  |  links, inputs)  |  |  href, text)     |  | Analysis   | |             |
 |        |  +------------------+  +------------------+  +------------+ |             |
 |        +------------------------------------------------------------+             |
+|                                     |                                             |
+|                                     v                                             |
+|   +-------------------------------------------------------------------------+     |
+|   |                    CoverageTracker (Phase 19)                           |     |
+|   +-------------------------------------------------------------------------+     |
+|   |  +------------------+  +------------------+  +------------------+        |     |
+|   |  | Initialize       |  | Track Segments   |  | Calculate %      |        |     |
+|   |  | (pageHeight,     |  | (scrollY,        |  | getCoverage      |        |     |
+|   |  |  viewportHeight) |  |  elements)       |  | Percent()        |        |     |
+|   |  +------------------+  +------------------+  +------------------+        |     |
+|   +-------------------------------------------------------------------------+     |
+|                                     |                                             |
+|                                     v                                             |
+|   +-------------------------------------------------------------------------+     |
+|   |                    DOMMerger (Phase 19)                                 |     |
+|   +-------------------------------------------------------------------------+     |
+|   |  Merge DOM snapshots from multiple scroll positions                     |     |
+|   |  - Absolute coordinates (page-relative)                                 |     |
+|   |  - Fingerprint-based deduplication                                      |     |
+|   |  - Dynamic token filtering                                              |     |
+|   +-------------------------------------------------------------------------+     |
 |                                     |                                             |
 |                                     v                                             |
 |                      +-------------------------------+                            |
@@ -144,12 +176,19 @@
                                         v
 
 +==================================================================================+
-|                        STAGE 3: AGENT LOOP                                        |
+|                        STAGE 3: AGENT LOOP (with Coverage)                        |
 +==================================================================================+
 |                                                                                   |
 |   +-------------------------------------------------------------------------+     |
 |   |                    Agent Core (agent/)                                  |     |
-|   |            observe -> reason -> act (max 10 steps)                      |     |
+|   |            observe -> reason -> act (dynamic maxSteps)                  |     |
+|   |                                                                         |     |
+|   |   SCAN MODES (Phase 19):                                                |     |
+|   |   +------------------+  +------------------+  +------------------+      |     |
+|   |   | full_page        |  | above_fold       |  | llm_guided       |      |     |
+|   |   | Auto-scroll for  |  | Initial viewport |  | LLM decides      |      |     |
+|   |   | 100% coverage    |  | only (faster)    |  | scrolling        |      |     |
+|   |   +------------------+  +------------------+  +------------------+      |     |
 |   +-------------------------------------------------------------------------+     |
 |                                     |                                             |
 |       +-----------------------------+-----------------------------+               |
@@ -157,21 +196,24 @@
 |       v                             v                             v               |
 |   +----------+              +---------------+             +-------------+         |
 |   | OBSERVE  |              | REASON        |             | ACT         |         |
-|   | (DOM     |              | (GPT-4        |             | (Execute    |         |
-|   |  State)  |              |  Analysis)    |             |  Tool)      |         |
+|   | (DOM     |              | (GPT-4o       |             | (Execute    |         |
+|   |  State + |              |  Analysis)    |             |  Tool)      |         |
+|   | Coverage)|              |               |             |             |         |
 |   +----------+              +---------------+             +-------------+         |
 |       |                             |                             |               |
 |       v                             v                             v               |
 |   +---------+               +---------------+             +-------------+         |
-|   | Build   |               | API Request   |             | 9 CRO       |         |
+|   | Build   |               | API Request   |             | 11 CRO      |         |
 |   | Page    |               | - System Msg  |             | Analysis    |         |
-|   | State   |               | - User Msg    |             | Tools       |         |
-|   |         |               | - Tool Defs   |             |             |         |
+|   | State + |               | - User Msg    |             | Tools       |         |
+|   | Coverage|               | - Coverage    |             |             |         |
+|   | Report  |               |   Context     |             |             |         |
 |   +---------+               | - temp: 0.3   |             |             |         |
 |                             +---------------+             +-------------+         |
 |                                                                   |               |
 |                             LOOP UNTIL                            |               |
-|                          'done' OR maxSteps                       |               |
+|                        'done' AND coverage >= minCoverage         |               |
+|                          OR maxSteps reached                      |               |
 |                                                                   v               |
 |                                            +----------------------------+         |
 |                                            |     CROAgentOutput         |         |
@@ -179,6 +221,7 @@
 |                                            | - hypotheses: Hypothesis[] |         |
 |                                            | - stepsExecuted: number    |         |
 |                                            | - actionHistory: string[]  |         |
+|                                            | - coveragePercent: number  |         |
 |                                            +----------------------------+         |
 |                                                                                   |
 +==================================================================================+
@@ -201,15 +244,27 @@
 |        |                                                            |             |
 |        |  +------------------+  +------------------+  +------------+ |             |
 |        |  | CTA Rules        |  | Form Rules       |  | Trust      | |             |
-|        |  | H001: Visibility |  | H003: Length     |  | Rules      | |             |
-|        |  | H002: Clarity    |  | H004: Labels     |  | H005       | |             |
+|        |  | H001: Missing    |  | H005: Form too   |  | Rules      | |             |
+|        |  |   primary CTA    |  |   long           |  | H006       | |             |
+|        |  | H002: CTA below  |  |                  |  |            | |             |
+|        |  |   fold           |  |                  |  |            | |             |
+|        |  | H003: Low        |  |                  |  |            | |             |
+|        |  |   contrast       |  |                  |  |            | |             |
+|        |  | H004: Generic    |  |                  |  |            | |             |
+|        |  |   text           |  |                  |  |            | |             |
 |        |  +------------------+  +------------------+  +------------+ |             |
 |        |                                                            |             |
 |        |  +------------------+  +------------------+  +------------+ |             |
 |        |  | Value Prop Rules |  | Navigation Rules |  | Friction   | |             |
-|        |  | H006: Clarity    |  | H008: Complexity |  | Detection  | |             |
-|        |  | H007: Position   |  | H009: Consistency|  | H010       | |             |
+|        |  | H007: Unclear    |  | H008: Poor nav   |  | Detection  | |             |
+|        |  |   value prop     |  |                  |  | H010       | |             |
 |        |  +------------------+  +------------------+  +------------+ |             |
+|        |                                                            |             |
+|        |  +------------------+                                      |             |
+|        |  | Social Proof     |                                      |             |
+|        |  | H009: Missing    |                                      |             |
+|        |  |   social proof   |                                      |             |
+|        |  +------------------+                                      |             |
 |        +------------------------------------------------------------+             |
 |                                     |                                             |
 |                                     v                                             |
@@ -305,22 +360,25 @@
 |                      | - url: string                 |                            |
 |                      | - businessType: result        |                            |
 |                      | - insights: CROInsight[]      |                            |
+|                      | - heuristicInsights: []       |                            |
 |                      | - hypotheses: Hypothesis[]    |                            |
-|                      | - score: CROScore             |                            |
+|                      | - scores: CROScores           |                            |
 |                      | - metadata: AnalysisMetadata  |                            |
+|                      | - coveragePercent: number     |                            |
 |                      | - outputFiles?: paths         |                            |
 |                      +-------------------------------+                            |
 |                                                                                   |
 +==================================================================================+
 ```
 
-## 9 CRO Analysis Tools
+## 11 CRO Analysis Tools (Phase 17)
 
 ```
 +---------------------------------------------------------------------------------+
-|                              CRO ANALYSIS TOOLS                                  |
+|                              CRO ANALYSIS TOOLS (11)                             |
 +---------------------------------------------------------------------------------+
 |                                                                                  |
+|   ANALYSIS TOOLS (6)                                                             |
 |   +---------------------------+    +---------------------------+                 |
 |   | 1. analyze_ctas           |    | 2. analyze_forms          |                 |
 |   | Analyze call-to-action    |    | Analyze form elements     |                 |
@@ -342,6 +400,7 @@
 |   | consistency               |    | conversion                |                 |
 |   +---------------------------+    +---------------------------+                 |
 |                                                                                  |
+|   NAVIGATION TOOLS (3)                                                           |
 |   +---------------------------+    +---------------------------+                 |
 |   | 7. scroll_page            |    | 8. click                  |                 |
 |   | Scroll to reveal          |    | Click on elements         |                 |
@@ -349,16 +408,23 @@
 |   | content                   |    |                           |                 |
 |   +---------------------------+    +---------------------------+                 |
 |                                                                                  |
+|   +---------------------------+                                                  |
+|   | 9. go_to_url              |                                                  |
+|   | Navigate to a             |                                                  |
+|   | different URL             |                                                  |
+|   +---------------------------+                                                  |
+|                                                                                  |
+|   CONTROL TOOLS (2)                                                              |
 |   +---------------------------+    +---------------------------+                 |
-|   | 9. go_to_url              |    | 10. done                  |                 |
-|   | Navigate to a             |    | Signal analysis           |                 |
-|   | different URL             |    | completion                |                 |
+|   | 10. record_insight        |    | 11. done                  |                 |
+|   | LLM records custom        |    | Signal analysis           |                 |
+|   | observation               |    | completion                |                 |
 |   +---------------------------+    +---------------------------+                 |
 |                                                                                  |
 +---------------------------------------------------------------------------------+
 ```
 
-## 10 Heuristic Rules
+## 10 Heuristic Rules (Phase 18)
 
 ```
 +---------------------------------------------------------------------------------+
@@ -367,111 +433,196 @@
 |                                                                                  |
 |  CTA RULES                                                                       |
 |  +-----------------------+    +-----------------------+                          |
-|  | H001: CTA Visibility  |    | H002: CTA Clarity     |                          |
-|  | Check if primary CTAs |    | Check if CTA text     |                          |
-|  | are visible above     |    | clearly communicates  |                          |
-|  | the fold              |    | the action            |                          |
+|  | H001: Missing Primary |    | H002: CTA Below Fold  |   SEVERITY: critical    |
+|  | CTA                   |    | Primary CTA not       |   SEVERITY: high        |
+|  | No primary CTA found  |    | visible in viewport   |                          |
+|  +-----------------------+    +-----------------------+                          |
+|                                                                                  |
+|  +-----------------------+    +-----------------------+                          |
+|  | H003: Low Contrast    |    | H004: Generic CTA     |   SEVERITY: high        |
+|  | CTA                   |    | Text                  |   SEVERITY: medium      |
+|  | Poor color contrast   |    | "Click here", "Submit"|                          |
 |  +-----------------------+    +-----------------------+                          |
 |                                                                                  |
 |  FORM RULES                                                                      |
-|  +-----------------------+    +-----------------------+                          |
-|  | H003: Form Length     |    | H004: Form Labels     |                          |
-|  | Check if forms have   |    | Check if form fields  |                          |
-|  | excessive fields      |    | have clear labels     |                          |
-|  +-----------------------+    +-----------------------+                          |
+|  +-----------------------+                                                       |
+|  | H005: Form Too Long   |                               SEVERITY: medium       |
+|  | More than 5 fields    |                                                       |
+|  | in a single form      |                                                       |
+|  +-----------------------+                                                       |
 |                                                                                  |
 |  TRUST RULES                                                                     |
 |  +-----------------------+                                                       |
-|  | H005: Trust Signals   |                                                       |
-|  | Check for presence    |                                                       |
-|  | of trust indicators   |                                                       |
+|  | H006: Missing Trust   |                               SEVERITY: high         |
+|  | Signals               |                                                       |
+|  | No badges, reviews,   |                                                       |
+|  | or certifications     |                                                       |
 |  +-----------------------+                                                       |
 |                                                                                  |
 |  VALUE PROPOSITION RULES                                                         |
-|  +-----------------------+    +-----------------------+                          |
-|  | H006: Value Prop      |    | H007: Value Prop      |                          |
-|  | Clarity               |    | Position              |                          |
-|  | Check if value prop   |    | Check if value prop   |                          |
-|  | is clearly stated     |    | is prominently placed |                          |
-|  +-----------------------+    +-----------------------+                          |
+|  +-----------------------+                                                       |
+|  | H007: Unclear Value   |                               SEVERITY: critical     |
+|  | Proposition           |                                                       |
+|  | H1 doesn't clearly    |                                                       |
+|  | communicate value     |                                                       |
+|  +-----------------------+                                                       |
 |                                                                                  |
 |  NAVIGATION RULES                                                                |
-|  +-----------------------+    +-----------------------+                          |
-|  | H008: Navigation      |    | H009: Navigation      |                          |
-|  | Complexity            |    | Consistency           |                          |
-|  | Check if nav is       |    | Check if nav is       |                          |
-|  | not overly complex    |    | consistent across     |                          |
-|  +-----------------------+    +-----------------------+                          |
+|  +-----------------------+                                                       |
+|  | H008: Poor Navigation |                               SEVERITY: medium       |
+|  | Confusing menu        |                                                       |
+|  | structure             |                                                       |
+|  +-----------------------+                                                       |
+|                                                                                  |
+|  SOCIAL PROOF RULES                                                              |
+|  +-----------------------+                                                       |
+|  | H009: Missing Social  |                               SEVERITY: medium       |
+|  | Proof                 |                                                       |
+|  | No reviews or         |                                                       |
+|  | testimonials          |                                                       |
+|  +-----------------------+                                                       |
 |                                                                                  |
 |  FRICTION RULES                                                                  |
 |  +-----------------------+                                                       |
-|  | H010: Friction        |                                                       |
-|  | Detection             |                                                       |
-|  | Identify elements     |                                                       |
-|  | causing user friction |                                                       |
+|  | H010: Mobile Friction |                               SEVERITY: high         |
+|  | Elements causing      |                                                       |
+|  | mobile user friction  |                                                       |
 |  +-----------------------+                                                       |
 |                                                                                  |
 +---------------------------------------------------------------------------------+
 ```
 
-## Agent Loop Flow
+## Coverage System (Phase 19)
 
 ```
 +---------------------------------------------------------------------------------+
-|                            AGENT LOOP (observe -> reason -> act)                 |
+|                          100% PAGE COVERAGE SYSTEM                               |
++---------------------------------------------------------------------------------+
+|                                                                                  |
+|   SCAN MODES                                                                     |
+|   +---------------------------+    +---------------------------+                 |
+|   | full_page (default)       |    | above_fold               |                 |
+|   | - Auto-scroll entire page |    | - Initial viewport only  |                 |
+|   | - 100% coverage required  |    | - No scrolling           |                 |
+|   | - DOMMerger combines all  |    | - Faster analysis        |                 |
+|   |   segments                |    |                          |                 |
+|   +---------------------------+    +---------------------------+                 |
+|                                                                                  |
+|   +---------------------------+                                                  |
+|   | llm_guided               |                                                   |
+|   | - LLM decides scrolling  |                                                   |
+|   | - Original behavior      |                                                   |
+|   | - No enforcement         |                                                   |
+|   +---------------------------+                                                  |
+|                                                                                  |
+|   COVERAGE TRACKING                                                              |
+|   +---------------------------------------------------------------------+        |
+|   |  CoverageTracker                                                    |        |
+|   |  - initialize(pageHeight, viewportHeight)                           |        |
+|   |  - markSegmentScanned(scrollY, elementsFound)                       |        |
+|   |  - getCoveragePercent() -> 0-100                                    |        |
+|   |  - isFullyCovered() -> boolean                                      |        |
+|   |  - getCoverageReport() -> string (for LLM context)                  |        |
+|   +---------------------------------------------------------------------+        |
+|                                                                                  |
+|   DOM MERGING                                                                    |
+|   +---------------------------------------------------------------------+        |
+|   |  DOMMerger                                                          |        |
+|   |  - Merge DOM snapshots from multiple scroll positions               |        |
+|   |  - Absolute page coordinates                                        |        |
+|   |  - Fingerprint-based deduplication                                  |        |
+|   |  - Dynamic token filtering                                          |        |
+|   +---------------------------------------------------------------------+        |
+|                                                                                  |
+|   ENFORCEMENT                                                                    |
+|   +---------------------------------------------------------------------+        |
+|   |  In full_page mode:                                                 |        |
+|   |  - Agent CANNOT call 'done' until coverage >= minCoveragePercent    |        |
+|   |  - Default minCoveragePercent = 100                                 |        |
+|   |  - Dynamic maxSteps based on page segments                          |        |
+|   +---------------------------------------------------------------------+        |
+|                                                                                  |
++---------------------------------------------------------------------------------+
+```
+
+## Agent Loop Flow (Updated for Phase 19)
+
+```
++---------------------------------------------------------------------------------+
+|                   AGENT LOOP (with Coverage Enforcement)                         |
 +---------------------------------------------------------------------------------+
 |                                                                                  |
 |   +-----------------+                                                            |
 |   |  Initialize     |                                                            |
 |   |  Agent State    |                                                            |
+|   |  + Coverage     |                                                            |
 |   +-----------------+                                                            |
 |           |                                                                      |
 |           v                                                                      |
 |   +-------------------+                                                          |
-|   |    STEP 1-10      |<------------------------------------------------+        |
+|   | Get ScanMode      |                                                          |
+|   | (full_page/above_ |                                                          |
+|   | fold/llm_guided)  |                                                          |
+|   +-------------------+                                                          |
+|           |                                                                      |
+|           v                                                                      |
+|   +-------------------+                                                          |
+|   |    STEP 1-N       |<------------------------------------------------+        |
+|   | (dynamic maxSteps)|                                                 |        |
 |   +-------------------+                                                 |        |
 |           |                                                             |        |
 |           v                                                             |        |
 |   +-----------------+                                                   |        |
-|   |    OBSERVE      |  Build PageState from current DOM                 |        |
+|   |    OBSERVE      |  Build PageState from current DOM + coverage      |        |
 |   |    (DOM State)  |  - domTree: DOMTree                               |        |
 |   |                 |  - insights: CROInsight[]                         |        |
 |   |                 |  - previousActions: string[]                      |        |
+|   |                 |  - coverageReport: string (Phase 19)              |        |
 |   +-----------------+                                                   |        |
 |           |                                                             |        |
 |           v                                                             |        |
 |   +-----------------+                                                   |        |
-|   |    REASON       |  GPT-4 analyzes state and decides action          |        |
-|   |    (GPT-4)      |  - Receives: system prompt + page state           |        |
+|   |    REASON       |  GPT-4o analyzes state and decides action         |        |
+|   |    (GPT-4o)     |  - Receives: system prompt + page state           |        |
+|   |                 |  - Coverage context in user message               |        |
 |   |                 |  - Returns: tool call (action to take)            |        |
-|   |                 |  - Model: gpt-4, temp: 0.3                         |        |
+|   |                 |  - Model: gpt-4o, temp: 0.3                        |        |
 |   +-----------------+                                                   |        |
 |           |                                                             |        |
 |           v                                                             |        |
 |   +-----------------+                                                   |        |
 |   |     ACT         |  Execute the chosen tool                          |        |
-|   |   (Tool Exec)   |  - analyze_ctas, analyze_forms, etc.              |        |
+|   |   (Tool Exec)   |  - 11 CRO tools available                         |        |
 |   |                 |  - Returns: new insights + updated state          |        |
+|   |                 |  - Updates coverage tracker                       |        |
 |   +-----------------+                                                   |        |
 |           |                                                             |        |
 |           v                                                             |        |
 |   +-------------------+                                                 |        |
-|   | Action == 'done'? |----NO------------------------------------------>+        |
-|   | OR step >= 10?    |                                                          |
+|   | Action == 'done'? |                                                 |        |
+|   +-------------------+                                                 |        |
+|           |                                                             |        |
+|          YES                                                            |        |
+|           |                                                             |        |
+|           v                                                             |        |
+|   +-------------------+                                                 |        |
+|   | Coverage >= min%? |----NO--> Force continue or scroll ------------->+        |
+|   | (full_page mode)  |                                                          |
 |   +-------------------+                                                          |
 |           |                                                                      |
-|          YES                                                                     |
+|          YES (or maxSteps reached)                                               |
 |           |                                                                      |
 |           v                                                                      |
 |   +-----------------+                                                            |
 |   |  Return Output  |                                                            |
 |   | CROAgentOutput  |                                                            |
+|   | + coverage data |                                                            |
 |   +-----------------+                                                            |
 |                                                                                  |
 +---------------------------------------------------------------------------------+
 ```
 
-## Component Dependency Graph
+## Component Dependency Graph (Updated)
 
 ```
                               +-------------------+
@@ -479,42 +630,42 @@
                               |  (Orchestrator)   |
                               +-------------------+
                                        |
-            +-----------+--------------+--------------+-----------+
-            |           |              |              |           |
-            v           v              v              v           v
-     +-----------+ +-----------+ +-----------+ +-----------+ +---------+
-     | Browser   | | DOM       | | Agent     | | Heuristic | | Output  |
-     | Module    | | Extractor | | Core      | | Engine    | | Module  |
-     +-----------+ +-----------+ +-----------+ +-----------+ +---------+
-            |           |              |              |           |
-            v           v              v              v           v
-     +-----------+ +-----------+ +-----------+ +-----------+ +---------+
-     | Playwright| | CRO       | | GPT-4     | | 10 Rules  | | File    |
-     | Browser   | | Classifier| | (OpenAI)  | | H001-H010 | | Writer  |
-     +-----------+ +-----------+ +-----------+ +-----------+ +---------+
-                                       |
-                                       v
-                              +-------------------+
-                              |   Tool System     |
-                              |   (9 Tools)       |
-                              +-------------------+
-                                       |
-            +-----------+-----------+--+-----------+-----------+
-            |           |           |              |           |
-            v           v           v              v           v
-     +----------+ +----------+ +----------+ +----------+ +----------+
-     |analyze_  | |analyze_  | |detect_   | |assess_   | |check_    |
-     |ctas      | |forms     | |trust     | |value_prop| |navigation|
-     +----------+ +----------+ +----------+ +----------+ +----------+
-            |           |           |
-            v           v           v
-     +----------+ +----------+ +----------+
-     |find_     | |scroll_   | |click     |
-     |friction  | |page      | |          |
-     +----------+ +----------+ +----------+
+       +-----------+-----------+-------+-------+-----------+-----------+
+       |           |           |               |           |           |
+       v           v           v               v           v           v
++-----------+ +-----------+ +-----------+ +-----------+ +-----------+ +---------+
+| Browser   | | DOM       | | Coverage  | | Agent     | | Heuristic | | Output  |
+| Module    | | Extractor | | Tracker   | | Core      | | Engine    | | Module  |
++-----------+ +-----------+ +-----------+ +-----------+ +-----------+ +---------+
+       |           |           |               |           |           |
+       v           v           v               v           v           v
++-----------+ +-----------+ +-----------+ +-----------+ +-----------+ +---------+
+| Playwright| | CRO       | | Segment   | | GPT-4o    | | 10 Rules  | | File    |
+| Browser   | | Classifier| | Tracker   | | (OpenAI)  | | H001-H010 | | Writer  |
++-----------+ +-----------+ +-----------+ +-----------+ +-----------+ +---------+
+       |           |                               |
+       v           v                               v
++-----------+ +-----------+               +-------------------+
+| Cookie    | | DOMMerger |               |   Tool System     |
+| Handler   | | (Phase 19)|               |   (11 Tools)      |
++-----------+ +-----------+               +-------------------+
+                                                   |
+       +-----------+-----------+-----------+-------+-------+-----------+
+       |           |           |           |               |           |
+       v           v           v           v               v           v
++----------+ +----------+ +----------+ +----------+ +----------+ +----------+
+|analyze_  | |analyze_  | |detect_   | |assess_   | |check_    | |find_     |
+|ctas      | |forms     | |trust     | |value_prop| |navigation| |friction  |
++----------+ +----------+ +----------+ +----------+ +----------+ +----------+
+       |           |           |
+       v           v           v
++----------+ +----------+ +----------+ +----------+ +----------+
+|scroll_   | |click     | |go_to_url | |record_   | |done      |
+|page      | |          | |          | |insight   | |          |
++----------+ +----------+ +----------+ +----------+ +----------+
 ```
 
-## Configuration Hierarchy
+## Configuration Hierarchy (Updated for Phase 19)
 
 ```
 +---------------------------------------------------------------------------------+
@@ -526,16 +677,18 @@
 |   | CROAgentOptions:                                                    |        |
 |   |   headless=false, timeout=60000, maxSteps=10                        |        |
 |   |   outputFormats=['console'], outputDir='./output'                   |        |
-|   |   model='gpt-4', temperature=0.3                                    |        |
+|   |   model='gpt-4o', temperature=0.3                                   |        |
+|   |   scanMode='full_page', minCoveragePercent=100                      |        |
 |   +---------------------------------------------------------------------+        |
 |                                      |                                           |
 |                                      v                                           |
 |   LAYER 2: CONSTRUCTOR (Code-level override)                                     |
 |   +---------------------------------------------------------------------+        |
 |   | new CROAgent({                                                      |        |
-|   |   url: 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711',                                       |        |
+|   |   url: 'https://example.com',                                       |        |
 |   |   headless: true,                                                   |        |
 |   |   maxSteps: 15,                                                     |        |
+|   |   scanMode: 'above_fold',                                           |        |
 |   |   outputFormats: ['markdown', 'json']                               |        |
 |   | })                                                                  |        |
 |   +---------------------------------------------------------------------+        |
@@ -545,6 +698,7 @@
 |   +---------------------------------------------------------------------+        |
 |   | --headless --verbose --output markdown,json                         |        |
 |   | --max-steps 20 --timeout 90000 --output-dir ./reports               |        |
+|   | --scan-mode full_page --min-coverage 100                            |        |
 |   +---------------------------------------------------------------------+        |
 |                                      |                                           |
 |                                      v                                           |
@@ -561,7 +715,7 @@
 +---------------------------------------------------------------------------------+
 ```
 
-## Type System Overview
+## Type System Overview (Updated)
 
 ```
 +---------------------------------------------------------------------------------+
@@ -577,52 +731,73 @@
 |   | - xpath: string   |                  | - actionHistory: []    |              |
 |   | - isVisible: bool |                  +------------------------+              |
 |   | - croClass: CROClass                                                         |
-|   +-------------------+                  +------------------------+              |
-|                                          | CROAnalysisResult      |              |
-|   +-------------------+                  | - url: string          |              |
-|   | DOMTree           |                  | - businessType: result |              |
-|   | - url: string     |                  | - insights: []         |              |
+|   | - pageY: number   | <-- Phase 19     +------------------------+              |
+|   +-------------------+                  | CROAnalysisResult      |              |
+|                                          | - url: string          |              |
+|   +-------------------+                  | - businessType: result |              |
+|   | DOMTree           |                  | - insights: []         |              |
+|   | - url: string     |                  | - heuristicInsights: []|              |
 |   | - title: string   |                  | - hypotheses: []       |              |
-|   | - nodes: []       |                  | - score: CROScore      |              |
-|   | - metadata: {}    |                  | - metadata: {}         |              |
-|   | - statistics: {}  |                  | - outputFiles?: {}     |              |
+|   | - nodes: []       |                  | - scores: CROScores    |              |
+|   | - metadata: {}    |                  | - stepsExecuted: num   |              |
+|   | - statistics: {}  |                  | - terminationReason    |              |
+|   +-------------------+                  | - coveragePercent      | <-- Phase 19 |
+|                                          +------------------------+              |
+|   COVERAGE TYPES (Phase 19)                                                      |
+|   +-------------------+                  CONFIG TYPES                            |
+|   | PageSegment       |                  +------------------------+              |
+|   | - index: number   |                  | CROAgentOptions        |              |
+|   | - startY: number  |                  | - url: string          |              |
+|   | - endY: number    |                  | - headless?: bool      |              |
+|   | - scanned: bool   |                  | - timeout?: number     |              |
+|   +-------------------+                  | - maxSteps?: number    |              |
+|                                          | - verbose?: bool       |              |
+|   +-------------------+                  | - scanMode?: ScanMode  | <-- Phase 19 |
+|   | CoverageState     |                  | - minCoverage?: number | <-- Phase 19 |
+|   | - segments: []    |                  | - outputFormats?: []   |              |
+|   | - percent: number |                  | - outputDir?: string   |              |
+|   | - isComplete: bool|                  | - model?: string       |              |
+|   +-------------------+                  | - temperature?: number |              |
+|                                          +------------------------+              |
+|   INSIGHT TYPES                                                                  |
+|   +-------------------+                  +------------------------+              |
+|   | CROInsight        |                  | HeuristicRule          |              |
+|   | - id: string      |                  | - id: string           |              |
+|   | - type: string    |                  | - name: string         |              |
+|   | - severity: Sev   |                  | - evaluate: function   |              |
+|   | - category: Cat   |                  | - category: CROClass   |              |
+|   | - issue: string   |                  +------------------------+              |
+|   | - recommendation  |                                                          |
+|   | - evidence: []    |                  +------------------------+              |
+|   +-------------------+                  | ToolDefinition         |              |
+|                                          | - name: string         |              |
+|   +-------------------+                  | - description: string  |              |
+|   | Hypothesis        |                  | - parameters: ZodSchema|              |
+|   | - id: string      |                  +------------------------+              |
+|   | - title: string   |                                                          |
+|   | - description: str|                  +------------------------+              |
+|   | - expectedImpact  |                  | CROScores              |              |
+|   | - relatedInsights |                  | - overall: number      |              |
+|   +-------------------+                  | - breakdown: {}        |              |
+|                                          | - grade: A-F           |              |
+|   ENUMS/UNIONS                           +------------------------+              |
+|   +-------------------+                                                          |
+|   | CROClassification |                  +------------------------+              |
+|   | 'cta' | 'form' |  |                  | ScanMode (Phase 19)    |              |
+|   | 'trust' | 'value_ |                  | 'full_page'            |              |
+|   | prop' | 'navigation                  | 'above_fold'           |              |
+|   | 'custom'          |                  | 'llm_guided'           |              |
 |   +-------------------+                  +------------------------+              |
 |                                                                                  |
-|   INSIGHT TYPES                          CONFIG TYPES                            |
-|   +-------------------+                  +------------------------+              |
-|   | CROInsight        |                  | CROAgentOptions        |              |
-|   | - id: string      |                  | - url: string          |              |
-|   | - ruleId: string  |                  | - headless?: bool      |              |
-|   | - severity: Sev   |                  | - timeout?: number     |              |
-|   | - message: string |                  | - maxSteps?: number    |              |
-|   +-------------------+                  | - verbose?: bool       |              |
-|                                          | - outputFormats?: []   |              |
-|   +-------------------+                  | - outputDir?: string   |              |
-|   | Hypothesis        |                  | - model?: string       |              |
-|   | - id: string      |                  | - temperature?: number |              |
-|   | - title: string   |                  +------------------------+              |
-|   | - description: str|                                                          |
-|   | - expectedImpact  |                  +------------------------+              |
-|   | - relatedInsights |                  | HeuristicRule          |              |
-|   +-------------------+                  | - id: string           |              |
-|                                          | - name: string         |              |
-|   ENUMS/UNIONS                           | - evaluate: function   |              |
-|   +-------------------+                  | - category: CROClass   |              |
-|   | CROClassification |                  +------------------------+              |
-|   | 'cta' | 'form' |  |                                                          |
-|   | 'trust' | 'value_ |                  +------------------------+              |
-|   | prop' | 'navigation                  | ToolDefinition         |              |
-|   +-------------------+                  | - name: string         |              |
-|                                          | - description: string  |              |
-|   +-------------------+                  | - parameters: ZodSchema|              |
-|   | Severity          |                  +------------------------+              |
+|   +-------------------+                                                          |
+|   | Severity          |                                                          |
 |   | 'critical' | 'high'                                                          |
-|   | 'medium' | 'low'  |                  +------------------------+              |
-|   +-------------------+                  | CROScore               |              |
-|                                          | - overall: number      |              |
-|   +-------------------+                  | - breakdown: {}        |              |
-|   | BusinessType      |                  | - grade: A-F           |              |
-|   | 'ecommerce'|'saas'|                  +------------------------+              |
+|   | 'medium' | 'low'  |                                                          |
+|   +-------------------+                                                          |
+|                                                                                  |
+|   +-------------------+                                                          |
+|   | BusinessType      |                                                          |
+|   | 'ecommerce'|'saas'|                                                          |
 |   | 'banking' |'insur |                                                          |
 |   | 'travel'|'media'  |                                                          |
 |   | 'other'           |                                                          |
@@ -631,7 +806,7 @@
 +---------------------------------------------------------------------------------+
 ```
 
-## File Structure Map
+## File Structure Map (Updated)
 
 ```
 browser-agent/
@@ -646,36 +821,46 @@ browser-agent/
 |   |   +-- cro-agent.ts .......... Main CROAgent orchestrator
 |   |   +-- prompt-builder.ts ..... System/user prompt construction
 |   |   +-- message-manager.ts .... Conversation history management
-|   |   +-- state-manager.ts ...... PageState management
-|   |   +-- tool-registry.ts ...... Tool definitions registration
-|   |   +-- tool-executor.ts ...... Tool execution logic
+|   |   +-- state-manager.ts ...... PageState management (+ coverage)
+|   |   +-- coverage-tracker.ts ... 100% page coverage tracking (Phase 19)
 |   |   +-- score-calculator.ts ... CRO score computation
+|   |   +-- tools/
+|   |       +-- tool-registry.ts .. Tool definitions registration
+|   |       +-- tool-executor.ts .. Tool execution logic
+|   |       +-- create-cro-registry.ts
+|   |       +-- cro/ .............. 11 CRO tools
 |   |
 |   +-- browser/ .................. Browser automation module
 |   |   +-- index.ts .............. Module exports
 |   |   +-- browser-manager.ts .... Playwright lifecycle
 |   |   +-- page-loader.ts ........ URL navigation
-|   |
-|   +-- extraction/ ............... DOM extraction module
-|   |   +-- index.ts .............. Module exports
-|   |   +-- dom-extractor.ts ...... DOM element extraction
-|   |   +-- cro-classifier.ts ..... CRO element classification
+|   |   +-- cookie-handler.ts ..... Cookie consent dismissal
+|   |   +-- dom/
+|   |       +-- extractor.ts ...... DOM element extraction
+|   |       +-- serializer.ts ..... DOM to string for LLM
+|   |       +-- build-dom-tree.ts . DOM tree construction (+ absolute coords)
+|   |       +-- dom-merger.ts ..... Multi-segment DOM merging (Phase 19)
 |   |
 |   +-- heuristics/ ............... Heuristic analysis module
 |   |   +-- index.ts .............. Module exports & HeuristicEngine
-|   |   +-- business-detector.ts .. Business type detection
+|   |   +-- heuristic-engine.ts ... Rule engine
+|   |   +-- business-type-detector.ts Business type detection
 |   |   +-- severity-scorer.ts .... Severity scoring
 |   |   +-- rules/ ................ Individual heuristic rules
-|   |       +-- h001-cta-visibility.ts
-|   |       +-- h002-cta-clarity.ts
-|   |       +-- h003-form-length.ts
-|   |       +-- h004-form-labels.ts
-|   |       +-- h005-trust-signals.ts
-|   |       +-- h006-value-prop-clarity.ts
-|   |       +-- h007-value-prop-position.ts
-|   |       +-- h008-nav-complexity.ts
-|   |       +-- h009-nav-consistency.ts
-|   |       +-- h010-friction-detection.ts
+|   |       +-- h001-missing-cta.ts
+|   |       +-- h002-cta-below-fold.ts
+|   |       +-- h003-low-contrast-cta.ts
+|   |       +-- h004-generic-cta-text.ts
+|   |       +-- h005-form-too-long.ts
+|   |       +-- h006-missing-trust-signals.ts
+|   |       +-- h007-unclear-value-prop.ts
+|   |       +-- h008-poor-navigation.ts
+|   |       +-- h009-missing-social-proof.ts
+|   |       +-- h010-mobile-friction.ts
+|   |
+|   +-- models/ ................... Zod schemas
+|   |   +-- index.ts .............. Module exports
+|   |   +-- coverage.ts ........... Coverage models (Phase 19)
 |   |
 |   +-- output/ ................... Output generation module
 |   |   +-- index.ts .............. Module exports
@@ -687,6 +872,9 @@ browser-agent/
 |   |   +-- insight-deduplicator.ts Duplicate insight removal
 |   |   +-- insight-prioritizer.ts  Insight prioritization
 |   |
+|   +-- prompts/ .................. LLM prompts
+|   |   +-- system-cro.md ......... System prompt template (+ coverage rules)
+|   |
 |   +-- types/ .................... TypeScript type definitions
 |   |   +-- index.ts .............. All interfaces & types
 |   |
@@ -695,19 +883,28 @@ browser-agent/
 |       +-- logger.ts ............. Structured logging
 |       +-- validator.ts .......... URL & environment validation
 |
-+-- tests/ ........................ Test suites
-|   +-- unit/ ..................... Unit tests
++-- tests/ ........................ Test suites (476 tests)
+|   +-- unit/ ..................... Unit tests (389)
+|   |   +-- coverage-tracker.test.ts (16 tests) - Phase 19
+|   |   +-- dom-merger.test.ts (7 tests) - Phase 19
 |   |   +-- heuristic-engine.test.ts
 |   |   +-- heuristic-rules.test.ts
 |   |   +-- output-generation.test.ts
-|   +-- integration/ .............. Integration tests
+|   +-- integration/ .............. Integration tests (83)
+|   |   +-- coverage-enforcement.test.ts (11 tests) - Phase 19
 |   |   +-- post-processing.test.ts
-|   +-- e2e/ ...................... End-to-end tests
+|   +-- e2e/ ...................... End-to-end tests (4)
+|   |   +-- coverage-workflow.test.ts (4 tests) - Phase 19
 |   |   +-- cro-full-workflow.test.ts
 |   +-- fixtures/ ................. Test fixtures
 |
 +-- specs/ ........................ Specification documents
-|   +-- 001-browser-agent-core/ ... Core requirements & design
+|   +-- 001-browser-agent-core/
+|       +-- spec/ ................. Requirements
+|       +-- plan/ ................. Implementation plan
+|       +-- tasks/ ................ Task definitions
+|       +-- quickstart.md ......... Entry point
+|       +-- PROJECT-CONTEXT-PROMPT.md LLM context prompt
 |
 +-- design/ ....................... Architecture diagrams
 |   +-- APPLICATION_FLOW.md ....... This file
@@ -725,30 +922,37 @@ browser-agent/
 +-- .env .......................... Environment variables (secrets)
 ```
 
-## Quick Reference: CLI Commands
+## Quick Reference: CLI Commands (Updated for Phase 19)
 
 ```
 +---------------------------------------------------------------------------------+
 |                               CLI USAGE                                          |
 +---------------------------------------------------------------------------------+
 |                                                                                  |
-|  Basic Analysis:                                                                 |
-|  $ npm run start -- https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711                                          |
+|  Basic Analysis (default: full_page mode):                                       |
+|  $ npm run start -- https://example.com                                          |
+|                                                                                  |
+|  Scan Modes (Phase 19):                                                          |
+|  $ npm run start -- --scan-mode=full_page https://example.com    # 100% coverage |
+|  $ npm run start -- --scan-mode=above_fold https://example.com   # First viewport|
+|  $ npm run start -- --scan-mode=llm_guided https://example.com   # LLM decides   |
+|                                                                                  |
+|  Coverage Threshold:                                                             |
+|  $ npm run start -- --scan-mode=full_page --min-coverage 80 https://example.com  |
 |                                                                                  |
 |  With Output Formats:                                                            |
-|  $ npm run start -- --output markdown https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711                        |
-|  $ npm run start -- --output json https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711                            |
-|  $ npm run start -- --output markdown,json https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711                   |
+|  $ npm run start -- --output-format markdown https://example.com                 |
+|  $ npm run start -- --output-format json https://example.com                     |
+|  $ npm run start -- --output-format markdown --output-file report.md https://... |
 |                                                                                  |
 |  With Options:                                                                   |
-|  $ npm run start -- --headless https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711                               |
-|  $ npm run start -- --verbose https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711                                |
-|  $ npm run start -- --timeout 90000 https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711                          |
-|  $ npm run start -- --max-steps 15 https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711                           |
-|  $ npm run start -- --output-dir ./reports https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711                   |
+|  $ npm run start -- --headless https://example.com                               |
+|  $ npm run start -- --verbose https://example.com                                |
+|  $ npm run start -- --timeout 90000 https://example.com                          |
+|  $ npm run start -- --max-steps 15 https://example.com                           |
 |                                                                                  |
 |  Combined:                                                                       |
-|  $ npm run start -- --headless --verbose --output markdown,json https://site.com |
+|  $ npm run start -- --headless --verbose --scan-mode=full_page https://site.com  |
 |                                                                                  |
 |  Help:                                                                           |
 |  $ npm run start -- --help                                                       |
@@ -759,89 +963,52 @@ browser-agent/
 |  --verbose, -v           Enable verbose/debug logging                            |
 |  --timeout <ms>          Page load timeout in ms (default: 60000)                |
 |  --max-steps <n>         Maximum agent loop iterations (default: 10)             |
-|  --output <formats>      Output formats: console,markdown,json (default: console)|
-|  --output-dir <path>     Directory for output files (default: ./output)          |
+|  --scan-mode <mode>      full_page | above_fold | llm_guided (default: full_page)|
+|  --min-coverage <n>      Minimum coverage % required (default: 100, full_page)   |
+|  --output-format <fmt>   Output format: console | markdown | json                |
+|  --output-file <path>    Output file path for markdown/json                      |
+|  --no-cookie-dismiss     Disable automatic cookie consent dismissal              |
 |  --help, -h              Show help information                                   |
 +---------------------------------------------------------------------------------+
 ```
 
-## Output Examples
+## Phase Summary
 
-### Console Output
 ```
 +---------------------------------------------------------------------------------+
-|  CRO ANALYSIS RESULTS                                                            |
+|                              PHASE SUMMARY                                       |
 +---------------------------------------------------------------------------------+
-|  URL: https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711                                                        |
-|  Business Type: ecommerce (confidence: 0.85)                                     |
-|  Overall Score: 72/100 (Grade: B)                                                |
+|                                                                                  |
+|  COMPLETED PHASES (1-19)                                                         |
+|  +---------------------------------------------------------------------+         |
+|  | Phase 1-12  | Foundation: Browser, extraction, LangChain, cookies   |         |
+|  | Phase 13-15 | CRO models, DOM extraction, tool system               |         |
+|  | Phase 16    | Agent core (observe -> reason -> act loop)            |         |
+|  | Phase 17    | 11 CRO tools (analysis, navigation, control)          |         |
+|  | Phase 18    | Heuristics (10 rules), business type, hypotheses      |         |
+|  | Phase 19    | 100% page coverage system                             |         |
+|  +---------------------------------------------------------------------+         |
+|                                                                                  |
+|  PLANNED PHASE (20)                                                              |
+|  +---------------------------------------------------------------------+         |
+|  | Phase 20    | Unified Extraction Pipeline                           |         |
+|  |             | - Layered extraction (0-3)                            |         |
+|  |             | - Strict token budgets                                 |         |
+|  |             | - Multi-strategy selectors                             |         |
+|  |             | - Constraint detection                                 |         |
+|  |             | - 58 tasks, 181 tests planned                          |         |
+|  +---------------------------------------------------------------------+         |
+|                                                                                  |
+|  STATISTICS                                                                      |
+|  +---------------------------------------------------------------------+         |
+|  | Total Tasks    | 235 (177 complete, 58 pending)                     |         |
+|  | Total Tests    | 476 passing (389 unit, 83 integration, 4 E2E)      |         |
+|  | Modules        | 13 (browser, dom, agent, tools, coverage, etc.)    |         |
+|  | Tools          | 11 CRO tools                                        |         |
+|  | Heuristics     | 10 rules (H001-H010)                                |         |
+|  +---------------------------------------------------------------------+         |
+|                                                                                  |
 +---------------------------------------------------------------------------------+
-|  INSIGHTS (12 found):                                                            |
-|  [CRITICAL] H001: Primary CTA not visible above the fold                         |
-|  [HIGH] H003: Form has 15 fields (recommend max 5)                               |
-|  [MEDIUM] H005: No trust signals detected                                        |
-|  ...                                                                             |
-+---------------------------------------------------------------------------------+
-|  HYPOTHESES (5 generated):                                                       |
-|  1. Moving CTA above fold could increase conversions by 15-25%                   |
-|  2. Reducing form fields could improve completion rate by 20%                    |
-|  ...                                                                             |
-+---------------------------------------------------------------------------------+
-```
-
-### Markdown Report
-```markdown
-# CRO Analysis Report
-
-## Summary
-- **URL**: https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711
-- **Business Type**: ecommerce
-- **Score**: 72/100 (B)
-- **Analysis Date**: 2024-01-15 10:30:00
-
-## Insights by Severity
-
-### Critical
-- **H001**: Primary CTA not visible above the fold
-
-### High
-- **H003**: Form has 15 fields (recommend max 5)
-
-## Hypotheses
-1. **Move CTA Above Fold**
-   - Expected Impact: High
-   - Related Insights: H001
-```
-
-### JSON Output
-```json
-{
-  "url": "https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711",
-  "businessType": {
-    "type": "ecommerce",
-    "confidence": 0.85,
-    "indicators": ["shopping cart", "product listings"]
-  },
-  "score": {
-    "overall": 72,
-    "grade": "B",
-    "breakdown": {
-      "cta": 65,
-      "form": 70,
-      "trust": 80,
-      "valueProp": 75,
-      "navigation": 70
-    }
-  },
-  "insights": [...],
-  "hypotheses": [...],
-  "metadata": {
-    "startTime": "2024-01-15T10:30:00Z",
-    "endTime": "2024-01-15T10:31:30Z",
-    "durationMs": 90000,
-    "stepsExecuted": 8
-  }
-}
 ```
 
 ## Technology Stack
@@ -851,10 +1018,10 @@ browser-agent/
 |                             TECHNOLOGY STACK                                     |
 +---------------------------------------------------------------------------------+
 |                                                                                  |
-|   Runtime              | Node.js 18+                                             |
+|   Runtime              | Node.js 20+                                             |
 |   Language             | TypeScript 5.x                                          |
 |   Browser Automation   | Playwright (Chromium)                                   |
-|   AI/LLM               | OpenAI GPT-4 via LangChain                              |
+|   AI/LLM               | OpenAI GPT-4o via LangChain                             |
 |   Schema Validation    | Zod                                                     |
 |   Testing              | Vitest                                                  |
 |   CLI Framework        | Commander.js                                            |

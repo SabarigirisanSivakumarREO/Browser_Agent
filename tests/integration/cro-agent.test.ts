@@ -45,7 +45,7 @@ const createMockDOMTree = (): DOMTree => ({
 
 // Mock PageState
 const createMockPageState = (): PageState => ({
-  url: 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711',
+  url: 'https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy',
   title: 'Example Store',
   domTree: createMockDOMTree(),
   viewport: { width: 1280, height: 720, deviceScaleFactor: 1, isMobile: false },
@@ -57,7 +57,7 @@ const createMockPageState = (): PageState => ({
 const createMockMemory = (overrides?: Partial<CROMemory>): CROMemory => ({
   stepHistory: [],
   findings: [],
-  pagesSeen: ['https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711'],
+  pagesSeen: ['https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy'],
   currentFocus: 'initial_scan',
   errors: [],
   ...overrides,
@@ -159,7 +159,7 @@ describe('CROAgent Integration', () => {
       const stateManager = new StateManager();
 
       const mockPage = {
-        url: () => 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711',
+        url: () => 'https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy',
       } as any;
 
       const result = await executor.execute('analyze_ctas', {}, {
@@ -196,7 +196,7 @@ describe('CROAgent Integration', () => {
 
     // Test 4: Simulate complete agent loop with done action
     it('should complete loop when agent calls done', async () => {
-      const mockPage = { url: () => 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711' } as any;
+      const mockPage = { url: () => 'https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy' } as any;
       const pageState = createMockPageState();
 
       // Simulate 2 steps then done
@@ -264,7 +264,7 @@ describe('CROAgent Integration', () => {
 
     // Test 7: Reset failures on success
     it('should reset consecutive failures on successful action', async () => {
-      const mockPage = { url: () => 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711' } as any;
+      const mockPage = { url: () => 'https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy' } as any;
 
       stateManager.recordFailure('Error 1');
       stateManager.recordFailure('Error 2');
@@ -285,7 +285,7 @@ describe('CROAgent Integration', () => {
 
     // Test 8: State accumulation across steps
     it('should accumulate insights across steps (SC-024)', async () => {
-      const mockPage = { url: () => 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711' } as any;
+      const mockPage = { url: () => 'https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy' } as any;
       const pageState = createMockPageState();
 
       // Simulate 3 analyze_ctas calls
@@ -304,7 +304,7 @@ describe('CROAgent Integration', () => {
 
     // Test 9: Memory tracking across steps
     it('should track step history in memory', async () => {
-      const mockPage = { url: () => 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711' } as any;
+      const mockPage = { url: () => 'https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy' } as any;
 
       for (let i = 0; i < 3; i++) {
         const action = i < 2 ? 'analyze_ctas' : 'done';
@@ -413,7 +413,7 @@ describe('CROAgent Integration', () => {
 
     // Test 16: Unknown tool returns error
     it('should handle unknown tool gracefully', async () => {
-      const mockPage = { url: () => 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711' } as any;
+      const mockPage = { url: () => 'https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy' } as any;
 
       const result = await executor.execute('unknown_tool' as any, {}, {
         page: mockPage,
@@ -439,7 +439,7 @@ describe('CROAgent Integration', () => {
       };
       registry.register(strictTool);
 
-      const mockPage = { url: () => 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711' } as any;
+      const mockPage = { url: () => 'https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy' } as any;
       const result = await executor.execute('analyze_forms', { formIndex: 'not a number' }, {
         page: mockPage,
         state: createMockPageState(),
@@ -461,7 +461,7 @@ describe('CROAgent Integration', () => {
       };
       registry.register(errorTool);
 
-      const mockPage = { url: () => 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711' } as any;
+      const mockPage = { url: () => 'https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy' } as any;
       const result = await executor.execute('detect_trust_signals', {}, {
         page: mockPage,
         state: createMockPageState(),

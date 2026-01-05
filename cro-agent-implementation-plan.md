@@ -494,13 +494,13 @@ async analyze(url: string): Promise<PageAnalysis> {
 
 ```bash
 # Current MVP (heading extraction)
-npm run start -- https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711
+npm run start -- https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy
 
 # After Phase 1 (agent analysis)
-npm run analyze -- https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711 --max-steps 10
+npm run analyze -- https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy --max-steps 10
 
 # After Phase 3 (full output)
-npm run analyze -- https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711 --output-format markdown --output-file report.md
+npm run analyze -- https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy --output-format markdown --output-file report.md
 ```
 
 ### Key Files to Read First

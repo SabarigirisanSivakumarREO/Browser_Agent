@@ -16,7 +16,7 @@ import type { Page } from 'playwright';
 
 // Mock PageState for testing
 const createMockPageState = (): PageState => ({
-  url: 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711',
+  url: 'https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy',
   title: 'Test Page',
   domTree: {
     rootId: 'root',
@@ -31,7 +31,7 @@ const createMockPageState = (): PageState => ({
 // Mock Playwright Page
 const createMockPage = (): Page =>
   ({
-    url: () => 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711',
+    url: () => 'https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy',
     title: () => Promise.resolve('Test Page'),
   }) as unknown as Page;
 
@@ -408,7 +408,7 @@ describe('ToolResultFormatter', () => {
   // Test 21: Format success result
   it('should format successful tool execution result', () => {
     const result: ToolExecutionResult = {
-      url: 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711',
+      url: 'https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy',
       toolName: 'analyze_ctas',
       success: true,
       loadTimeMs: 1500,
@@ -421,7 +421,7 @@ describe('ToolResultFormatter', () => {
 
     const output = formatter.format(result);
     expect(output).toContain('TOOL: ANALYZE_CTAS');
-    expect(output).toContain('URL: https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711');
+    expect(output).toContain('URL: https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy');
     expect(output).toContain('Status: SUCCESS');
     expect(output).toContain('Load Time: 1.50s');
     expect(output).toContain('Tool Execution: 50ms');
@@ -431,7 +431,7 @@ describe('ToolResultFormatter', () => {
   // Test 22: Format error result
   it('should format failed tool execution result', () => {
     const result: ToolExecutionResult = {
-      url: 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711',
+      url: 'https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy',
       toolName: 'analyze_forms',
       success: false,
       error: 'Page load timeout',
@@ -446,7 +446,7 @@ describe('ToolResultFormatter', () => {
   // Test 23: Format insights by severity
   it('should format insights grouped by severity', () => {
     const result: ToolExecutionResult = {
-      url: 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711',
+      url: 'https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy',
       toolName: 'analyze_ctas',
       success: true,
       result: {
@@ -485,7 +485,7 @@ describe('ToolResultFormatter', () => {
   // Test 24: Format extracted data
   it('should format extracted data', () => {
     const result: ToolExecutionResult = {
-      url: 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711',
+      url: 'https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy',
       toolName: 'analyze_ctas',
       success: true,
       result: {
@@ -506,7 +506,7 @@ describe('ToolResultFormatter', () => {
   it('should respect custom width option', () => {
     const wideFormatter = new ToolResultFormatter({ width: 100, useColors: false });
     const result: ToolExecutionResult = {
-      url: 'https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711',
+      url: 'https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy',
       toolName: 'test',
       success: true,
       result: { success: true, insights: [] },

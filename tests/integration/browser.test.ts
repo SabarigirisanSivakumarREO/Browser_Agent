@@ -27,7 +27,7 @@ describe('Browser Integration', () => {
       const page = browserManager.getPage();
       const loader = new PageLoader(page, { timeout: 30000 });
 
-      const result = await loader.load('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711');
+      const result = await loader.load('https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy');
 
       expect(result.success).toBe(true);
       expect(result.title).toBe('Example Domain');
@@ -62,7 +62,7 @@ describe('Browser Integration', () => {
       const loader = new PageLoader(page, { timeout: 30000 });
       const extractor = new HeadingExtractor();
 
-      await loader.load('https://in.burberry.com/relaxed-fit-gabardine-overshirt-p81108711');
+      await loader.load('https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy');
       const result = await extractor.extract(page);
 
       expect(result.totalCount).toBeGreaterThan(0);
