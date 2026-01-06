@@ -1,0 +1,54 @@
+{
+  "name": "Reviews & Social Proof",
+  "description": "How customer reviews and social proof should be displayed to build trust and aid purchase decisions",
+  "heuristics": [
+    {
+      "id": "PDP-REVIEW-001",
+      "principle": "Reviews should be visible on the product page without requiring navigation away",
+      "checkpoints": [
+        "Customer reviews are accessible on the PDP",
+        "Users do not need to navigate to separate pages for reviews",
+        "Reviews section is easy to find and access",
+        "Review content loads on the same page (inline or expandable)"
+      ],
+      "severity": "high",
+      "category": "Reviews & Social Proof"
+    },
+    {
+      "id": "PDP-REVIEW-002",
+      "principle": "Summary indicators such as average rating and review count should be visible near the product title or price",
+      "checkpoints": [
+        "Star rating or equivalent is prominently displayed",
+        "Total review count is shown",
+        "Rating summary is visible above the fold",
+        "Rating links to full reviews section"
+      ],
+      "severity": "high",
+      "category": "Reviews & Social Proof"
+    },
+    {
+      "id": "PDP-REVIEW-003",
+      "principle": "Users should be able to scan and filter reviews by relevance or rating",
+      "checkpoints": [
+        "Reviews can be sorted (most recent, most helpful, rating)",
+        "Filter by star rating is available",
+        "Review highlights or summary is provided",
+        "Users can search reviews if volume is high"
+      ],
+      "severity": "medium",
+      "category": "Reviews & Social Proof"
+    },
+    {
+      "id": "PDP-REVIEW-004",
+      "principle": "Review content should include both positive and critical feedback to build trust",
+      "checkpoints": [
+        "Mix of positive and negative reviews is displayed",
+        "Critical reviews are not hidden or suppressed",
+        "Review authenticity indicators are present",
+        "Verified purchase badges or similar trust signals exist"
+      ],
+      "severity": "medium",
+      "category": "Reviews & Social Proof"
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "name": "Product Imagery & Media",
+  "description": "How product images and media should help users understand and evaluate the product",
+  "heuristics": [
+    {
+      "id": "PDP-IMAGE-001",
+      "principle": "Images should clearly communicate the product's real-world size and proportions",
+      "checkpoints": [
+        "Size reference is provided (human model, hand, or common object)",
+        "Multiple views show true proportions",
+        "Dimensions or scale indicators are present where relevant",
+        "Image aspect ratios do not distort the product"
+      ],
+      "severity": "high",
+      "category": "Product Imagery & Media"
+    },
+    {
+      "id": "PDP-IMAGE-002",
+      "principle": "Contextual imagery should show the product in use or on a human model where relevant",
+      "checkpoints": [
+        "Lifestyle or in-context images are included where appropriate",
+        "For wearables, product is shown on a model or mannequin",
+        "For home goods, product is shown in a room setting",
+        "Usage context helps user understand practical application"
+      ],
+      "severity": "medium",
+      "category": "Product Imagery & Media"
+    },
+    {
+      "id": "PDP-IMAGE-003",
+      "principle": "Multiple image angles should be available, with zoom or high-resolution viewing",
+      "checkpoints": [
+        "More than one product image is available",
+        "Different angles or views are provided",
+        "Zoom functionality or high-resolution viewing is available",
+        "Image gallery navigation is intuitive"
+      ],
+      "severity": "high",
+      "category": "Product Imagery & Media"
+    },
+    {
+      "id": "PDP-IMAGE-004",
+      "principle": "Media should load quickly and not block access to key purchasing actions",
+      "checkpoints": [
+        "Images load progressively or with placeholders",
+        "Add to Cart button is accessible before all images load",
+        "Video content does not autoplay and block the page",
+        "Media loading does not cause layout shifts"
+      ],
+      "severity": "medium",
+      "category": "Product Imagery & Media"
+    }
+  ]
+}

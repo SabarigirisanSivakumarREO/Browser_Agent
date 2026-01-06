@@ -1,0 +1,42 @@
+{
+  "name": "Specifications & Details",
+  "description": "How technical and product specifications should be presented for informed decision making",
+  "heuristics": [
+    {
+      "id": "PDP-SPEC-001",
+      "principle": "Technical specifications should be scannable and consistently formatted",
+      "checkpoints": [
+        "Specs are presented in a structured format (table, list)",
+        "Labels and values are clearly differentiated",
+        "Related specs are grouped logically",
+        "Formatting is consistent across all specification items"
+      ],
+      "severity": "medium",
+      "category": "Specifications & Details"
+    },
+    {
+      "id": "PDP-SPEC-002",
+      "principle": "Terminology should be explained where it may not be universally understood",
+      "checkpoints": [
+        "Technical terms include brief explanations or tooltips",
+        "Industry jargon is translated to user-friendly language",
+        "Abbreviations are spelled out or explained",
+        "Complex specifications include context for interpretation"
+      ],
+      "severity": "low",
+      "category": "Specifications & Details"
+    },
+    {
+      "id": "PDP-SPEC-003",
+      "principle": "Specification content should be complete and not rely on external documentation",
+      "checkpoints": [
+        "Key specifications are listed on the page",
+        "Users do not need to download PDFs for basic info",
+        "Dimensions, materials, and key attributes are present",
+        "Compatibility information is included where relevant"
+      ],
+      "severity": "medium",
+      "category": "Specifications & Details"
+    }
+  ]
+}

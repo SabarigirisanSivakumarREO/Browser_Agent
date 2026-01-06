@@ -81,3 +81,11 @@ export type {
   ScanMode,
 } from './coverage.js';
 export { DEFAULT_COVERAGE_CONFIG } from './coverage.js';
+
+// Page type (Phase 21)
+export type {
+  PageType,
+  PageTypeResult,
+  PageTypeSignals,
+} from './page-type.js';
+export { PAGE_TYPE_SIGNALS, PAGE_TYPES } from './page-type.js';

@@ -1,0 +1,42 @@
+{
+  "name": "Mobile Usability",
+  "description": "How the product page should be optimised for mobile users with touch interfaces and limited screen space",
+  "heuristics": [
+    {
+      "id": "PDP-MOBILE-001",
+      "principle": "Interactive elements should be easy to tap without precision",
+      "checkpoints": [
+        "Touch targets are at least 44x44 pixels",
+        "Adequate spacing between tappable elements",
+        "No accidental taps from elements too close together",
+        "Form inputs and selectors are finger-friendly"
+      ],
+      "severity": "high",
+      "category": "Mobile Usability"
+    },
+    {
+      "id": "PDP-MOBILE-002",
+      "principle": "Important information should not be hidden behind excessive scrolling or interaction",
+      "checkpoints": [
+        "Key purchase info visible early in scroll",
+        "Critical details not buried in expandable sections",
+        "Page length is reasonable for mobile consumption",
+        "Important content is prioritised above fold"
+      ],
+      "severity": "high",
+      "category": "Mobile Usability"
+    },
+    {
+      "id": "PDP-MOBILE-003",
+      "principle": "The purchase action should be prioritised within limited screen space",
+      "checkpoints": [
+        "Add to Cart is prominent on mobile layout",
+        "Screen space dedicated to conversion actions",
+        "Secondary elements do not compete with primary CTA",
+        "Mobile layout supports the purchase journey"
+      ],
+      "severity": "high",
+      "category": "Mobile Usability"
+    }
+  ]
+}

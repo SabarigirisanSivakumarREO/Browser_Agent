@@ -1,0 +1,42 @@
+{
+  "name": "Utility & Secondary Actions",
+  "description": "How secondary features should support the shopping experience without distracting from the primary purchase goal",
+  "heuristics": [
+    {
+      "id": "PDP-UTILITY-001",
+      "principle": "Save, wishlist or compare features should be available without competing with the primary action",
+      "checkpoints": [
+        "Wishlist/save option is present but secondary",
+        "Compare feature is accessible if relevant",
+        "Secondary actions use subdued visual treatment",
+        "Primary CTA remains the dominant action"
+      ],
+      "severity": "low",
+      "category": "Utility & Secondary Actions"
+    },
+    {
+      "id": "PDP-UTILITY-002",
+      "principle": "Gifting options should be present on the product page when relevant",
+      "checkpoints": [
+        "Gift option is available for appropriate products",
+        "Gift wrapping or messaging options are accessible",
+        "Gift purchase flow is clearly indicated",
+        "Registry or gift list add options are present if applicable"
+      ],
+      "severity": "low",
+      "category": "Utility & Secondary Actions"
+    },
+    {
+      "id": "PDP-UTILITY-003",
+      "principle": "The page should avoid unnecessary distractions that pull users away from the purchase decision",
+      "checkpoints": [
+        "Promotional banners do not dominate the page",
+        "Cross-sell recommendations are not intrusive",
+        "Pop-ups and overlays are minimal",
+        "Exit intent or email capture does not interrupt purchase flow"
+      ],
+      "severity": "medium",
+      "category": "Utility & Secondary Actions"
+    }
+  ]
+}

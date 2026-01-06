@@ -2,10 +2,12 @@
  * Agent Progress Formatter
  *
  * Phase 16-CLI (T089): Formats CRO agent analysis progress and results for console output.
+ * Phase 21d (T318): Added vision insights formatting.
  */
 
 import type { CROAnalysisResult } from '../agent/cro-agent.js';
 import type { CROInsight, Severity } from '../models/index.js';
+import type { VisionAnalysisSummary } from '../heuristics/vision/types.js';
 
 const COLORS = {
   GREEN: '\x1b[32m',
@@ -127,15 +129,25 @@ export class AgentProgressFormatter {
       }
     }
 
-    // Tool Insights
-    const allInsights = [...result.insights, ...result.heuristicInsights];
+    // Phase 21d: Vision Analysis Summary (if available)
+    if (result.visionAnalysis) {
+      lines.push('');
+      lines.push(this.separator.replace(/=/g, '-'));
+      lines.push(`VISION ANALYSIS (${result.pageType?.toUpperCase() || 'unknown'})`);
+      lines.push(this.separator.replace(/=/g, '-'));
+      lines.push(this.formatVisionSummary(result.visionAnalysis.summary));
+    }
+
+    // Tool Insights (including vision insights)
+    const allInsights = [...result.insights, ...result.heuristicInsights, ...result.visionInsights];
     if (allInsights.length > 0) {
       const bySeverity = this.groupBySeverity(allInsights);
 
       lines.push('');
       lines.push(this.separator.replace(/=/g, '-'));
+      const visionCount = result.visionInsights.length;
       lines.push(
-        `INSIGHTS: ${result.insights.length} tool + ${result.heuristicInsights.length} heuristic = ${allInsights.length} total`
+        `INSIGHTS: ${result.insights.length} tool + ${result.heuristicInsights.length} heuristic + ${visionCount} vision = ${allInsights.length} total`
       );
       lines.push(this.separator.replace(/=/g, '-'));
 
@@ -218,8 +230,46 @@ export class AgentProgressFormatter {
    */
   private formatInsightLine(insight: CROInsight, colorCode: string): string {
     const category = insight.category ? `[${insight.category}]` : '';
-    const issue = this.truncate(insight.issue, this.width - 10);
-    return this.color(`  • ${category} ${issue}`, colorCode);
+    // Include heuristicId if available (for vision insights)
+    const heuristicTag = insight.heuristicId ? `[${insight.heuristicId}]` : '';
+    const issue = this.truncate(insight.issue, this.width - 20);
+    return this.color(`  • ${heuristicTag || category} ${issue}`, colorCode);
+  }
+
+  /**
+   * Format vision analysis summary (Phase 21d)
+   */
+  private formatVisionSummary(summary: VisionAnalysisSummary): string {
+    const lines: string[] = [];
+
+    // Heuristics evaluation stats
+    const passColor = summary.passed > 0 ? COLORS.GREEN : COLORS.DIM;
+    const failColor = summary.failed > 0 ? COLORS.RED : COLORS.DIM;
+    const partialColor = summary.partial > 0 ? COLORS.YELLOW : COLORS.DIM;
+
+    lines.push(`  Heuristics: ${summary.totalHeuristics} evaluated`);
+    lines.push(`  ${this.color(`✓ Passed: ${summary.passed}`, passColor)} | ${this.color(`✗ Failed: ${summary.failed}`, failColor)} | ${this.color(`~ Partial: ${summary.partial}`, partialColor)} | N/A: ${summary.notApplicable}`);
+
+    // Severity breakdown for failed items
+    const severityParts: string[] = [];
+    if (summary.bySeverity.critical > 0) {
+      severityParts.push(this.color(`${summary.bySeverity.critical} critical`, COLORS.RED));
+    }
+    if (summary.bySeverity.high > 0) {
+      severityParts.push(this.color(`${summary.bySeverity.high} high`, COLORS.YELLOW));
+    }
+    if (summary.bySeverity.medium > 0) {
+      severityParts.push(`${summary.bySeverity.medium} medium`);
+    }
+    if (summary.bySeverity.low > 0) {
+      severityParts.push(`${summary.bySeverity.low} low`);
+    }
+
+    if (severityParts.length > 0) {
+      lines.push(`  Issues by severity: ${severityParts.join(', ')}`);
+    }
+
+    return lines.join('\n');
   }
 
   /**

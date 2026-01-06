@@ -26,6 +26,7 @@
 | 18 | Models, Heuristics, Output, Agent Integration, CLI | [phase-18.md](./phase-18.md) |
 | 19 | Coverage System (Models, DOM, Agent, Prompts, CLI, Testing) | [phase-19.md](./phase-19.md) |
 | 20 | Unified Extraction Pipeline (10 modules) | [phase-20.md](./phase-20.md) |
+| 21 | PDP Heuristics (PageType + 35 rules) | [phase-21.md](./phase-21.md) |
 
 ---
 
@@ -71,30 +72,20 @@
 | **19d** | T139-T140 | 2 | Prompt Updates | ✅ Complete | - |
 | **19e** | T141-T142 | 2 | CLI & Config | ✅ Complete | 1 unit |
 | **19f** | T143-T146 | 4 | Testing & Polish | ✅ Complete | 11 int + 4 e2e |
-| **20a** | T147-T155 | 9 | foundations/ | Pending | 36 unit |
-| **20b** | T156-T159 | 4 | dom/ meta & screenshot | Pending | 9 unit |
-| **20c** | T160-T161 | 2 | dom/ landmarks | Pending | 8 unit |
-| **20d** | T162-T166 | 5 | dom/ nodes & fingerprint | Pending | 23 unit |
-| **20e** | T167-T172 | 6 | interactions/ links/forms/prices | Pending | 19 unit |
-| **20f** | T173-T174 | 2 | visible/ constraints | Pending | 12 unit |
-| **20g** | T175-T176 | 2 | dom/ assembly | Pending | 8 int |
-| **20h** | T177-T181 | 5 | interactions/ actions | Pending | 15 unit |
-| **20i** | T182-T186 | 5 | coverage/ capture & merge | Pending | 16 unit |
-| **20j** | T187-T188 | 2 | coverage/ assembly | Pending | 6 int |
-| **20k** | T189-T193 | 5 | context/ LLM prep | Pending | 6 unit + 4 int |
-| **20l** | T194-T195 | 2 | Module Integration | Pending | 4 int |
-| **20m** | T196-T200 | 5 | E2E Tests (original) | Pending | 15 e2e |
-| **20n** | T201-T204 | 4 | Documentation | Pending | - |
-| **20o** | T205-T212 | 8 | styles/ | Pending | 16 unit |
-| **20p** | T213-T222 | 10 | network/ | Pending | 23 unit |
-| **20q** | T223-T230 | 8 | storage/ | Pending | 20 unit |
-| **20r** | T231-T240 | 10 | a11y/ | Pending | 21 unit |
-| **20s** | T241-T248 | 8 | frames/ | Pending | 17 unit |
-| **20t** | T249-T258 | 10 | vision/ | Pending | 22 unit |
-| **20u** | T259-T264 | 6 | pipeline integration | Pending | 9 int |
-| **20v** | T265-T274 | 10 | E2E full pipeline | Pending | 22 e2e |
+| **20A** | T147-T158 | 12 | Framework-agnostic detection | Pending | 25 unit |
+| **20B** | T159-T170 | 12 | Extended CRO types | Pending | 15 unit |
+| **20C** | T171-T180 | 10 | Multi-strategy selectors | Pending | 23 unit |
+| **20D** | T181-T192 | 12 | LLM DOM classification | Pending | 22 unit |
+| **20E** | T193-T202 | 10 | Visibility & context | Pending | 20 unit |
+| **20-Int** | T203-T206 | 4 | Integration & E2E | Pending | 3 e2e |
+| **21a** | T285-T292 | 8 | PageType Detection | ✅ Complete | 35+ unit |
+| **21b** | T293-T306 | 14 | Heuristics Knowledge Base | ✅ Complete | 25 unit |
+| **21c** | T307-T313 | 7 | CRO Vision Analyzer | ✅ Complete | 44 unit |
+| **21d** | T314-T320 | 7 | Vision Integration | Pending | 23+ int |
 
-**Total**: 312 tasks (177 complete, 135 pending)
+**Total**: 298 tasks (231 complete, 67 pending)
+- Phase 20: 60 tasks (hybrid extraction)
+- Phase 21d: 7 tasks (vision integration)
 
 ---
 
@@ -123,5 +114,6 @@
 - Phase 18-CLI: `npm run start -- <url>` → CRO analysis as default ✅
 - Phase 19: `npm run start -- --scan-mode=full_page <url>` → 100% page coverage ✅
 - Phase 20: Unified extraction pipeline - 10 modules, 128 tasks, 351 tests (pending)
+- Phase 21d: `npm run start -- --vision <url>` → GPT-4o Vision heuristic analysis (pending)
 
 ---

@@ -4,6 +4,7 @@
  * Phase 16 (T081): Main CRO analysis agent with observe→reason→act loop.
  * Phase 18e (T117): Added post-processing pipeline integration.
  * Phase 19c (T135-T138): Added full-page coverage scan mode.
+ * Phase 21d (T315-T316): Added GPT-4o Vision analysis integration.
  * Orchestrates browser automation, DOM extraction, LLM interaction, and tool execution.
  */
 
@@ -20,6 +21,7 @@ import type {
   Hypothesis,
   ScanMode,
   CoverageConfig,
+  PageType,
 } from '../models/index.js';
 import { DEFAULT_CRO_OPTIONS, parseAgentOutput, DEFAULT_COVERAGE_CONFIG } from '../models/index.js';
 import { BrowserManager, PageLoader } from '../browser/index.js';
@@ -37,6 +39,12 @@ import type { DEFAULT_BROWSER_CONFIG } from '../types/index.js';
 import {
   BusinessTypeDetector,
   createHeuristicEngine,
+  // Phase 21d: Vision analysis imports
+  createPageTypeDetector,
+  createCROVisionAnalyzer,
+  isPageTypeSupported,
+  type CROVisionAnalysisResult,
+  type CROVisionAnalyzerConfig,
 } from '../heuristics/index.js';
 import {
   InsightDeduplicator,
@@ -92,6 +100,7 @@ const c = {
 /**
  * Result of CRO analysis
  * Phase 18e (T117a): Extended with post-processing fields
+ * Phase 21d (T315): Added vision analysis result
  */
 export interface CROAnalysisResult {
   /** URL that was analyzed */
@@ -102,8 +111,14 @@ export interface CROAnalysisResult {
   insights: CROInsight[];
   /** Insights from heuristic rules */
   heuristicInsights: CROInsight[];
+  /** Insights from vision analysis (Phase 21d) */
+  visionInsights: CROInsight[];
   /** Detected business type */
   businessType?: BusinessTypeResult;
+  /** Detected page type (Phase 21d) */
+  pageType?: PageType;
+  /** Vision analysis result (Phase 21d) */
+  visionAnalysis?: CROVisionAnalysisResult;
   /** Generated A/B test hypotheses */
   hypotheses: Hypothesis[];
   /** CRO scores (overall and by category) */
@@ -131,6 +146,7 @@ export type OutputFormat = 'console' | 'markdown' | 'json' | 'all';
 /**
  * Options for CROAgent.analyze() method
  * Phase 19c: Added scanMode and coverageConfig
+ * Phase 21d (T316): Added vision analysis options
  */
 export interface AnalyzeOptions {
   /** Override browser config (headless, timeout, etc.) */
@@ -149,6 +165,12 @@ export interface AnalyzeOptions {
   scanMode?: ScanMode;
   /** Coverage configuration for full_page mode */
   coverageConfig?: Partial<CoverageConfig>;
+  /** Phase 21d: Enable vision analysis for supported page types (default: true) */
+  useVisionAnalysis?: boolean;
+  /** Phase 21d: Vision model to use */
+  visionModel?: 'gpt-4o' | 'gpt-4o-mini';
+  /** Phase 21d: Custom vision analyzer config */
+  visionConfig?: Partial<CROVisionAnalyzerConfig>;
 }
 
 /**
@@ -320,6 +342,113 @@ export class CROAgent {
 
       // Log extracted DOM information
       this.logExtractedElements(domTree, verbose);
+
+      // ═══════════════════════════════════════════════════════════════════════════
+      // PHASE 21: VISION ANALYSIS (T315)
+      // ═══════════════════════════════════════════════════════════════════════════
+      const useVision = analyzeOptions?.useVisionAnalysis ?? true;
+      let detectedPageType: PageType | undefined;
+      let visionAnalysis: CROVisionAnalysisResult | undefined;
+      let visionInsights: CROInsight[] = [];
+      let screenshotBase64: string | undefined;
+
+      if (useVision) {
+        console.log('═'.repeat(80));
+        console.log('  PHASE 21: VISION ANALYSIS (GPT-4o)');
+        console.log('═'.repeat(80));
+
+        // 21a. Detect page type
+        console.log('\n  ┌─ PHASE 21a: Page Type Detection ──────────────────────────────');
+        const pageTypeDetector = createPageTypeDetector();
+        const viewportSize = page.viewportSize() || { width: 1280, height: 720 };
+        const pageTypeState: PageState = {
+          url,
+          title: pageTitle,
+          domTree,
+          viewport: {
+            width: viewportSize.width,
+            height: viewportSize.height,
+            deviceScaleFactor: 1,
+            isMobile: false,
+          },
+          scrollPosition: { x: 0, y: 0, maxX: 0, maxY: 0 },
+          timestamp: Date.now(),
+        };
+        const pageTypeResult = pageTypeDetector.detect(pageTypeState);
+        detectedPageType = pageTypeResult.type;
+        console.log(`  │ ${c.success('✓')} Detected: ${pageTypeResult.type} (confidence: ${(pageTypeResult.confidence * 100).toFixed(0)}%)`);
+        console.log(`  │ → Signals: ${pageTypeResult.signals.slice(0, 3).join(', ')}${pageTypeResult.signals.length > 3 ? '...' : ''}`);
+        console.log(`  └${'─'.repeat(60)}`);
+
+        // 21b. Check if vision analysis is supported for this page type
+        if (isPageTypeSupported(detectedPageType)) {
+          console.log('\n  ┌─ PHASE 21b: Screenshot Capture ─────────────────────────────');
+          // Scroll to top for screenshot
+          await page.evaluate('window.scrollTo(0, 0)');
+          await this.sleep(300);
+
+          // Capture screenshot as base64
+          const screenshotBuffer = await page.screenshot({
+            type: 'png',
+            fullPage: false, // Capture viewport only for vision analysis
+          });
+          screenshotBase64 = screenshotBuffer.toString('base64');
+          console.log(`  │ ${c.success('✓')} Screenshot captured (${(screenshotBuffer.length / 1024).toFixed(1)}KB)`);
+          console.log(`  └${'─'.repeat(60)}`);
+
+          // 21c. Run vision analysis
+          console.log('\n  ┌─ PHASE 21c: Vision Analysis ────────────────────────────────');
+          const visionModel = analyzeOptions?.visionModel ?? 'gpt-4o';
+          const visionConfig = {
+            model: visionModel,
+            ...analyzeOptions?.visionConfig,
+          };
+
+          try {
+            const visionAnalyzer = createCROVisionAnalyzer(visionConfig);
+            const viewport = {
+              width: viewportSize.width,
+              height: viewportSize.height,
+              deviceScaleFactor: 1,
+              isMobile: false,
+            };
+
+            console.log(`  │ → Analyzing against ${detectedPageType.toUpperCase()} heuristics using ${visionModel}...`);
+            visionAnalysis = await visionAnalyzer.analyze(screenshotBase64, detectedPageType, viewport);
+            visionInsights = visionAnalysis.insights;
+
+            const { summary } = visionAnalysis;
+            console.log(`  │ ${c.success('✓')} Vision analysis complete`);
+            console.log(`  │ → Heuristics: ${summary.passed} passed, ${summary.failed} failed, ${summary.partial} partial`);
+            console.log(`  │ → Issues by severity: Critical ${summary.bySeverity.critical}, High ${summary.bySeverity.high}, Medium ${summary.bySeverity.medium}, Low ${summary.bySeverity.low}`);
+
+            if (visionInsights.length > 0) {
+              console.log(`  │ → Vision insights:`);
+              for (const insight of visionInsights.slice(0, 3)) {
+                console.log(`  │   • ${c.severity(insight.severity)} [${insight.heuristicId}] ${insight.issue?.slice(0, 40)}...`);
+              }
+              if (visionInsights.length > 3) {
+                console.log(`  │   ... and ${visionInsights.length - 3} more`);
+              }
+            }
+          } catch (visionError) {
+            const errMsg = visionError instanceof Error ? visionError.message : 'Vision analysis failed';
+            console.log(`  │ ${c.error('✗ Vision analysis failed:')} ${errMsg}`);
+            errors.push(`Vision: ${errMsg}`);
+            this.logger.warn('Vision analysis failed', { error: errMsg });
+          }
+          console.log(`  └${'─'.repeat(60)}`);
+        } else {
+          console.log(`\n  ┌─ PHASE 21b-c: Vision Analysis ─────────────────────────────`);
+          console.log(`  │ ${c.warn('⏭ SKIPPED')} - Page type '${detectedPageType}' not supported`);
+          console.log(`  │ → Supported types: pdp`);
+          console.log(`  └${'─'.repeat(60)}`);
+        }
+
+        console.log('\n' + '═'.repeat(80));
+        console.log('  PHASE 21: VISION ANALYSIS COMPLETE');
+        console.log('═'.repeat(80) + '\n');
+      }
 
       // ═══════════════════════════════════════════════════════════════════════════
       // PHASE 15: Tool System Initialization
@@ -613,10 +742,10 @@ export class CROAgent {
           this.logger.info('Heuristics skipped by user option');
         }
 
-        // 3c. Combine and deduplicate insights
+        // 3c. Combine and deduplicate insights (include vision insights)
         console.log('\n  ┌─ PHASE 18d: Insight Processing ──────────────────────────────');
-        const allInsights = [...toolInsights, ...heuristicInsights];
-        console.log(`  │ → Combined insights: ${allInsights.length} (${toolInsights.length} tool + ${heuristicInsights.length} heuristic)`);
+        const allInsights = [...toolInsights, ...heuristicInsights, ...visionInsights];
+        console.log(`  │ → Combined insights: ${allInsights.length} (${toolInsights.length} tool + ${heuristicInsights.length} heuristic + ${visionInsights.length} vision)`);
         const deduplicator = new InsightDeduplicator();
         const uniqueInsights = deduplicator.deduplicate(allInsights);
         console.log(`  │ ${c.success('✓')} After deduplication: ${uniqueInsights.length} unique insights`);
@@ -711,7 +840,10 @@ export class CROAgent {
         success: true,
         insights: toolInsights,
         heuristicInsights,
+        visionInsights,
         businessType,
+        pageType: detectedPageType,
+        visionAnalysis,
         hypotheses,
         scores,
         report,
@@ -734,6 +866,7 @@ export class CROAgent {
       console.log('║  PHASE OUTPUTS FLOW:                                                        ║');
       console.log('║    Phase 3  (Browser)    → Page loaded                                      ║');
       console.log('║    Phase 14 (DOM)        → ' + `${domTree.croElementCount} CRO elements extracted`.padEnd(49) + '║');
+      console.log('║    Phase 21 (Vision)     → ' + `${result.pageType || 'n/a'}, ${result.visionInsights.length} vision insights`.padEnd(49) + '║');
       console.log('║    Phase 15 (Tools)      → 11 tools registered                              ║');
       console.log('║    Phase 16 (Agent)      → ' + `${result.stepsExecuted} steps executed`.padEnd(49) + '║');
       console.log('║    Phase 17 (Execution)  → ' + `${result.insights.length} tool insights`.padEnd(49) + '║');
@@ -747,6 +880,8 @@ export class CROAgent {
         stepsExecuted: result.stepsExecuted,
         toolInsightCount: result.insights.length,
         heuristicInsightCount: result.heuristicInsights.length,
+        visionInsightCount: result.visionInsights.length,
+        pageType: result.pageType,
         hypothesesCount: result.hypotheses.length,
         overallScore: result.scores.overall,
         terminationReason: result.terminationReason,
@@ -773,7 +908,10 @@ export class CROAgent {
         success: false,
         insights: [],
         heuristicInsights: [],
+        visionInsights: [],
         businessType: undefined,
+        pageType: undefined,
+        visionAnalysis: undefined,
         hypotheses: [],
         scores: emptyScores,
         report: undefined,

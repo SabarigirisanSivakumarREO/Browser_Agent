@@ -1,0 +1,42 @@
+{
+  "name": "Selection & Configuration",
+  "description": "How product variants and configuration options should be presented for clear, error-free selection",
+  "heuristics": [
+    {
+      "id": "PDP-SELECT-001",
+      "principle": "Variant selection such as size, colour or configuration should be clear and unambiguous",
+      "checkpoints": [
+        "All available options are clearly visible",
+        "Selected option is clearly indicated",
+        "Option labels are descriptive (not just codes)",
+        "Visual swatches match actual product appearance"
+      ],
+      "severity": "high",
+      "category": "Selection & Configuration"
+    },
+    {
+      "id": "PDP-SELECT-002",
+      "principle": "Unavailable options should be clearly labelled and not selectable",
+      "checkpoints": [
+        "Out of stock variants are visually distinct",
+        "Unavailable options cannot be accidentally selected",
+        "Stock status is communicated for each variant",
+        "Back-in-stock notifications are offered where appropriate"
+      ],
+      "severity": "high",
+      "category": "Selection & Configuration"
+    },
+    {
+      "id": "PDP-SELECT-003",
+      "principle": "The impact of selections on price, availability or delivery should be immediately visible",
+      "checkpoints": [
+        "Price updates when variant is selected",
+        "Availability status updates with selection",
+        "Delivery estimate changes are shown if applicable",
+        "No surprises after adding to cart from variant selection"
+      ],
+      "severity": "high",
+      "category": "Selection & Configuration"
+    }
+  ]
+}

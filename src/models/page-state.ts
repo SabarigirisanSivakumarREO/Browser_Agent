@@ -2,9 +2,11 @@
  * Page State Models
  *
  * Defines interfaces for page state snapshots used by the CRO agent.
+ * Phase 21d (T314): Added visionAnalysis field for GPT-4o vision results.
  */
 
 import type { DOMTree } from './dom-tree.js';
+import type { CROVisionAnalysisResult } from '../heuristics/vision/types.js';
 
 /**
  * Viewport information
@@ -38,4 +40,6 @@ export interface PageState {
   scrollPosition: ScrollPosition;
   timestamp: number;
   screenshotPath?: string;   // If screenshot taken
+  screenshotBase64?: string; // Base64 encoded screenshot for vision analysis
+  visionAnalysis?: CROVisionAnalysisResult;  // Phase 21d: GPT-4o vision analysis result
 }

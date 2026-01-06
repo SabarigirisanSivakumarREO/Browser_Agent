@@ -60,191 +60,127 @@
 
 ---
 
-## Unified Extraction Pipeline Requirements (Phase 20)
+## Hybrid Extraction Pipeline Requirements (Phase 20)
 
-**Layer 0 - Shared Foundations**:
+**Overview**: Replace the original 10-module extraction pipeline with a focused hybrid approach that combines framework-agnostic selectors, LLM DOM classification, and vision analysis for near-100% element detection accuracy.
 
-- **FR-113**: System MUST define PageSnapshot interface with snapshotVersion, meta, screenshot, landmarks, nodes, links, forms, prices, constraints, limitations
-- **FR-114**: System MUST define PageCoverage interface with coverageVersion, depth, baseSnapshot, states, mergedNodes, coveragePercent, missingCoverageReasons
-- **FR-115**: System MUST define ExtractionBudgets with configurable caps: maxNodesTotal (250), maxInteractive (120), maxHeadings (50), maxLinks (120), maxForms (10), maxPrices (60)
-- **FR-116**: System MUST define SelectorBundle with preferred CSS selector and fallback SelectorStrategy[]
-- **FR-117**: System MUST define SelectorStrategy union: role, text, nth, xpath
-- **FR-118**: System MUST provide SelectorResolver that tries strategies in order until unique match
+**Architecture**:
+```
+Layer 1: Framework-Agnostic Selectors (Free, Fast)
+   ↓ High-confidence elements pass through
+   ↓ Low-confidence elements → Layer 2
+Layer 2: LLM DOM Classification (Paid, Accurate)
+   ↓ Classifies unmatched interactive elements
+Layer 3: Vision Analysis (Already Built - Phase 21)
+   ↓ UX-level heuristic evaluation
+Output: Complete CRO Analysis
+```
 
-**Layer 1 - Page Snapshot**:
+### Phase 20A: Framework-Agnostic CRO Detection
 
-- **FR-119**: System MUST extract PageMeta: url, title, lang, description, canonical, viewport, pageHeight, loadTimeMs, timestamp
-- **FR-120**: System MUST capture viewport screenshot (not full page) as base64 with width/height
-- **FR-121**: System MUST extract Landmarks using accessibility.snapshot() with DOM fallback
-- **FR-122**: System MUST ensure at least 'main' landmark present (fallback to body)
-- **FR-123**: System MUST extract PageNodes with candidate selection then enrichment
-- **FR-124**: System MUST enrich nodes with: bbox (absolute), isVisible, isAboveFold, isDisabled, isOccluded, role, accessibleName, text, styles subset
-- **FR-125**: System MUST generate node fingerprint from: tag + role + normalizedText + landmarkRole + nearestHeadingIndex + yBucket
-- **FR-126**: System MUST prioritize above-fold nodes, dedupe near-identical in same landmark, enforce budget caps
-- **FR-127**: System MUST extract links with href, isExternal, isNavigation
-- **FR-128**: System MUST extract forms with fields (type, name, label, required, placeholder) and submitButtonIndex
-- **FR-129**: System MUST extract prices with raw text, parsed currency, parsed value (best-effort)
-- **FR-130**: System MUST detect constraints (12 types): hasCookieBanner, hasShadowDOM, hasCrossOriginFrames, hasLazyContent, hasStickyHeader, hasModal, hasInfiniteScroll, hasVirtualizedList, hasWebComponents, hasServiceWorker, hasDynamicPricing, requiresAuth, isABTest, occludedViewportPercent
+**Functional Requirements**:
+- **FR-113**: System MUST detect CRO elements using semantic HTML patterns (button, a[href], type=submit, role=button) regardless of CSS framework
+- **FR-114**: System MUST detect CRO elements using text patterns (add to cart, buy now, checkout, subscribe, etc.)
+- **FR-115**: System MUST detect CRO elements using ARIA patterns (aria-label, role attributes)
+- **FR-116**: System MUST detect CRO elements using common data attributes (data-testid, data-action)
+- **FR-117**: System MAY detect e-commerce platform (Shopify, WooCommerce, Magento) and apply platform-specific selectors as bonus layer
+- **FR-118**: System MUST work on sites using Tailwind CSS, Styled Components, CSS Modules, or any custom CSS framework
 
-**Layer 2 - State Coverage**:
+**Configuration Requirements**:
+- **CR-027**: Text pattern matching MUST be case-insensitive
+- **CR-028**: Selector weights MUST be configurable (default: semantic HTML 0.7-0.9, text 0.8-0.9, ARIA 0.8-0.85)
 
-- **FR-131**: System MUST define CoverageDepth profiles: quick (initial + post_cookie), standard (+ scroll_mid + scroll_bottom), thorough (+ expand_accordions + expand_menus)
-- **FR-132**: System MUST provide dismissCookieBanner action with known CMP patterns + text heuristic fallback
-- **FR-133**: System MUST provide expandAccordions action within main landmark only, max 8 clicks
-- **FR-134**: System MUST provide expandMenus action (thorough only), max 5 clicks, skip destructive actions
-- **FR-135**: System MUST capture state with: name, scrollY, screenshot, nodeCount, newNodes, changedNodes
-- **FR-136**: System MUST detect changes: appeared, disappeared, text_changed, position_changed
-- **FR-137**: System MUST merge states by fingerprint, track firstSeenIn/visibleIn[], compute coveragePercent
+### Phase 20B: Extended CRO Types
 
-**Layer 3 - CRO Analysis Context**:
+**Functional Requirements**:
+- **FR-119**: System MUST classify `price` elements (current, original, sale prices)
+- **FR-120**: System MUST classify `variant_selector` elements (size, color, option selectors)
+- **FR-121**: System MUST classify `stock_status` elements (in stock, out of stock, limited)
+- **FR-122**: System MUST classify `delivery_info` elements (shipping, returns information)
+- **FR-123**: System MUST classify `product_image` elements (main product images)
+- **FR-124**: System MUST classify `review_widget` elements (ratings, reviews displays)
+- **FR-125**: System MUST extend CROType union to include new types
 
-- **FR-138**: System MUST provide prepareContext() that packages meta + landmarks + constraints + top 25 priority nodes
-- **FR-139**: System MUST provide request_more_nodes tool for LLM to request additional nodes by landmark/type/state
-- **FR-140**: System MUST limit main analysis to 1 pass + up to 2 follow-up passes (cost control)
-- **FR-141**: System MUST ensure every insight/hypothesis references node indices and/or state screenshots
+### Phase 20C: Multi-Strategy Selectors
 
-**Module: styles/** (CSS & Design Tokens):
+**Functional Requirements**:
+- **FR-126**: System MUST define SelectorBundle with preferred CSS selector and fallback strategies
+- **FR-127**: System MUST define SelectorStrategy union: role, text, nth, xpath
+- **FR-128**: System MUST generate SelectorBundle for each indexed element with:
+  - preferred: data-testid or id-based CSS selector (if available)
+  - css: Robust CSS selector
+  - xpath: Current XPath (fallback)
+  - text: Button/link text content (for interactive elements)
+- **FR-129**: System MUST provide SelectorResolver that tries strategies in order until unique match
 
-- **FR-142**: System MUST extract CSS variables from :root element
-- **FR-143**: System MUST detect design tokens (primary/secondary colors, typography, spacing)
-- **FR-144**: System MUST extract computed styles for key elements (CTAs, headings, forms)
-- **FR-145**: System MUST detect theme mode (light/dark/unknown)
+**Configuration Requirements**:
+- **CR-029**: SelectorResolver MUST timeout after 5s per strategy attempt
+- **CR-030**: SelectorResolver MUST never throw, return null on failure
 
-**Module: network/** (Request/Response Capture):
+### Phase 20D: LLM DOM Classification
 
-- **FR-146**: System MUST capture network requests with url, method, resourceType, status, timing
-- **FR-147**: System MUST capture JSON API responses (< 50KB body limit)
-- **FR-148**: System MUST extract performance timing (navigationStart, FCP, LCP, loadComplete)
-- **FR-149**: System MUST identify third-party domains in resource summary
+**Functional Requirements**:
+- **FR-130**: System MUST identify unclassified interactive elements (croType null or confidence < 0.5)
+- **FR-131**: System MUST batch unclassified elements and send to LLM for classification
+- **FR-132**: System MUST use classification prompt that returns: type, confidence, reasoning
+- **FR-133**: System MUST support CRO types: cta, form, trust_signal, value_prop, navigation, price, variant_selector, stock_status, delivery_info, review_widget, other
+- **FR-134**: System MUST track classificationSource: 'selector' | 'llm' for each element
+- **FR-135**: System MUST cache LLM classifications by element fingerprint
 
-**Module: storage/** (Cookies & Web Storage):
+**Configuration Requirements**:
+- **CR-031**: LLM classification MUST use gpt-4o-mini by default (cost optimization)
+- **CR-032**: LLM classification MUST batch up to 30 elements per API call
+- **CR-033**: LLM classification timeout MUST be 30 seconds
+- **CR-034**: Classification cache TTL MUST be configurable (default: 24 hours)
 
-- **FR-150**: System MUST extract all cookies with name, value, domain, path, expiry, flags
-- **FR-151**: System MUST categorize cookies (necessary, analytics, marketing, unknown)
-- **FR-152**: System MUST extract localStorage and sessionStorage (truncate values > 200 chars)
-- **FR-153**: System MUST detect IndexedDB database names and service worker presence
+### Phase 20E: Enhanced Visibility & Context
 
-**Module: a11y/** (Accessibility):
-
-- **FR-154**: System MUST extract accessibility snapshot using page.accessibility.snapshot()
-- **FR-155**: System MUST build role map linking a11y roles to DOM node indices
-- **FR-156**: System MUST extract focus order (tab sequence) mapped to node indices
-- **FR-157**: System MUST detect basic a11y violations (missing-alt, missing-label, empty-button, empty-link)
-- **FR-158**: System MUST extract live regions with role categorization
-
-**Module: frames/** (iframes & Shadow DOM):
-
-- **FR-159**: System MUST extract same-origin iframe content (nodes + screenshot)
-- **FR-160**: System MUST extract cross-origin iframe metadata only (src, dimensions, visibility)
-- **FR-161**: System MUST traverse shadow DOM recursively (max depth 5)
-- **FR-162**: System MUST detect web components from customElements registry
-
-**Module: vision/** (Screenshots & LLM Analysis):
-
-- **FR-163**: System MUST capture viewport, fullpage, and segment screenshots
-- **FR-164**: System MUST capture element-level screenshots by node index
-- **FR-165**: System MUST provide optional LLM vision analysis (opt-in, uses GPT-4o)
-- **FR-166**: System MUST map vision analysis results back to DOM node indices
-
-**Pipeline Integration**:
-
-- **FR-167**: System MUST orchestrate modules in correct order (network before navigation)
-- **FR-168**: System MUST handle module failures gracefully (continue with available data)
-- **FR-169**: System MUST compile limitations[] array documenting extraction gaps
-- **FR-170**: System MUST serialize PageKnowledge to JSON and condensed LLM summary
-
-### Configuration Requirements (Phase 20)
-
-- **CR-027**: ExtractionBudgets MUST be configurable with sensible defaults
-- **CR-028**: Snapshot token output MUST target < 4k tokens
-- **CR-029**: Standard coverage token output MUST target < 12k tokens
-- **CR-030**: SelectorResolver MUST timeout after 5s per strategy attempt
-- **CR-031**: CoverageDepth MUST default to 'standard' for CRO analysis
-- **CR-032**: expandAccordions MUST wait 300ms after each click
-- **CR-033**: expandMenus MUST skip buttons containing: logout, sign out, delete, remove
+**Functional Requirements**:
+- **FR-136**: System MUST use 50% visibility threshold for above-fold detection
+- **FR-137**: System MUST track landmark context (header, nav, main, footer, aside) for each element
+- **FR-138**: System MUST track nearest heading context for each element
+- **FR-139**: System MUST detect element occlusion (covered by modal, banner, sticky header)
 
 ### Success Criteria (Phase 20)
 
-**Layer 0 - Foundations**:
-- **SC-076**: All new types compile and export correctly
-- **SC-077**: ExtractionBudgets enforced correctly on high-element pages
-- **SC-078**: SelectorBundle generated with preferred + fallback strategies
-- **SC-079**: SelectorResolver tries strategies in order, returns null on failure
+**Phase 20A - Framework-Agnostic Detection**:
+- **SC-076**: Semantic HTML patterns detect buttons regardless of CSS classes
+- **SC-077**: Text patterns detect CTAs with "add to cart", "buy now", etc.
+- **SC-078**: ARIA patterns detect elements with role=button, aria-label
+- **SC-079**: Detection works on Tailwind CSS sites (utility classes only)
+- **SC-080**: Detection works on Styled Components sites (hashed classes)
+- **SC-081**: Platform detection identifies Shopify, WooCommerce (optional)
 
-**Layer 1 - Snapshot**:
-- **SC-080**: PageMeta extracted correctly including loadTimeMs
-- **SC-081**: Screenshot captured as viewport (not full page) with dimensions
-- **SC-082**: Landmarks extracted via accessibility API with DOM fallback
-- **SC-083**: At least 'main' landmark present on all pages
-- **SC-084**: Nodes capped at budget limits (typical: 50-200)
-- **SC-085**: Above-fold nodes prioritized in output
-- **SC-086**: Fingerprints prevent false deduplication of repeated elements
-- **SC-087**: Links extracted with isExternal/isNavigation flags
-- **SC-088**: Forms extracted with field labels resolved
-- **SC-089**: Prices parsed with currency/value (best-effort)
-- **SC-090**: All 6 constraint types detected correctly
+**Phase 20B - Extended CRO Types**:
+- **SC-082**: Price elements detected and classified
+- **SC-083**: Variant selectors detected and classified
+- **SC-084**: Stock status elements detected and classified
+- **SC-085**: Delivery info elements detected and classified
+- **SC-086**: CROType union includes all new types
 
-**Layer 2 - Coverage**:
-- **SC-091**: CoverageDepth profiles execute correct state sequence
-- **SC-092**: dismissCookieBanner works on known CMPs
-- **SC-093**: expandAccordions stays within main landmark, respects max clicks
-- **SC-094**: expandMenus skips destructive actions
-- **SC-095**: State changes detected correctly (appeared/disappeared/changed)
-- **SC-096**: Merge by fingerprint prevents collisions on PLPs
+**Phase 20C - Multi-Strategy Selectors**:
+- **SC-087**: SelectorBundle generated with preferred + fallback strategies
+- **SC-088**: SelectorResolver tries strategies in order
+- **SC-089**: SelectorResolver returns null on failure (never throws)
+- **SC-090**: Elements can be re-selected after page navigation
 
-**Layer 3 - Analysis Context**:
-- **SC-097**: prepareContext outputs < 4k tokens for snapshot
-- **SC-098**: request_more_nodes returns filtered nodes within budget
-- **SC-099**: Analysis completes in 1-2 passes (cost control)
-- **SC-100**: All insights reference node indices
+**Phase 20D - LLM Classification**:
+- **SC-091**: Unclassified interactive elements identified correctly
+- **SC-092**: LLM classification returns valid CRO types
+- **SC-093**: Classification source tracked ('selector' vs 'llm')
+- **SC-094**: LLM classifications cached by fingerprint
+- **SC-095**: Batch classification reduces API calls
 
-**Robustness**:
-- **SC-101**: No hang on SPA hydration delay
-- **SC-102**: No hang on infinite network chatter (analytics)
-- **SC-103**: Cross-origin iframe flagged, no crash
-- **SC-104**: Shadow DOM flagged, visible content extracted
+**Phase 20E - Visibility & Context**:
+- **SC-096**: Above-fold detection uses 50% visibility threshold
+- **SC-097**: Landmark context tracked for each element
+- **SC-098**: Nearest heading context tracked for each element
+- **SC-099**: Occluded elements detected correctly
 
-**Module: styles/**:
-- **SC-106**: CSS variables extracted from :root
-- **SC-107**: Design tokens detected (colors, typography)
-- **SC-108**: Theme mode detected correctly
-- **SC-109**: Computed styles extracted for key elements
-
-**Module: network/**:
-- **SC-110**: Network requests captured with timing
-- **SC-111**: JSON API responses captured (< 50KB)
-- **SC-112**: Performance timing extracted (FCP, LCP)
-- **SC-113**: Third-party domains identified
-
-**Module: storage/**:
-- **SC-114**: Cookies extracted with all properties
-- **SC-115**: Cookie categorization accurate
-- **SC-116**: Web storage extracted and truncated
-- **SC-117**: IndexedDB and service worker detected
-
-**Module: a11y/**:
-- **SC-118**: Accessibility snapshot extracted
-- **SC-119**: Role map links to DOM indices
-- **SC-120**: Focus order extracted correctly
-- **SC-121**: Basic violations detected
-
-**Module: frames/**:
-- **SC-122**: Same-origin iframe content extracted
-- **SC-123**: Cross-origin iframe metadata only
-- **SC-124**: Shadow DOM traversed recursively
-- **SC-125**: Web components detected
-
-**Module: vision/**:
-- **SC-126**: Screenshots captured (viewport, fullpage, segment)
-- **SC-127**: Element screenshots by node index
-- **SC-128**: Vision analysis maps to DOM nodes
-- **SC-129**: Vision module opt-in works correctly
-
-**Pipeline Integration**:
-- **SC-130**: Modules execute in correct order
-- **SC-131**: Module failures handled gracefully
-- **SC-132**: Limitations array populated correctly
-- **SC-133**: PageKnowledge serialization valid
+**Integration**:
+- **SC-100**: Hybrid detection achieves 95%+ element accuracy
+- **SC-101**: Cost per page ~$0.01-0.02 for LLM classification
+- **SC-102**: Total extraction time < 5 seconds (excluding LLM)
 
 **Test Totals**:
-- **SC-105**: Phase 20 adds 351 tests (259 unit + 70 integration + 22 e2e)
+- **SC-103**: Phase 20 adds ~100 tests (75 unit + 20 integration + 5 e2e)

@@ -1,0 +1,54 @@
+{
+  "name": "Pricing & Cost Transparency",
+  "description": "How pricing information should be displayed to build trust and enable informed purchasing decisions",
+  "heuristics": [
+    {
+      "id": "PDP-PRICE-001",
+      "principle": "The full price should be immediately visible without requiring interaction",
+      "checkpoints": [
+        "Price is visible above the fold",
+        "Price does not require clicking tabs or expandable sections",
+        "Price is prominently displayed near product title",
+        "Price uses adequate font size and contrast"
+      ],
+      "severity": "critical",
+      "category": "Pricing & Cost Transparency"
+    },
+    {
+      "id": "PDP-PRICE-002",
+      "principle": "Unit pricing should be shown where quantity or size varies",
+      "checkpoints": [
+        "Price per unit is displayed for variable quantity products",
+        "Size/quantity relationship to price is clear",
+        "Bulk pricing tiers are clearly explained if applicable",
+        "Unit price helps comparison with similar products"
+      ],
+      "severity": "medium",
+      "category": "Pricing & Cost Transparency"
+    },
+    {
+      "id": "PDP-PRICE-003",
+      "principle": "Delivery costs, taxes or fees should be clearly signposted near the primary action",
+      "checkpoints": [
+        "Shipping cost or free shipping threshold is mentioned",
+        "Tax inclusion/exclusion is clarified where relevant",
+        "Additional fees are disclosed before checkout",
+        "Delivery estimate or timeframe is visible"
+      ],
+      "severity": "high",
+      "category": "Pricing & Cost Transparency"
+    },
+    {
+      "id": "PDP-PRICE-004",
+      "principle": "Promotions or discounts should be explained clearly without ambiguity",
+      "checkpoints": [
+        "Original and sale prices are both shown when discounted",
+        "Discount percentage or savings amount is clear",
+        "Promotion conditions or limitations are stated",
+        "Promotion end date is shown if time-limited"
+      ],
+      "severity": "medium",
+      "category": "Pricing & Cost Transparency"
+    }
+  ]
+}

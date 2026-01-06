@@ -1,10 +1,10 @@
 /**
- * Heuristic Engine - Phase 18b (T106a)
+ * Heuristic Engine - Phase 18b (T106a) + Phase 21 (T291)
  *
  * Core engine for running heuristic rules against page state.
  */
 
-import type { PageState, CROInsight, BusinessType } from '../models/index.js';
+import type { PageState, CROInsight, BusinessType, PageType } from '../models/index.js';
 import type { HeuristicRule, HeuristicResult, HeuristicEngineOptions } from './types.js';
 import { createLogger } from '../utils/index.js';
 
@@ -71,11 +71,13 @@ export class HeuristicEngine {
    * Run all applicable rules against page state
    * @param state - Current page state with DOM tree
    * @param businessType - Detected business type for filtering
+   * @param pageType - Detected page type for filtering (optional, Phase 21)
    * @param options - Optional filtering options
    */
   run(
     state: PageState,
     businessType: BusinessType,
+    pageType?: PageType,
     options: HeuristicEngineOptions = {}
   ): HeuristicResult {
     const startTime = Date.now();
@@ -84,7 +86,7 @@ export class HeuristicEngine {
     let rulesPassed = 0;
     let rulesFailed = 0;
 
-    const { categories, ruleIds, filterByBusinessType = true } = options;
+    const { categories, ruleIds, filterByBusinessType = true, filterByPageType = true } = options;
 
     for (const rule of this.rules.values()) {
       // Filter by rule IDs if specified
@@ -109,10 +111,24 @@ export class HeuristicEngine {
         continue;
       }
 
+      // Filter by page type if enabled (Phase 21)
+      if (
+        filterByPageType &&
+        rule.pageTypes &&
+        rule.pageTypes.length > 0 &&
+        pageType &&
+        !rule.pageTypes.includes(pageType)
+      ) {
+        logger.debug(
+          `Skipping rule ${rule.id}: page type ${pageType} not in ${rule.pageTypes.join(', ')}`
+        );
+        continue;
+      }
+
       rulesExecuted++;
 
       try {
-        const insight = rule.check(state, businessType);
+        const insight = rule.check(state, businessType, pageType);
         if (insight) {
           insights.push(insight);
           rulesFailed++;

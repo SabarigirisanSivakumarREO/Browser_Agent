@@ -1,0 +1,54 @@
+{
+  "name": "Layout & Structure",
+  "description": "How the page structure and visual hierarchy should support natural scanning and discovery of key product information",
+  "heuristics": [
+    {
+      "id": "PDP-LAYOUT-001",
+      "principle": "The page should follow a clear vertical flow that supports natural scanning",
+      "checkpoints": [
+        "Content follows a logical top-to-bottom reading flow",
+        "Related information is grouped together",
+        "No horizontal scrolling required to view key content",
+        "Content width is appropriate for comfortable reading"
+      ],
+      "severity": "high",
+      "category": "Layout & Structure"
+    },
+    {
+      "id": "PDP-LAYOUT-002",
+      "principle": "Critical information such as price, delivery, returns and key specs should not be hidden in horizontal tabs",
+      "checkpoints": [
+        "Price is visible without switching tabs",
+        "Delivery information is accessible without tab interaction",
+        "Returns policy is visible or clearly linked",
+        "Key specifications are not buried in tab interfaces"
+      ],
+      "severity": "high",
+      "category": "Layout & Structure"
+    },
+    {
+      "id": "PDP-LAYOUT-003",
+      "principle": "Expandable sections should be clearly labelled and easy to open without losing context",
+      "checkpoints": [
+        "Accordion or expandable sections have clear titles",
+        "Expand/collapse indicators are visible",
+        "Opening a section does not cause jarring page jumps",
+        "Collapsed state communicates what content is hidden"
+      ],
+      "severity": "medium",
+      "category": "Layout & Structure"
+    },
+    {
+      "id": "PDP-LAYOUT-004",
+      "principle": "Visual hierarchy should prioritise product name, imagery, price and the primary action",
+      "checkpoints": [
+        "Product name/title is prominently displayed",
+        "Product imagery dominates the visual hierarchy",
+        "Price is visually prominent and easy to locate",
+        "Primary CTA (Add to Cart) stands out from other elements"
+      ],
+      "severity": "high",
+      "category": "Layout & Structure"
+    }
+  ]
+}

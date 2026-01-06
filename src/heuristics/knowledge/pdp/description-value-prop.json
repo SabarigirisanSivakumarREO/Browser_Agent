@@ -1,0 +1,42 @@
+{
+  "name": "Description & Value Proposition",
+  "description": "How product descriptions should communicate value and help users understand if the product meets their needs",
+  "heuristics": [
+    {
+      "id": "PDP-DESC-001",
+      "principle": "The primary description should explain what the product is and who it is for in plain language",
+      "checkpoints": [
+        "Description answers 'what is this product' clearly",
+        "Target use case or audience is evident",
+        "Language avoids unnecessary jargon",
+        "Key product purpose is communicated early in description"
+      ],
+      "severity": "high",
+      "category": "Description & Value Proposition"
+    },
+    {
+      "id": "PDP-DESC-002",
+      "principle": "Key benefits should be easy to scan and not buried in long paragraphs",
+      "checkpoints": [
+        "Benefits are presented in scannable format (bullets, icons)",
+        "Key features are highlighted or emphasized",
+        "Description is not an unbroken wall of text",
+        "Most important benefits appear early"
+      ],
+      "severity": "high",
+      "category": "Description & Value Proposition"
+    },
+    {
+      "id": "PDP-DESC-003",
+      "principle": "Claims should be supported by evidence such as specifications, reviews or imagery",
+      "checkpoints": [
+        "Quality claims are backed by specifics",
+        "Performance claims reference specifications or test data",
+        "Social proof supports value claims where available",
+        "Images demonstrate claimed features"
+      ],
+      "severity": "medium",
+      "category": "Description & Value Proposition"
+    }
+  ]
+}

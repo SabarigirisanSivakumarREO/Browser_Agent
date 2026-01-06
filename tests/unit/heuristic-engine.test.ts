@@ -200,7 +200,8 @@ describe('HeuristicEngine', () => {
       engine.registerAll(rules);
 
       const state = createMockPageState();
-      const result = engine.run(state, 'other', { categories: ['cta', 'form'] });
+      // Note: pageType is 3rd param (optional), options is 4th param
+      const result = engine.run(state, 'other', undefined, { categories: ['cta', 'form'] });
 
       expect(result.rulesExecuted).toBe(2);
       expect(result.insights).toHaveLength(2);
@@ -215,7 +216,8 @@ describe('HeuristicEngine', () => {
       engine.registerAll(rules);
 
       const state = createMockPageState();
-      const result = engine.run(state, 'other', { ruleIds: ['H001', 'H003'] });
+      // Note: pageType is 3rd param (optional), options is 4th param
+      const result = engine.run(state, 'other', undefined, { ruleIds: ['H001', 'H003'] });
 
       expect(result.rulesExecuted).toBe(2);
       expect(result.insights).toHaveLength(2);

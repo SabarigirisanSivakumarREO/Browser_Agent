@@ -1,33 +1,59 @@
 /**
- * Heuristics Types - Phase 18b (T106)
+ * Heuristics Types - Phase 18b (T106) + Phase 21 (T290)
  *
  * Core interfaces for heuristic rule engine.
  */
 
-import type { PageState, CROInsight, BusinessType } from '../models/index.js';
+import type { PageState, CROInsight, BusinessType, PageType } from '../models/index.js';
+
+/**
+ * Heuristic rule category
+ * Includes original categories + PDP-specific categories (Phase 21)
+ */
+export type HeuristicCategory =
+  // Original categories
+  | 'cta'
+  | 'form'
+  | 'trust'
+  | 'value_prop'
+  | 'navigation'
+  // PDP-specific categories (Phase 21)
+  | 'pdp_layout'
+  | 'pdp_imagery'
+  | 'pdp_pricing'
+  | 'pdp_description'
+  | 'pdp_specs'
+  | 'pdp_reviews'
+  | 'pdp_selection'
+  | 'pdp_cta'
+  | 'pdp_mobile'
+  | 'pdp_utility';
 
 /**
  * Heuristic rule interface
  */
 export interface HeuristicRule {
-  /** Unique rule ID (H001-H010 format) */
+  /** Unique rule ID (H001-H010 for general, PDP001-PDP035 for PDP) */
   id: string;
   /** Human-readable rule name */
   name: string;
   /** Description of what this rule checks */
   description: string;
   /** CRO category this rule belongs to */
-  category: 'cta' | 'form' | 'trust' | 'value_prop' | 'navigation';
+  category: HeuristicCategory;
   /** Default severity when rule triggers */
   severity: 'critical' | 'high' | 'medium' | 'low';
   /** Business types this rule applies to (empty = all) */
   businessTypes: BusinessType[];
+  /** Page types this rule applies to (empty = all) - Phase 21 */
+  pageTypes?: PageType[];
   /**
    * Check function - returns insight if violation found, null otherwise
    * @param state - Current page state with DOM tree
    * @param businessType - Detected business type
+   * @param pageType - Detected page type (optional for backward compat)
    */
-  check: (state: PageState, businessType: BusinessType) => CROInsight | null;
+  check: (state: PageState, businessType: BusinessType, pageType?: PageType) => CROInsight | null;
 }
 
 /**
@@ -51,9 +77,11 @@ export interface HeuristicResult {
  */
 export interface HeuristicEngineOptions {
   /** Only run rules for these categories */
-  categories?: ('cta' | 'form' | 'trust' | 'value_prop' | 'navigation')[];
+  categories?: HeuristicCategory[];
   /** Only run rules with these IDs */
   ruleIds?: string[];
-  /** Skip rules that don't match business type */
+  /** Skip rules that don't match business type (default: true) */
   filterByBusinessType?: boolean;
+  /** Skip rules that don't match page type (default: true) - Phase 21 */
+  filterByPageType?: boolean;
 }

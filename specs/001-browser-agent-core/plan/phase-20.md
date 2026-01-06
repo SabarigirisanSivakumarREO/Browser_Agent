@@ -1,768 +1,255 @@
-**Navigation**: [Index](./index.md) | [Previous](./phase-19.md) | Next
+**Navigation**: [Index](./index.md) | [Previous](./phase-19.md) | [Next](./phase-21.md)
 
-## Phase 20: Unified Extraction Pipeline
+## Phase 20: Hybrid Extraction Pipeline
 
 ### Summary
 
-Build a modular, reusable Page Extraction Pipeline with 10 extraction modules:
-- **foundations/**: Shared types, budgets, selector strategies
-- **dom/**: DOM snapshot, landmarks, nodes, fingerprinting
-- **visible/**: Visibility detection, above-fold, occlusion
-- **styles/**: CSS variables, design tokens, computed styles
-- **network/**: Request/response capture, API JSON, timing
-- **storage/**: Cookies, localStorage, sessionStorage
-- **interactions/**: Safe actions (cookie dismiss, expand, scroll)
-- **a11y/**: Accessibility snapshot, role mapping, focus order
-- **frames/**: iframes + shadow DOM traversal
-- **vision/**: Screenshots + LLM visual analysis
+Replace the original 10-module extraction pipeline with a focused **hybrid approach** that combines framework-agnostic selectors, LLM DOM classification, and vision analysis for near-100% element detection accuracy.
+
+**Key Change**: Instead of building 10 new modules (styles, network, storage, a11y, frames, vision), we enhance the existing extraction with:
+- Framework-agnostic CRO detection (works on Tailwind, Styled Components, any CSS)
+- Extended CRO types (price, variant, stock, delivery, etc.)
+- Multi-strategy selectors (preferred + fallbacks)
+- LLM DOM classification (catches what selectors miss)
+- Enhanced visibility and context tracking
 
 ### Architecture Overview
 
 ```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                    UNIFIED EXTRACTION PIPELINE v2.0                          │
-├──────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  foundations/  (shared types, budgets, selectors)                            │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────────────────┐   │
-│  │ Types &      │  │ Extraction   │  │ Selector Bundle                  │   │
-│  │ Schemas      │  │ Budgets      │  │ ├─ preferred: CSS (id/testid)   │   │
-│  │ ├─ PageKnow  │  │ ├─ nodes:250 │  │ └─ fallback: [role,text,nth,xp] │   │
-│  │ └─ All types │  │ └─ tokens:4k │  └──────────────────────────────────┘   │
-│  └──────────────┘  └──────────────┘                                         │
-│                                                                              │
-├──────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  dom/  (DOM snapshot, landmarks, nodes, fingerprinting)                      │
-│  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌────────────────────┐    │
-│  │ Meta       │  │ Landmarks  │  │ Key Nodes  │  │ Fingerprint        │    │
-│  │ url,title  │  │ a11y+DOM   │  │ enriched   │  │ tag+role+text+pos  │    │
-│  └────────────┘  └────────────┘  └────────────┘  └────────────────────┘    │
-│                                                                              │
-├──────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  visible/  (visibility detection, above-fold, occlusion)                     │
-│  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌────────────────────┐    │
-│  │ Visibility │  │ Bounding   │  │ Above Fold │  │ Occlusion          │    │
-│  │ 10-point   │  │ Boxes      │  │ Detection  │  │ Detection          │    │
-│  └────────────┘  └────────────┘  └────────────┘  └────────────────────┘    │
-│                                                                              │
-├──────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  styles/  (CSS variables, design tokens, computed styles)                    │
-│  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌────────────────────┐    │
-│  │ CSS Vars   │  │ Computed   │  │ Design     │  │ Theme Detection    │    │
-│  │ :root vars │  │ Key Props  │  │ Tokens     │  │ dark/light mode    │    │
-│  └────────────┘  └────────────┘  └────────────┘  └────────────────────┘    │
-│                                                                              │
-├──────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  network/  (request/response capture, API JSON, timing)                      │
-│  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌────────────────────┐    │
-│  │ Requests   │  │ Responses  │  │ API JSON   │  │ Timing/Perf        │    │
-│  │ url,method │  │ status,type│  │ body<50KB  │  │ TTFB, FCP, LCP     │    │
-│  └────────────┘  └────────────┘  └────────────┘  └────────────────────┘    │
-│                                                                              │
-├──────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  storage/  (cookies, localStorage, sessionStorage)                           │
-│  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌────────────────────┐    │
-│  │ Cookies    │  │ localStorage│ │ sessionStor│  │ IndexedDB Keys     │    │
-│  │ name,value │  │ key:value  │  │ key:value  │  │ db names only      │    │
-│  └────────────┘  └────────────┘  └────────────┘  └────────────────────┘    │
-│                                                                              │
-├──────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  interactions/  (safe actions: cookie dismiss, expand, scroll)               │
-│  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌────────────────────┐    │
-│  │ Cookie     │  │ Accordion  │  │ Menu       │  │ Scroll Stepwise    │    │
-│  │ Dismiss    │  │ Expand     │  │ Expand     │  │ + DOM delta        │    │
-│  └────────────┘  └────────────┘  └────────────┘  └────────────────────┘    │
-│                                                                              │
-├──────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  a11y/  (accessibility snapshot, role mapping, focus order)                  │
-│  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌────────────────────┐    │
-│  │ A11y Tree  │  │ Role Map   │  │ Live       │  │ Focus Order        │    │
-│  │ Playwright │  │ to nodes   │  │ Regions    │  │ Tab sequence       │    │
-│  └────────────┘  └────────────┘  └────────────┘  └────────────────────┘    │
-│                                                                              │
-├──────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  frames/  (iframes + shadow DOM traversal)                                   │
-│  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌────────────────────┐    │
-│  │ Same-Origin│  │ Cross-Orig │  │ Shadow     │  │ Web Components     │    │
-│  │ Full extract│ │ Meta only  │  │ Recursive  │  │ Custom elements    │    │
-│  └────────────┘  └────────────┘  └────────────┘  └────────────────────┘    │
-│                                                                              │
-├──────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  vision/  (screenshots + LLM visual analysis)                                │
-│  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌────────────────────┐    │
-│  │ Viewport   │  │ Full Page  │  │ Segment    │  │ LLM Vision         │    │
-│  │ Screenshot │  │ Screenshot │  │ Screenshots│  │ Analysis           │    │
-│  └────────────┘  └────────────┘  └────────────┘  └────────────────────┘    │
-│                                                                              │
-├──────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  Output: PageKnowledge JSON (Unified)                                        │
-│  ┌─────────────────────────────────────────────────────────────────────┐    │
-│  │ meta + dom + visible + styles + network + storage + interactions +  │    │
-│  │ a11y + frames + vision + coverage + constraints + limitations       │    │
-│  └─────────────────────────────────────────────────────────────────────┘    │
-│                                                                              │
-└──────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                    HYBRID DETECTION PIPELINE                     │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  Layer 1: Framework-Agnostic Selectors (Fast, Free)             │
+│  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐    │
+│  │ Semantic HTML  │  │ Text Patterns  │  │ ARIA Patterns  │    │
+│  │ button, a[href]│  │ add to cart,   │  │ role=button,   │    │
+│  │ type=submit    │  │ buy now, etc.  │  │ aria-label     │    │
+│  └────────────────┘  └────────────────┘  └────────────────┘    │
+│      ↓ High-confidence elements pass through (~70%)             │
+│      ↓ Low-confidence elements → Layer 2                        │
+│                                                                  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  Layer 2: LLM DOM Classification (Accurate, Paid)               │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │ Unclassified interactive elements → GPT-4o-mini          │  │
+│  │ Input: tag, text, attributes, context                    │  │
+│  │ Output: CRO type + confidence + reasoning                │  │
+│  │ Cost: ~$0.01-0.02 per page (10-30 elements batched)      │  │
+│  └──────────────────────────────────────────────────────────┘  │
+│      ↓ All elements now classified                              │
+│                                                                  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  Layer 3: Vision Analysis (Already Built - Phase 21)            │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │ Screenshot → GPT-4o Vision                               │  │
+│  │ Baymard heuristics evaluation (35 PDP rules)             │  │
+│  │ UX-level insights independent of DOM structure           │  │
+│  └──────────────────────────────────────────────────────────┘  │
+│                                                                  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  Output: Complete CRO Analysis                                  │
+│  ├─ Element-level insights (from Layers 1-2)                   │
+│  └─ UX-level insights (from Layer 3)                           │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-### Extraction Pipeline Order
+### Why Hybrid?
+
+| Approach | Coverage | Cost | Speed |
+|----------|----------|------|-------|
+| Hardcoded selectors only | ~60-70% | Free | Fast |
+| LLM classification only | ~95% | ~$0.10/page | Slow |
+| **Hybrid (selectors + LLM)** | **~95%** | **~$0.01-0.02** | **Fast** |
+
+- **Cost efficient**: Selectors handle 70% of elements (free)
+- **Accurate**: LLM catches what selectors miss
+- **Framework-agnostic**: Works on Tailwind, Styled Components, any CSS
+- **Complete**: Vision provides UX-level insights regardless of DOM structure
+
+### Phase 20A: Framework-Agnostic CRO Detection
+
+**Goal**: Detect CRO elements regardless of CSS framework
+
+**Problem solved**: Tailwind, Styled Components, CSS Modules use non-semantic class names that hardcoded selectors can't match.
+
+**Solution**: Prioritize semantic HTML, text patterns, and ARIA over class names.
 
 ```typescript
-/**
- * Extraction module execution order.
- * Order matters - some modules depend on others.
- */
-const EXTRACTION_ORDER = [
-  'network',       // 1. Attach listeners BEFORE navigation
-  'dom',           // 2. DOM snapshot + landmarks + nodes
-  'visible',       // 3. Visibility detection + above-fold
-  'interactions',  // 4. Cookie dismiss + expand + scroll
-  'styles',        // 5. CSS vars + computed styles
-  'storage',       // 6. Cookies + localStorage
-  'a11y',          // 7. Accessibility snapshot
-  'frames',        // 8. iframes + shadow DOM
-  'vision',        // 9. Screenshots + LLM analysis
-] as const;
+// Layer 1a: Semantic HTML (works on ANY site)
+{ type: 'tag', pattern: 'button', weight: 0.7 },
+{ type: 'tag', pattern: 'a[href]', weight: 0.6 },
+{ type: 'attr', pattern: 'type=submit', weight: 0.9 },
+{ type: 'attr', pattern: 'role=button', weight: 0.8 },
+
+// Layer 1b: Text Patterns (works on ANY site)
+{ type: 'text', pattern: 'add to cart|buy now|checkout|subscribe', weight: 0.9 },
+{ type: 'text', pattern: 'sign up|get started|learn more|shop now', weight: 0.8 },
+{ type: 'text', pattern: 'free shipping|guaranteed|secure|trusted', weight: 0.7 },
+
+// Layer 1c: Common Data Attributes
+{ type: 'attr', pattern: 'data-testid*=cart|buy|checkout', weight: 0.85 },
+{ type: 'attr', pattern: 'aria-label*=add|buy|cart', weight: 0.85 },
+
+// Layer 1d: Platform-Specific (optional bonus)
+// Only applied if platform detected (Shopify, WooCommerce, etc.)
 ```
 
-### File Structure
+**Files to modify**:
+- `src/browser/dom/cro-selectors.ts` - Reorganize into framework-agnostic layers
 
-```
-src/extraction/                        # UNIFIED EXTRACTION MODULE
-├── index.ts                           # Main exports
-├── types.ts                           # All interfaces
-├── budgets.ts                         # ExtractionBudgets
-├── pipeline.ts                        # Main orchestrator
-│
-├── selectors/                         # Selector strategies
-│   ├── index.ts
-│   ├── bundle.ts                      # SelectorBundle creation
-│   └── resolver.ts                    # SelectorResolver
-│
-├── dom/                               # DOM extraction
-│   ├── index.ts                       # DOMExtractor class
-│   ├── meta.ts                        # extractMeta()
-│   ├── landmarks.ts                   # extractLandmarks()
-│   ├── nodes.ts                       # extractKeyNodes()
-│   ├── fingerprint.ts                 # generateFingerprint()
-│   └── scripts/
-│       └── extract-nodes.ts           # Injectable browser script
-│
-├── visible/                           # Visibility extraction
-│   ├── index.ts                       # VisibilityExtractor class
-│   ├── detection.ts                   # 10-point visibility check
-│   ├── above-fold.ts                  # Above-fold detection
-│   └── occlusion.ts                   # Occlusion detection
-│
-├── styles/                            # Styles extraction
-│   ├── index.ts                       # StylesExtractor class
-│   ├── css-variables.ts               # :root CSS vars
-│   ├── design-tokens.ts               # Design token detection
-│   └── computed.ts                    # Key element computed styles
-│
-├── network/                           # Network capture
-│   ├── index.ts                       # NetworkCapture class
-│   ├── capture.ts                     # Request/response listeners
-│   ├── api-responses.ts               # JSON response extraction
-│   └── timing.ts                      # Performance timing
-│
-├── storage/                           # Storage extraction
-│   ├── index.ts                       # StorageExtractor class
-│   ├── cookies.ts                     # Cookie extraction
-│   ├── web-storage.ts                 # localStorage/sessionStorage
-│   └── categorize.ts                  # Cookie categorization
-│
-├── interactions/                      # Safe interactions
-│   ├── index.ts                       # InteractionRunner class
-│   ├── safety-rules.ts                # DO_NOT_CLICK patterns
-│   ├── dismiss-cookie.ts              # Cookie banner dismissal
-│   ├── expand-accordion.ts            # Accordion expansion
-│   ├── expand-menu.ts                 # Menu expansion
-│   ├── scroll.ts                      # Stepwise scrolling
-│   ├── links.ts                       # Link extraction
-│   ├── forms.ts                       # Form extraction
-│   └── prices.ts                      # Price extraction
-│
-├── a11y/                              # Accessibility extraction
-│   ├── index.ts                       # A11yExtractor class
-│   ├── snapshot.ts                    # Playwright a11y snapshot
-│   ├── role-map.ts                    # Map roles to DOM nodes
-│   ├── live-regions.ts                # Live region detection
-│   ├── focus-order.ts                 # Tab order extraction
-│   └── violations.ts                  # Basic a11y checks
-│
-├── frames/                            # Frames + Shadow DOM
-│   ├── index.ts                       # FrameExtractor class
-│   ├── iframes.ts                     # iframe extraction
-│   ├── shadow-dom.ts                  # Shadow root traversal
-│   └── web-components.ts              # Custom element detection
-│
-├── vision/                            # Screenshots + Vision
-│   ├── index.ts                       # VisionExtractor class
-│   ├── capture.ts                     # Screenshot capture
-│   ├── analyze.ts                     # LLM vision analysis
-│   ├── prompts.ts                     # Vision analysis prompts
-│   └── dom-mapping.ts                 # Map vision to DOM nodes
-│
-├── coverage/                          # Multi-state coverage
-│   ├── index.ts                       # CoverageExtractor class
-│   ├── profiles.ts                    # Coverage depth configs
-│   ├── capture.ts                     # State capture
-│   └── merge.ts                       # Fingerprint-based merge
-│
-├── context/                           # LLM context preparation
-│   ├── index.ts
-│   ├── prepare.ts                     # Progressive disclosure
-│   ├── serialize.ts                   # Token-budgeted serialization
-│   └── chunking.ts                    # Multi-chunk output
-│
-└── output/                            # Output formats
-    ├── index.ts
-    ├── json.ts                        # PageKnowledge JSON
-    └── summary.ts                     # Condensed summary
-```
+### Phase 20B: Extended CRO Types
 
-### PageKnowledge Schema (v2.0)
+**Goal**: Provide richer data for actionable insights
 
-```typescript
-interface PageKnowledge {
-  // ─── VERSION & META ────────────────────────────────────────────
-  version: '2.0';
-  extractedAt: number;
-  extractionDuration: number;
+**Current types**: `cta`, `form`, `trust_signal`, `value_prop`, `navigation`
 
-  meta: PageMeta;
+**New types**:
+- `price` - Price display elements (current, original, sale)
+- `variant_selector` - Size/color/option selectors
+- `stock_status` - Availability indicators
+- `delivery_info` - Shipping/returns information
+- `product_image` - Main product images
+- `review_widget` - Review/rating displays
 
-  // ─── MODULE: dom ───────────────────────────────────────────────
-  dom: {
-    landmarks: Landmark[];
-    nodes: PageNode[];
-    nodeCount: number;
-    interactiveCount: number;
-    croElementCount: number;
-  };
+**Files to modify**:
+- `src/browser/dom/cro-selectors.ts` - Add new type patterns
+- `src/models/dom-tree.ts` - Extend CROType union
 
-  // ─── MODULE: visible ───────────────────────────────────────────
-  visible: {
-    textBlocks: TextBlock[];
-    aboveFoldNodes: number[];
-    viewportOcclusion: number;
-  };
+### Phase 20C: Multi-Strategy Selectors
 
-  // ─── MODULE: styles ────────────────────────────────────────────
-  styles: {
-    cssVariables: Record<string, string>;
-    designTokens: DesignTokens;
-    keyElementStyles: ElementStyleMap[];
-    themeMode: 'light' | 'dark' | 'unknown';
-  };
+**Goal**: Improve action reliability and accountability
 
-  // ─── MODULE: network ───────────────────────────────────────────
-  network: {
-    requests: NetworkRequest[];
-    apiResponses: APIResponse[];
-    resourceSummary: ResourceSummary;
-    timing: PerformanceTiming;
-  };
+**Problem**: XPath-only selectors break on dynamic content and re-renders.
 
-  // ─── MODULE: storage ───────────────────────────────────────────
-  storage: {
-    cookies: CookieInfo[];
-    localStorage: Record<string, string>;
-    sessionStorage: Record<string, string>;
-    indexedDBNames: string[];
-    serviceWorkerActive: boolean;
-  };
-
-  // ─── MODULE: interactions ──────────────────────────────────────
-  interactions: {
-    links: LinkInfo[];
-    forms: FormData[];
-    prices: PriceInfo[];
-    actionsPerformed: ActionResult[];
-  };
-
-  // ─── MODULE: a11y ──────────────────────────────────────────────
-  a11y: {
-    snapshot: A11yNode;
-    roleMap: Record<string, number[]>;
-    liveRegions: LiveRegion[];
-    focusOrder: FocusableElement[];
-    violations: A11yViolation[];
-  };
-
-  // ─── MODULE: frames ────────────────────────────────────────────
-  frames: {
-    iframes: FrameInfo[];
-    shadowHosts: ShadowHostInfo[];
-    totalShadowElements: number;
-    webComponents: WebComponentInfo[];
-  };
-
-  // ─── MODULE: vision ────────────────────────────────────────────
-  vision: {
-    screenshots: Screenshot[];
-    analysis?: VisionAnalysis;
-  };
-
-  // ─── COVERAGE ──────────────────────────────────────────────────
-  coverage: {
-    depth: CoverageDepth;
-    states: CapturedState[];
-    coveragePercent: number;
-    missingReasons: string[];
-  };
-
-  // ─── CONSTRAINTS & LIMITATIONS ─────────────────────────────────
-  constraints: PageConstraints;
-  limitations: string[];
-
-  // ─── BUDGETS ───────────────────────────────────────────────────
-  budgetsApplied: ExtractionBudgets;
-  budgetsExceeded: string[];
-}
-```
-
-### Key Interfaces
-
-#### PageNode
-
-```typescript
-interface PageNode {
-  index: number;
-  tag: string;
-  role?: string;
-  accessibleName?: string;
-  text: string;                    // Normalized, max 100 chars
-  selector: SelectorBundle;
-  bbox: BoundingBox;
-  landmark?: LandmarkRole;
-  nearestHeadingIndex?: number;
-
-  // Visibility & State
-  isVisible: boolean;
-  isAboveFold: boolean;
-  isDisabled: boolean;
-  isOccluded: boolean;
-
-  // Classification
-  nodeType: NodeType;
-  croType?: CROType;
-  confidence?: number;
-
-  // Styles (minimal subset)
-  styles?: NodeStyles;
-
-  // Identity (for deduplication)
-  fingerprint: string;
-
-  // Coverage tracking
-  firstSeenIn?: string;
-  visibleIn: string[];
-  stateChanges?: StateChange[];
-}
-```
-
-#### SelectorBundle
+**Solution**: SelectorBundle with fallback strategies
 
 ```typescript
 interface SelectorBundle {
-  preferred?: string;              // CSS: id/testid/aria-label based
-  fallback: SelectorStrategy[];    // Ordered list of fallback strategies
+  preferred: string | null;  // data-testid, id-based CSS
+  css: string;               // Robust CSS selector
+  xpath: string;             // Current fallback
+  text?: string;             // For buttons/links
 }
 
-type SelectorStrategy =
+interface SelectorStrategy =
   | { type: 'role'; role: string; name?: string }
   | { type: 'text'; tag: string; text: string }
   | { type: 'nth'; tag: string; nth: number; withinLandmark?: string }
   | { type: 'xpath'; value: string };
 ```
 
-#### PageConstraints (Extended)
+**Files to create/modify**:
+- `src/browser/dom/selector-bundle.ts` - New file
+- `src/browser/dom/build-dom-tree.ts` - Generate bundles
+- `src/models/dom-tree.ts` - Update DOMNode interface
+
+### Phase 20D: LLM DOM Classification
+
+**Goal**: Catch elements that hardcoded selectors miss
+
+**How it works**:
 
 ```typescript
-interface PageConstraints {
-  // Core constraints
-  hasCookieBanner: boolean;
-  hasShadowDOM: boolean;
-  hasCrossOriginFrames: boolean;
-  hasLazyContent: boolean;
-  hasStickyHeader: boolean;
-  hasModal: boolean;
-  occludedViewportPercent?: number;
+// 1. Identify unclassified elements
+const unclassified = domTree.filter(n =>
+  n.isInteractive && (!n.croType || n.croConfidence < 0.5)
+);
 
-  // Extended constraints
-  hasInfiniteScroll: boolean;
-  hasVirtualizedList: boolean;
-  hasWebComponents: boolean;
-  hasServiceWorker: boolean;
-  hasDynamicPricing: boolean;
-  requiresAuth: boolean;
-  isABTest: boolean;
+// 2. Batch send to LLM
+const prompt = `
+Classify these DOM elements into CRO types:
+${elements.map(e => `- ${e.tag} "${e.text}" [${e.attributes}]`).join('\n')}
+
+Types: cta, form, trust_signal, value_prop, navigation, price,
+       variant_selector, stock_status, delivery_info, review_widget, other
+
+Return JSON: [{ index, type, confidence, reasoning }]
+`;
+
+// 3. Update elements with LLM classification
+for (const result of llmResults) {
+  elements[result.index].croType = result.type;
+  elements[result.index].croConfidence = result.confidence;
+  elements[result.index].classificationSource = 'llm';
 }
 ```
 
-#### ExtractionBudgets
+**Cost optimization**:
+- Only classify unmatched interactive elements (typically 10-30 per page)
+- Use `gpt-4o-mini` for classification (cheap, fast)
+- Batch elements in single API call
+- Cache classifications by element fingerprint
 
-```typescript
-interface ExtractionBudgets {
-  maxNodesTotal: number;           // Default: 250
-  maxInteractive: number;          // Default: 120
-  maxHeadings: number;             // Default: 50
-  maxLinks: number;                // Default: 120
-  maxForms: number;                // Default: 10
-  maxPrices: number;               // Default: 60
-}
+**Files to create**:
+- `src/browser/dom/llm-classifier.ts` - LLM classification logic
+- `src/browser/dom/classification-prompt.ts` - Prompt templates
 
-const DEFAULT_BUDGETS: ExtractionBudgets = {
-  maxNodesTotal: 250,
-  maxInteractive: 120,
-  maxHeadings: 50,
-  maxLinks: 120,
-  maxForms: 10,
-  maxPrices: 60,
-};
-```
+**Files to modify**:
+- `src/browser/dom/extractor.ts` - Integrate LLM classification step
+- `src/models/dom-tree.ts` - Add `classificationSource: 'selector' | 'llm'`
 
-### Module Specifications
+### Phase 20E: Enhanced Visibility & Context
 
-#### styles/ Module
+**Goal**: Reduce false positives, add context for better recommendations
 
-```typescript
-interface StylesData {
-  cssVariables: Record<string, string>;  // --primary-color: #007bff
-  designTokens: DesignTokens;
-  keyElementStyles: ElementStyleMap[];
-  themeMode: 'light' | 'dark' | 'unknown';
-}
+**Improvements**:
+1. **Improved above-fold detection** - 50% visibility threshold (not just top edge)
+2. **Landmark context** - Which section (header/main/footer) element is in
+3. **Nearest heading context** - What heading an element relates to
+4. **Occlusion detection** - Is element covered by modal/banner
 
-interface DesignTokens {
-  colors: { primary?: string; secondary?: string; accent?: string; text?: string; background?: string };
-  typography: { fontFamily?: string; baseFontSize?: string; headingFont?: string };
-  spacing: { unit?: string; containerWidth?: string };
-}
+**Files to modify**:
+- `src/browser/dom/build-dom-tree.ts` - Add context fields
+- `src/models/dom-tree.ts` - Extend DOMNode interface
 
-// Extract CSS variables from :root
-async function extractCSSVariables(page: Page): Promise<Record<string, string>>;
-```
+### Modules NOT Being Built
 
-#### network/ Module
+| Original Phase 20 Module | Skip Reason |
+|--------------------------|-------------|
+| `styles/` | CSS tokens don't impact CRO analysis accuracy |
+| `network/` | API responses not used by heuristic rules |
+| `storage/` | Cookie data not needed for CRO insights |
+| `a11y/` | Separate feature, not core extraction |
+| `frames/` | Edge case, add when needed |
+| `vision/` | Already done in Phase 21 |
 
-```typescript
-interface NetworkData {
-  requests: NetworkRequest[];
-  apiResponses: APIResponse[];    // JSON responses < 50KB
-  resourceSummary: ResourceSummary;
-  timing: PerformanceTiming;
-}
+### Expected Accuracy
 
-interface NetworkRequest {
-  url: string;
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'OPTIONS';
-  resourceType: 'document' | 'script' | 'stylesheet' | 'image' | 'font' | 'xhr' | 'fetch' | 'other';
-  status: number;
-  timing: { startTime: number; duration: number };
-  isThirdParty: boolean;
-}
-
-interface PerformanceTiming {
-  navigationStart: number;
-  domContentLoaded: number;
-  loadComplete: number;
-  firstPaint?: number;
-  firstContentfulPaint?: number;
-  largestContentfulPaint?: number;
-}
-
-// Attach early - before page.goto()
-class NetworkCapture {
-  attach(page: Page): void;
-  getData(): NetworkData;
-}
-```
-
-#### storage/ Module
-
-```typescript
-interface StorageData {
-  cookies: CookieInfo[];
-  localStorage: Record<string, string>;
-  sessionStorage: Record<string, string>;
-  indexedDBNames: string[];
-  serviceWorkerActive: boolean;
-}
-
-interface CookieInfo {
-  name: string;
-  value: string;           // Truncated if > 100 chars
-  domain: string;
-  path: string;
-  expires?: number;
-  httpOnly: boolean;
-  secure: boolean;
-  sameSite: 'Strict' | 'Lax' | 'None';
-  category?: 'necessary' | 'analytics' | 'marketing' | 'unknown';
-}
-```
-
-#### a11y/ Module
-
-```typescript
-interface A11yData {
-  snapshot: A11yNode;              // Full Playwright accessibility tree
-  roleMap: Record<string, number[]>;  // role -> nodeIndices
-  liveRegions: LiveRegion[];
-  focusOrder: FocusableElement[];
-  violations: A11yViolation[];
-}
-
-interface A11yViolation {
-  type: 'missing-alt' | 'missing-label' | 'low-contrast' | 'empty-button' | 'empty-link';
-  nodeIndex: number;
-  message: string;
-  severity: 'error' | 'warning';
-}
-```
-
-#### frames/ Module
-
-```typescript
-interface FramesShadowData {
-  iframes: FrameInfo[];
-  shadowHosts: ShadowHostInfo[];
-  totalShadowElements: number;
-  webComponents: WebComponentInfo[];
-}
-
-interface FrameInfo {
-  id: string;
-  src: string;
-  origin: string;
-  isSameOrigin: boolean;
-  isCrossOrigin: boolean;
-  nodes?: PageNode[];         // Only for same-origin
-  screenshot?: string;        // Only for same-origin
-  dimensions: { width: number; height: number };
-  isVisible: boolean;
-}
-
-interface ShadowHostInfo {
-  hostNodeIndex: number;
-  hostTag: string;
-  mode: 'open' | 'closed';
-  childCount: number;
-  interactiveCount: number;
-  nodes: PageNode[];
-}
-```
-
-#### vision/ Module
-
-```typescript
-interface VisionData {
-  screenshots: Screenshot[];
-  analysis?: VisionAnalysis;
-}
-
-interface Screenshot {
-  id: string;
-  type: 'viewport' | 'fullpage' | 'segment' | 'element';
-  base64: string;
-  width: number;
-  height: number;
-  scrollY: number;
-  capturedAt: number;
-  segmentIndex?: number;
-  segmentTotal?: number;
-  nodeIndex?: number;
-}
-
-interface VisionAnalysis {
-  layoutType: 'single-column' | 'two-column' | 'grid' | 'hero-cta' | 'form-focused' | 'unknown';
-  primaryCTA: VisionCTA | null;
-  visualHierarchy: VisualElement[];
-  colorScheme: ColorScheme;
-  trustSignals: VisualTrustSignal[];
-  distractions: VisualDistraction[];
-  recommendations: VisionRecommendation[];
-}
-```
-
-### Pipeline Orchestrator
-
-```typescript
-interface ExtractionOptions {
-  modules?: {
-    dom?: boolean;          // Default: true (required)
-    visible?: boolean;      // Default: true
-    styles?: boolean;       // Default: true
-    network?: boolean;      // Default: true
-    storage?: boolean;      // Default: true
-    interactions?: boolean; // Default: true
-    a11y?: boolean;         // Default: true
-    frames?: boolean;       // Default: true
-    vision?: boolean;       // Default: false (opt-in)
-  };
-  budgets?: Partial<ExtractionBudgets>;
-  coverageDepth?: CoverageDepth;
-  visionModel?: 'gpt-4o' | 'gpt-4o-mini' | 'claude-3-5-sonnet';
-  screenshotMode?: 'viewport' | 'fullpage' | 'segments' | 'all';
-  segmentCount?: number;
-}
-
-class ExtractionPipeline {
-  async extract(page: Page, context: BrowserContext): Promise<PageKnowledge>;
-}
-```
-
-### Safety Rules
-
-```typescript
-// src/extraction/interactions/safety-rules.ts
-export const DO_NOT_CLICK = [
-  // Payment
-  /place.?order/i, /submit.?payment/i, /pay.?now/i, /checkout/i,
-  /confirm.?purchase/i, /complete.?order/i,
-
-  // Destructive
-  /delete/i, /remove/i, /cancel.?subscription/i, /unsubscribe/i,
-  /logout/i, /sign.?out/i,
-
-  // External
-  /download/i, /open.?in.?app/i
-];
-
-export const SAFE_TO_CLICK = [
-  // Expand
-  /more.?info/i, /show.?more/i, /view.?details/i, /expand/i,
-  /read.?more/i, /see.?all/i,
-
-  // Tabs/Accordions
-  /specifications/i, /description/i, /reviews/i, /faq/i,
-  /shipping/i, /returns/i, /size.?guide/i,
-
-  // Gallery
-  /next/i, /prev/i, /thumbnail/i
-];
-```
-
-### Coverage Profiles
-
-```typescript
-type CoverageDepth = 'quick' | 'standard' | 'thorough';
-
-const COVERAGE_PROFILES: Record<CoverageDepth, CoverageProfile> = {
-  quick: {
-    name: 'quick',
-    states: ['initial', 'post_cookie'],
-    actions: [{ type: 'dismissCookie' }],
-  },
-  standard: {
-    name: 'standard',
-    states: ['initial', 'post_cookie', 'scroll_mid', 'scroll_bottom'],
-    actions: [
-      { type: 'dismissCookie' },
-      { type: 'scroll', to: 0.5 },
-      { type: 'scroll', to: 1.0 },
-    ],
-  },
-  thorough: {
-    name: 'thorough',
-    states: ['initial', 'post_cookie', 'scroll_mid', 'scroll_bottom',
-             'accordion_expanded', 'menu_expanded'],
-    actions: [
-      { type: 'dismissCookie' },
-      { type: 'scroll', to: 0.5 },
-      { type: 'scroll', to: 1.0 },
-      { type: 'expandAccordions', maxClicks: 8 },
-      { type: 'expandMenus', maxClicks: 5 },
-    ],
-  },
-};
-```
-
-### Fingerprint Generation
-
-```typescript
-function generateFingerprint(node: RawNode, context: FingerprintContext): string {
-  const parts = [
-    node.tag,
-    node.role || '',
-    normalizeText(node.text).slice(0, 30),
-    context.landmarkRole || '',
-    context.nearestHeadingIndex?.toString() || '',
-    Math.floor((node.bbox?.y || 0) / 100).toString(),  // yBucket
-  ];
-  return parts.join('|');
-}
-```
-
-**Why fingerprint anchoring?**
-- `tag + role + text` alone would collapse repeated "Add to Cart" buttons on PLP
-- Adding `landmarkRole + nearestHeadingIndex + yBucket` provides spatial anchoring
-- Same button under different product headings → different fingerprints
-- Same button at different Y positions → different fingerprints
-
-### Migration Strategy
-
-1. **Phase 1 - Parallel Implementation** (no breaking changes)
-   - New extraction in `src/extraction/` (separate from `src/browser/dom/`)
-   - Existing CRO agent continues using old extraction
-   - New extraction testable independently
-
-2. **Phase 2 - Integration**
-   - Wire new extraction into CROAgent via feature flag
-   - `useNewExtraction: boolean` in options
-   - Run both in parallel for comparison on real sites
-
-3. **Phase 3 - Cutover**
-   - Make new extraction default
-   - Deprecate old extraction
-   - Update all dependent tests
-
-### Success Metrics
-
-| Metric | Current | Target |
-|--------|---------|--------|
-| Typical page node count | Uncapped | 50-200 |
-| Snapshot tokens | ~8k+ | < 4k |
-| Coverage tokens | ~32k | < 12k |
-| Extraction timeout | 10s | 5s |
-| PLP handling | Unlimited nodes | Capped + deduped |
-| Constraint reporting | None | All 12 types |
-| Selector resilience | XPath only | Multi-strategy |
-| Fingerprint collisions | Possible | Prevented by anchoring |
-| Module coverage | 5 modules | 10 modules |
+| Detection Layer | Coverage | Cost per Page |
+|-----------------|----------|---------------|
+| Framework-agnostic selectors | ~70% | Free |
+| LLM classification | +25% | ~$0.01-0.02 |
+| Vision analysis (Phase 21) | 100% UX | ~$0.05-0.10 |
+| **Total** | **~95%+** | **~$0.06-0.12** |
 
 ### Test Summary
 
-| Module | Unit | Integration | E2E | Total |
-|--------|------|-------------|-----|-------|
-| foundations/ | 36 | - | - | 36 |
-| dom/ | 31 | 8 | - | 39 |
-| visible/ | 12 | - | - | 12 |
-| styles/ | 16 | 4 | - | 20 |
-| network/ | 23 | 6 | - | 29 |
-| storage/ | 20 | 5 | - | 25 |
-| interactions/ | 19 | 6 | - | 25 |
-| a11y/ | 21 | 4 | - | 25 |
-| frames/ | 17 | 5 | - | 22 |
-| vision/ | 22 | 6 | - | 28 |
-| coverage/ | 16 | 6 | - | 22 |
-| context/ | 6 | 4 | - | 10 |
-| pipeline/ | - | 9 | - | 9 |
-| E2E original | - | - | 15 | 15 |
-| E2E full pipeline | - | - | 22 | 22 |
-| Documentation | - | - | - | - |
-| **TOTAL** | **239** | **63** | **37** | **351** |
+| Phase | Unit | Integration | E2E | Total |
+|-------|------|-------------|-----|-------|
+| 20A: Framework-Agnostic | 25 | - | - | 25 |
+| 20B: Extended Types | 15 | - | - | 15 |
+| 20C: Multi-Strategy | 15 | 5 | - | 20 |
+| 20D: LLM Classification | 15 | 10 | - | 25 |
+| 20E: Visibility & Context | 10 | 5 | 5 | 20 |
+| **TOTAL** | **80** | **20** | **5** | **105** |
 
-*Note: Test counts aligned with tasks/phase-20.md*
+### Migration Path
+
+1. **Phase 1 - Parallel Implementation** (no breaking changes)
+   - Enhance `cro-selectors.ts` with framework-agnostic patterns
+   - Add new CRO types
+   - Existing extraction continues working
+
+2. **Phase 2 - LLM Integration**
+   - Add LLM classifier as optional enhancement
+   - Feature flag: `useLLMClassification: boolean`
+   - Run both in parallel for comparison
+
+3. **Phase 3 - Default Enablement**
+   - Make LLM classification default (opt-out available)
+   - Measure accuracy improvement on real sites

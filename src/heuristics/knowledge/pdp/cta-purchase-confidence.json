@@ -1,0 +1,54 @@
+{
+  "name": "CTA & Purchase Confidence",
+  "description": "How the primary call-to-action and supporting trust signals should drive confident purchase decisions",
+  "heuristics": [
+    {
+      "id": "PDP-CTA-001",
+      "principle": "The primary call to action should be visually distinct and clearly labelled",
+      "checkpoints": [
+        "Add to Cart/Buy button has strong visual prominence",
+        "CTA uses contrasting colour that stands out",
+        "Button text clearly communicates the action",
+        "CTA is sized appropriately for easy interaction"
+      ],
+      "severity": "critical",
+      "category": "CTA & Purchase Confidence"
+    },
+    {
+      "id": "PDP-CTA-002",
+      "principle": "The call to action should remain accessible as users scroll, particularly on mobile",
+      "checkpoints": [
+        "Sticky CTA or persistent add-to-cart on mobile",
+        "CTA is visible after scrolling past initial viewport",
+        "Users can purchase without scrolling back to top",
+        "Sticky element does not obscure important content"
+      ],
+      "severity": "high",
+      "category": "CTA & Purchase Confidence"
+    },
+    {
+      "id": "PDP-CTA-003",
+      "principle": "Reassurance such as returns, delivery and guarantees should be visible near the action",
+      "checkpoints": [
+        "Return policy is mentioned near CTA",
+        "Delivery information is proximate to purchase button",
+        "Security or guarantee badges are visible",
+        "Trust signals reduce purchase anxiety"
+      ],
+      "severity": "high",
+      "category": "CTA & Purchase Confidence"
+    },
+    {
+      "id": "PDP-CTA-004",
+      "principle": "Users should not encounter preventable blockers at the point of adding to basket",
+      "checkpoints": [
+        "Required selections are clearly indicated before CTA attempt",
+        "Error messages are helpful and specific",
+        "Users are guided to resolve issues preventing purchase",
+        "No unexpected popups or interruptions at CTA"
+      ],
+      "severity": "high",
+      "category": "CTA & Purchase Confidence"
+    }
+  ]
+}

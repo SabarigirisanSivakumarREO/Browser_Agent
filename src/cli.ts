@@ -33,6 +33,8 @@ const VALID_TOOL_NAMES = CROActionNames;
 const VALID_OUTPUT_FORMATS = ['console', 'markdown', 'json'] as const;
 type OutputFormat = typeof VALID_OUTPUT_FORMATS[number];
 const VALID_SCAN_MODES: ScanMode[] = ['full_page', 'above_fold', 'llm_guided'];
+const VALID_VISION_MODELS = ['gpt-4o', 'gpt-4o-mini'] as const;
+type VisionModel = typeof VALID_VISION_MODELS[number];
 
 /**
  * Parses command-line arguments.
@@ -51,6 +53,8 @@ function parseArgs(): {
   toolName: CROActionName | null;
   scanMode: ScanMode;
   minCoverage: number;
+  useVision: boolean;
+  visionModel: VisionModel;
   verbose: boolean;
   help: boolean;
 } {
@@ -68,6 +72,8 @@ function parseArgs(): {
   let toolName: CROActionName | null = null;
   let scanMode: ScanMode = 'full_page';
   let minCoverage = 100;
+  let useVision = true;  // Phase 21d: Vision enabled by default
+  let visionModel: VisionModel = 'gpt-4o';  // Phase 21d: Default vision model
   let verbose = false;
   let help = false;
 
@@ -162,6 +168,33 @@ function parseArgs(): {
         console.error('Invalid min-coverage value. Must be between 0 and 100.');
         process.exit(1);
       }
+    } else if (arg === '--vision') {
+      // Phase 21d: Enable vision analysis (explicit)
+      useVision = true;
+    } else if (arg === '--no-vision') {
+      // Phase 21d: Disable vision analysis
+      useVision = false;
+    } else if (arg === '--vision-model' && args[i + 1]) {
+      // Phase 21d: Set vision model
+      const model = args[i + 1] as VisionModel;
+      if (VALID_VISION_MODELS.includes(model)) {
+        visionModel = model;
+      } else {
+        console.error(`Invalid vision model: ${model}`);
+        console.error(`Valid models: ${VALID_VISION_MODELS.join(', ')}`);
+        process.exit(1);
+      }
+      i++;
+    } else if (arg?.startsWith('--vision-model=')) {
+      // Phase 21d: Set vision model (= syntax)
+      const model = arg.split('=')[1] as VisionModel;
+      if (VALID_VISION_MODELS.includes(model)) {
+        visionModel = model;
+      } else {
+        console.error(`Invalid vision model: ${model}`);
+        console.error(`Valid models: ${VALID_VISION_MODELS.join(', ')}`);
+        process.exit(1);
+      }
     } else if (arg && !arg.startsWith('-')) {
       urls.push(arg);
     }
@@ -181,6 +214,8 @@ function parseArgs(): {
     toolName,
     scanMode,
     minCoverage,
+    useVision,
+    visionModel,
     verbose,
     help,
   };
@@ -225,6 +260,13 @@ CRO ANALYSIS OPTIONS:
                           assess_value_prop, check_navigation, find_friction,
                           scroll_page, go_to_url, done
 
+VISION ANALYSIS OPTIONS (Phase 21):
+  --vision                Enable GPT-4o vision analysis (default: enabled)
+  --no-vision             Disable GPT-4o vision analysis
+  --vision-model <model>  Vision model to use (default: gpt-4o)
+                          - gpt-4o: Best quality, slower and more expensive
+                          - gpt-4o-mini: Faster and cheaper, slightly lower quality
+
 MODES:
   --legacy                Use legacy heading extraction mode (no CRO analysis)
                           Original behavior: extract h1-h6 + LangChain processing
@@ -268,6 +310,15 @@ EXAMPLES:
 
   # Execute specific tool for debugging
   npm run start -- --tool analyze_ctas https://www.carwale.com
+
+  # Vision analysis (Phase 21) - enabled by default for PDP pages
+  npm run start -- https://www.peregrineclothing.co.uk/products/lynton-polo-shirt
+
+  # Disable vision analysis
+  npm run start -- --no-vision https://www.peregrineclothing.co.uk/products/lynton-polo-shirt
+
+  # Use gpt-4o-mini for faster/cheaper vision analysis
+  npm run start -- --vision-model=gpt-4o-mini https://www.peregrineclothing.co.uk/products/lynton-polo-shirt
 `);
 }
 
@@ -416,6 +467,7 @@ async function processToolExecution(
 
 /**
  * Process URL with CRO agent analysis (default mode)
+ * Phase 21d (T317): Added vision options
  */
 async function processAnalysis(
   url: string,
@@ -428,6 +480,8 @@ async function processAnalysis(
     maxSteps: number;
     scanMode: ScanMode;
     minCoverage: number;
+    useVision: boolean;
+    visionModel: VisionModel;
     verbose: boolean;
   }
 ): Promise<CROAnalysisResult> {
@@ -448,6 +502,7 @@ async function processAnalysis(
       success: false,
       insights: [],
       heuristicInsights: [],
+      visionInsights: [],
       hypotheses: [],
       scores: emptyScores,
       stepsExecuted: 0,
@@ -487,6 +542,9 @@ async function processAnalysis(
       skipHeuristics: true,
       scanMode: options.scanMode,
       coverageConfig,
+      // Phase 21d: Vision analysis options
+      useVisionAnalysis: options.useVision,
+      visionModel: options.visionModel,
     });
 
     return result;
@@ -505,6 +563,7 @@ async function processAnalysis(
       success: false,
       insights: [],
       heuristicInsights: [],
+      visionInsights: [],
       hypotheses: [],
       scores: emptyScores,
       stepsExecuted: 0,
@@ -588,6 +647,8 @@ async function main(): Promise<void> {
     toolName,
     scanMode,
     minCoverage,
+    useVision,
+    visionModel,
     verbose,
     help,
   } = parseArgs();
@@ -689,6 +750,8 @@ async function main(): Promise<void> {
       maxSteps,
       scanMode,
       minCoverage,
+      useVision,
+      visionModel,
       verbose,
     });
 
