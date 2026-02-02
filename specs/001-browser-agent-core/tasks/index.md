@@ -16,17 +16,20 @@
 
 ## Quick Navigation
 
-| Phases | Description | File |
-|--------|-------------|------|
-| 1-9 | Setup, Foundation, US1-4, Orchestrator, E2E, Polish | [phases-01-09.md](./phases-01-09.md) |
-| 10-12, 12b, 12c | Bug Fixes, Wait Strategy, Cookie Consent, Enhanced Detection, Peregrine Fix | [phases-10-12.md](./phases-10-12.md) |
-| 13-14 | Core Models, Agent Models, DOM Extraction | [phases-13-14.md](./phases-13-14.md) |
-| 15-16 | Tool System, Agent Core | [phases-15-16.md](./phases-15-16.md) |
-| 17 | Navigation, Analysis, Control Tools + Summary | [phase-17.md](./phase-17.md) |
-| 18 | Models, Heuristics, Output, Agent Integration, CLI | [phase-18.md](./phase-18.md) |
-| 19 | Coverage System (Models, DOM, Agent, Prompts, CLI, Testing) | [phase-19.md](./phase-19.md) |
-| 20 | Unified Extraction Pipeline (10 modules) | [phase-20.md](./phase-20.md) |
-| 21 | PDP Heuristics (PageType + 35 rules) | [phase-21.md](./phase-21.md) |
+| Phases | Description | File | Status |
+|--------|-------------|------|--------|
+| 1-9 | Setup, Foundation, US1-4, Orchestrator, E2E, Polish | [phases-01-09.md](./phases-01-09.md) | ✅ |
+| 10-12, 12b, 12c | Bug Fixes, Wait Strategy, Cookie Consent, Enhanced Detection | [phases-10-12.md](./phases-10-12.md) | ✅ |
+| 13-14 | Core Models, Agent Models, DOM Extraction | [phases-13-14.md](./phases-13-14.md) | ✅ |
+| 15-16 | Tool System, Agent Core | [phases-15-16.md](./phases-15-16.md) | ✅ |
+| 17 | Navigation, Analysis, Control Tools + Summary | [phase-17.md](./phase-17.md) | ✅ |
+| 18 | Models, Heuristics, Output, Agent Integration, CLI | [phase-18.md](./phase-18.md) | ✅ |
+| 19 | Coverage System (Models, DOM, Agent, Prompts, CLI, Testing) | [phase-19.md](./phase-19.md) | ✅ |
+| ~~20~~ | ~~Unified Extraction Pipeline (DEFERRED)~~ | [phase-20.md](./phase-20.md) | **DEFERRED** |
+| 21 | PDP Heuristics (PageType + 35 rules) | [phase-21.md](./phase-21.md) | Partial |
+| **CR-001** | **Architecture Refactor (remove modes, merge agents)** | [cr-001-refactor.md](./cr-001-refactor.md) | ✅ Complete |
+| **21j** | **CLI Vision Agent Fix (use CROAgent unified mode)** | [phase-21j.md](./phase-21j.md) | 📋 NEXT (8 tasks) |
+| **22** | **Page Type Knowledge Bases (PLP, Homepage, Cart, Checkout, Generic)** | [phase-22.md](./phase-22.md) | 📋 Pending (38 tasks) |
 
 ---
 
@@ -72,20 +75,50 @@
 | **19d** | T139-T140 | 2 | Prompt Updates | ✅ Complete | - |
 | **19e** | T141-T142 | 2 | CLI & Config | ✅ Complete | 1 unit |
 | **19f** | T143-T146 | 4 | Testing & Polish | ✅ Complete | 11 int + 4 e2e |
-| **20A** | T147-T158 | 12 | Framework-agnostic detection | Pending | 25 unit |
-| **20B** | T159-T170 | 12 | Extended CRO types | Pending | 15 unit |
-| **20C** | T171-T180 | 10 | Multi-strategy selectors | Pending | 23 unit |
-| **20D** | T181-T192 | 12 | LLM DOM classification | Pending | 22 unit |
-| **20E** | T193-T202 | 10 | Visibility & context | Pending | 20 unit |
-| **20-Int** | T203-T206 | 4 | Integration & E2E | Pending | 3 e2e |
+| ~~**20A**~~ | ~~T147-T158~~ | ~~12~~ | ~~Framework-agnostic detection~~ | **DEFERRED** | - |
+| ~~**20B**~~ | ~~T159-T170~~ | ~~12~~ | ~~Extended CRO types~~ | **DEFERRED** | - |
+| ~~**20C**~~ | ~~T171-T180~~ | ~~10~~ | ~~Multi-strategy selectors~~ | **DEFERRED** | - |
+| ~~**20D**~~ | ~~T181-T192~~ | ~~12~~ | ~~LLM DOM classification~~ | **DEFERRED** | - |
+| ~~**20E**~~ | ~~T193-T202~~ | ~~10~~ | ~~Visibility & context~~ | **DEFERRED** | - |
+| ~~**20-Int**~~ | ~~T203-T206~~ | ~~4~~ | ~~Integration & E2E~~ | **DEFERRED** | - |
 | **21a** | T285-T292 | 8 | PageType Detection | ✅ Complete | 35+ unit |
 | **21b** | T293-T306 | 14 | Heuristics Knowledge Base | ✅ Complete | 25 unit |
 | **21c** | T307-T313 | 7 | CRO Vision Analyzer | ✅ Complete | 44 unit |
-| **21d** | T314-T320 | 7 | Vision Integration | Pending | 23+ int |
+| **21d** | T314-T320 | 7 | Vision Integration | ✅ Complete | 23+ int |
+| ~~**21e**~~ | ~~T321-T328~~ | ~~8~~ | ~~Multi-Viewport Vision~~ | ✅ REMOVED (CR-001) | - |
+| ~~**21f**~~ | ~~T329-T334~~ | ~~6~~ | ~~Full-Page Screenshot~~ | ✅ REMOVED (CR-001) | - |
+| ~~**21g**~~ | ~~T335-T352~~ | ~~18~~ | ~~Vision Agent Loop~~ | ✅ MERGED (CR-001) | 91 unit |
+| **CR-001** | T500-T522 | 23 | Architecture Refactor | ✅ Complete | 51 unit |
+| **21h** | T353-T365 | 14 | Evidence Capture | ✅ Complete | 49 unit |
+| **21i** | T366-T382 | 17 | DOM-Screenshot Mapping | ✅ Complete | 88 unit |
+| **21j** | T383-T390 | 8 | CLI Vision Agent Fix | 📋 NEXT | 20 unit |
+| **22** | T400-T437 | ~38 | New Page Type Knowledge Bases | 📋 Pending | ~38 unit |
 
-**Total**: 298 tasks (231 complete, 67 pending)
-- Phase 20: 60 tasks (hybrid extraction)
-- Phase 21d: 7 tasks (vision integration)
+**Total after Phase 21i**: 425 complete + ~46 pending (excluding deferred Phase 20)
+- Phase 20: 60 tasks **DEFERRED** (moved to backlog)
+- CR-001: 23 tasks ✅ **COMPLETE** (remove modes, merge agents, refactor)
+- Phase 21h: 14 tasks ✅ **COMPLETE** (evidence capture)
+- Phase 21i: 17 tasks ✅ **COMPLETE** (DOM-screenshot mapping)
+- Phase 21j: 8 tasks 📋 **NEXT** (CLI fix - use CROAgent unified mode)
+- Phase 22: ~38 tasks 📋 (PLP, Homepage, Cart, Checkout, Generic KBs)
+
+---
+
+## Test Count Verification
+
+**Last Verified**: 2026-01-30
+
+| Category | Planned | Actual | Status |
+|----------|---------|--------|--------|
+| Unit Tests | 600+ | 650+ | ✓ |
+| Integration Tests | 100+ | 110+ | ✓ |
+| E2E Tests | 20+ | 22 | ✓ |
+| **Total** | **720+** | **782** | ✓ |
+
+**Test Files**: 41 (36 passing, 5 with failures)
+**Test Cases**: 782 (773 passing, 9 failing)
+
+*Note: 9 failing tests are URL normalization issues (trailing slash expectations) unrelated to core functionality.*
 
 ---
 
@@ -107,13 +140,19 @@
 
 **Implementation details in plan.md** - tasks.md is task definitions only
 
-**Incremental CLI Milestones**:
-- Phase 14b: `npm run start -- --cro-extract <url>` → Show CRO elements ✅
-- Phase 15b: `npm run start -- --cro-extract --tool <name> <url>` → Run specific tool ✅
-- Phase 16-CLI: `npm run start -- --analyze <url>` → Full agent loop ✅
-- Phase 18-CLI: `npm run start -- <url>` → CRO analysis as default ✅
-- Phase 19: `npm run start -- --scan-mode=full_page <url>` → 100% page coverage ✅
-- Phase 20: Unified extraction pipeline - 10 modules, 128 tasks, 351 tests (pending)
-- Phase 21d: `npm run start -- --vision <url>` → GPT-4o Vision heuristic analysis (pending)
+**Current Priority**:
+1. ~~CR-001: Architecture refactor (23 tasks)~~ ✅ **COMPLETE**
+2. Phase 21h: Evidence capture (14 tasks) 📋 **NEXT**
+3. Phase 21i: DOM-Screenshot mapping (17 tasks)
+4. Phase 22: Page type knowledge bases (38 tasks)
+
+**Deferred**:
+- Phase 20: Unified extraction pipeline (60 tasks) - moved to backlog
+
+**CLI Milestones**:
+- Phases 1-19: All complete ✅
+- After CR-001: `npm run start -- --vision-agent <url>` → Unified CRO + Vision analysis
+- After Phase 21h: `npm run start -- --vision-agent --save-evidence <url>` → With evidence
+- After Phase 21i: `npm run start -- --vision-agent --annotate-screenshots <url>` → With annotations
 
 ---

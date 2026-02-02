@@ -15,9 +15,8 @@ Browser Agent is a CLI tool that autonomously navigates web pages, extracts CRO-
 - **DOM Extraction** - Extracts CRO-relevant elements with intelligent selectors
 - **Cookie Consent Handling** - Automatic detection and dismissal of cookie banners
 - **Multiple Output Formats** - Console, Markdown reports, and JSON export
-- **AI Processing** - LangChain integration with OpenAI GPT-4o-mini for intelligent analysis
+- **Vision Agent Mode** - Unified DOM + Vision analysis for comprehensive CRO evaluation
 - **Batch Processing** - Process multiple URLs sequentially with aggregated results
-- **Legacy Mode** - Original heading extraction mode available via `--legacy` flag
 
 ## Tech Stack
 
@@ -105,7 +104,7 @@ npm run start -- https://www.peregrineclothing.co.uk/collections/polo-shirts/pro
                         scroll_page, go_to_url, done
 
 # Mode Options
---legacy                Use legacy heading extraction mode (no CRO analysis)
+--vision-agent          Enable unified CRO analysis with vision
 --verbose, -v           Enable verbose logging
 --help, -h              Show help message
 ```
@@ -125,8 +124,8 @@ npm run start -- --headless --output-format json --output-file analysis.json htt
 # Execute specific tool for debugging
 npm run start -- --tool analyze_ctas https://www.example.com
 
-# Legacy heading extraction mode
-npm run start -- --legacy https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy
+# Vision agent mode (comprehensive DOM + Vision analysis)
+npm run start -- --vision-agent https://www.example.com
 
 # Custom wait strategy for dynamic sites
 npm run start -- --wait-until networkidle --post-load-wait 10000 https://spa-site.com
@@ -135,9 +134,9 @@ npm run start -- --wait-until networkidle --post-load-wait 10000 https://spa-sit
 ### Programmatic Usage
 
 ```typescript
-import { CROAgent, BrowserAgent } from './src';
+import { CROAgent } from './src';
 
-// CRO Analysis (Primary Mode)
+// CRO Analysis
 const croAgent = new CROAgent({
   maxSteps: 10,
   actionWaitMs: 500,
@@ -145,7 +144,7 @@ const croAgent = new CROAgent({
   failureLimit: 3,
 });
 
-const result = await croAgent.analyze('https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy', {
+const result = await croAgent.analyze('https://www.example.com/product', {
   browserConfig: {
     headless: true,
     timeout: 60000,
@@ -161,16 +160,23 @@ console.log(result.insights);      // CRO insights found
 console.log(result.hypotheses);    // Testable hypotheses
 console.log(result.scores);        // CRO scores by category
 
-// Legacy Mode (Heading Extraction)
-const legacyAgent = new BrowserAgent({
-  browser: { headless: true, timeout: 60000 },
-  verbose: true,
+// Vision Agent Mode (comprehensive DOM + Vision analysis)
+const visionResult = await croAgent.analyze('https://www.example.com/product', {
+  browserConfig: {
+    headless: true,
+    timeout: 60000,
+    waitUntil: 'load',
+    postLoadWait: 5000,
+    dismissCookieConsent: true,
+    browserType: 'chromium',
+  },
+  enableUnifiedMode: true,
+  visionAgentMode: true,
+  scanMode: 'full_page',
+  visionModel: 'gpt-4o-mini',
 });
 
-legacyAgent.validateEnvironment();
-const legacyResult = await legacyAgent.processUrl('https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy');
-console.log(legacyAgent.formatResult(legacyResult));
-await legacyAgent.close();
+console.log(visionResult.visionAnalysis);  // Vision-based heuristic evaluations
 ```
 
 ## Architecture
@@ -231,8 +237,6 @@ await legacyAgent.close();
 | `InsightPrioritizer` | Prioritizes insights by impact |
 | `MarkdownReporter` | Generates markdown reports |
 | `JSONExporter` | Exports analysis to JSON |
-| `LangChainProcessor` | AI analysis with OpenAI (legacy mode) |
-| `HeadingExtractor` | H1-H6 extraction (legacy mode) |
 
 ## Project Structure
 
@@ -293,7 +297,6 @@ browser-agent/
 │   │   ├── business-type.ts
 │   │   └── tool-definition.ts
 │   ├── output/               # Output formatters
-│   │   ├── formatter.ts      # Legacy result formatter
 │   │   ├── cro-element-formatter.ts
 │   │   ├── tool-result-formatter.ts
 │   │   ├── agent-progress-formatter.ts
@@ -303,10 +306,6 @@ browser-agent/
 │   │   ├── markdown-reporter.ts
 │   │   ├── json-exporter.ts
 │   │   └── file-writer.ts
-│   ├── extraction/           # Legacy heading extraction
-│   │   └── heading-extractor.ts
-│   ├── langchain/            # LangChain integration
-│   │   └── processor.ts
 │   ├── types/                # TypeScript types
 │   │   └── index.ts
 │   └── utils/                # Utilities
@@ -372,39 +371,6 @@ browser-agent/
 ║    Expected Impact: +5-10% checkout completion                           ║
 ║    Test: Add SSL/security badges, money-back guarantee                   ║
 ╚══════════════════════════════════════════════════════════════════════════╝
-```
-
-### Legacy Mode Output (--legacy)
-
-```
-┌──────────────────────────────────────────────────────────────────────────┐
-│                       BROWSER AGENT RESULTS                              │
-├──────────────────────────────────────────────────────────────────────────┤
-│ URL: https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy                                                 │
-│ Status: SUCCESS                                                          │
-│ Load Time: 2.34s                                                         │
-├──────────────────────────────────────────────────────────────────────────┤
-│ HEADINGS FOUND: 5                                                        │
-│   h1: 1  |  h2: 3  |  h3: 1                                              │
-├──────────────────────────────────────────────────────────────────────────┤
-│ EXTRACTED HEADINGS:                                                      │
-│   [h1] Welcome to Example                                                │
-│   [h2] Getting Started                                                   │
-│   [h2] Features                                                          │
-│   [h3] Advanced Usage                                                    │
-│   [h2] Documentation                                                     │
-├──────────────────────────────────────────────────────────────────────────┤
-│ AI INSIGHTS:                                                             │
-│                                                                          │
-│ Summary: Well-structured documentation page with clear hierarchy...      │
-│                                                                          │
-│ Categories: [Documentation, Tutorial, Getting Started]                   │
-│                                                                          │
-│ Insights:                                                                │
-│   - Clear navigation structure with logical progression                  │
-│   - Good use of heading hierarchy for SEO                                │
-│   - Content organized by topic areas                                     │
-└──────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Scripts
@@ -496,32 +462,6 @@ interface Hypothesis {
 }
 
 type CROCategory = 'cta' | 'forms' | 'trust' | 'value_prop' | 'navigation' | 'friction';
-```
-
-### Legacy Types (Heading Extraction)
-
-```typescript
-interface Heading {
-  level: 1 | 2 | 3 | 4 | 5 | 6;
-  text: string;
-  index: number;
-}
-
-interface ExtractionResult {
-  headings: Heading[];
-  totalCount: number;
-  countByLevel: Record<number, number>;
-}
-
-interface AgentResult {
-  url: string;
-  pageLoad: PageLoadResult;
-  extraction: ExtractionResult | null;
-  processing: ProcessingResult | null;
-  success: boolean;
-  error?: string;
-  totalTimeMs: number;
-}
 ```
 
 ## Design Documentation

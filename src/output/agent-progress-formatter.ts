@@ -7,7 +7,7 @@
 
 import type { CROAnalysisResult } from '../agent/cro-agent.js';
 import type { CROInsight, Severity } from '../models/index.js';
-import type { VisionAnalysisSummary } from '../heuristics/vision/types.js';
+import type { VisionAnalysisSummary, HeuristicEvaluation, CROVisionAnalysisResult } from '../heuristics/vision/types.js';
 
 const COLORS = {
   GREEN: '\x1b[32m',
@@ -136,16 +136,19 @@ export class AgentProgressFormatter {
       lines.push(`VISION ANALYSIS (${result.pageType?.toUpperCase() || 'unknown'})`);
       lines.push(this.separator.replace(/=/g, '-'));
       lines.push(this.formatVisionSummary(result.visionAnalysis.summary));
+      lines.push('');
+      lines.push(this.formatVisionDetails(result.visionAnalysis));
     }
 
     // Tool Insights (including vision insights)
-    const allInsights = [...result.insights, ...result.heuristicInsights, ...result.visionInsights];
+    const visionInsights = result.visionInsights || [];
+    const allInsights = [...result.insights, ...result.heuristicInsights, ...visionInsights];
     if (allInsights.length > 0) {
       const bySeverity = this.groupBySeverity(allInsights);
 
       lines.push('');
       lines.push(this.separator.replace(/=/g, '-'));
-      const visionCount = result.visionInsights.length;
+      const visionCount = visionInsights.length;
       lines.push(
         `INSIGHTS: ${result.insights.length} tool + ${result.heuristicInsights.length} heuristic + ${visionCount} vision = ${allInsights.length} total`
       );
@@ -270,6 +273,170 @@ export class AgentProgressFormatter {
     }
 
     return lines.join('\n');
+  }
+
+  /**
+   * Format detailed vision analysis evaluations (Phase 21d enhanced)
+   */
+  private formatVisionDetails(visionAnalysis: CROVisionAnalysisResult): string {
+    const lines: string[] = [];
+    const evaluations = visionAnalysis.evaluations;
+
+    // Group evaluations by status
+    const failed = evaluations.filter(e => e.status === 'fail');
+    const partial = evaluations.filter(e => e.status === 'partial');
+    const passed = evaluations.filter(e => e.status === 'pass');
+    const notApplicable = evaluations.filter(e => e.status === 'not_applicable');
+
+    // Display failed evaluations with full details
+    if (failed.length > 0) {
+      lines.push(this.color('  ┌─ FAILED HEURISTICS ─────────────────────────────────────────', COLORS.RED));
+      for (const evaluation of failed) {
+        lines.push(this.formatEvaluationDetail(evaluation, COLORS.RED));
+      }
+      lines.push('');
+    }
+
+    // Display partial evaluations with full details
+    if (partial.length > 0) {
+      lines.push(this.color('  ┌─ PARTIAL COMPLIANCE ────────────────────────────────────────', COLORS.YELLOW));
+      for (const evaluation of partial) {
+        lines.push(this.formatEvaluationDetail(evaluation, COLORS.YELLOW));
+      }
+      lines.push('');
+    }
+
+    // Display passed evaluations (condensed)
+    if (passed.length > 0) {
+      lines.push(this.color('  ┌─ PASSED HEURISTICS ─────────────────────────────────────────', COLORS.GREEN));
+      for (const evaluation of passed) {
+        lines.push(this.formatEvaluationCondensed(evaluation, COLORS.GREEN));
+      }
+      lines.push('');
+    }
+
+    // Display N/A evaluations (condensed, dimmed)
+    if (notApplicable.length > 0) {
+      lines.push(this.color('  ┌─ NOT APPLICABLE ─────────────────────────────────────────────', COLORS.DIM));
+      for (const evaluation of notApplicable) {
+        lines.push(this.formatEvaluationCondensed(evaluation, COLORS.DIM));
+      }
+    }
+
+    return lines.join('\n');
+  }
+
+  /**
+   * Format a single evaluation with full details
+   * Phase 21h (T360): Added evidence field display
+   */
+  private formatEvaluationDetail(evaluation: HeuristicEvaluation, colorCode: string): string {
+    const lines: string[] = [];
+    const severityIcon = this.getSeverityIcon(evaluation.severity);
+    const confidenceStr = `${(evaluation.confidence * 100).toFixed(0)}%`;
+
+    // Header line with ID and severity
+    lines.push(this.color(`  │ ${severityIcon} [${evaluation.heuristicId}] ${evaluation.severity.toUpperCase()} (confidence: ${confidenceStr})`, colorCode));
+
+    // Phase 21h: Evidence metadata line (viewportIndex, timestamp)
+    const evidenceParts: string[] = [];
+    if (evaluation.viewportIndex !== undefined) {
+      evidenceParts.push(`viewport: ${evaluation.viewportIndex}`);
+    }
+    if (evaluation.timestamp) {
+      evidenceParts.push(`at: ${new Date(evaluation.timestamp).toISOString()}`);
+    }
+    if (evaluation.screenshotRef) {
+      evidenceParts.push(`screenshot: ${evaluation.screenshotRef}`);
+    }
+    if (evidenceParts.length > 0) {
+      lines.push(this.color(`  │   Evidence: ${evidenceParts.join(' | ')}`, COLORS.DIM));
+    }
+
+    // Principle (what should be done)
+    lines.push(this.color(`  │   Principle: ${this.wrapText(evaluation.principle, this.width - 16)}`, COLORS.DIM));
+
+    // Observation (what GPT-4o saw)
+    lines.push(`  │   ${this.color('Observation:', COLORS.CYAN)} ${this.wrapText(evaluation.observation, this.width - 18)}`);
+
+    // Phase 21h: DOM Element References
+    if (evaluation.domElementRefs && evaluation.domElementRefs.length > 0) {
+      const refStrings = evaluation.domElementRefs.map(ref => {
+        const parts = [`[${ref.index}]`, ref.elementType];
+        if (ref.textContent) {
+          parts.push(`"${this.truncate(ref.textContent, 30)}"`);
+        }
+        return parts.join(' ');
+      });
+      lines.push(`  │   ${this.color('Elements:', COLORS.DIM)} ${refStrings.join(', ')}`);
+    }
+
+    // Phase 21h: Bounding Box
+    if (evaluation.boundingBox) {
+      const bb = evaluation.boundingBox;
+      lines.push(`  │   ${this.color('BoundingBox:', COLORS.DIM)} x:${bb.x.toFixed(0)} y:${bb.y.toFixed(0)} ${bb.width.toFixed(0)}×${bb.height.toFixed(0)} (viewport ${bb.viewportIndex})`);
+    }
+
+    // Issue (what's wrong) - only for fail/partial
+    if (evaluation.issue) {
+      lines.push(`  │   ${this.color('Issue:', colorCode)} ${this.wrapText(evaluation.issue, this.width - 12)}`);
+    }
+
+    // Recommendation (how to fix)
+    if (evaluation.recommendation) {
+      lines.push(`  │   ${this.color('Recommendation:', COLORS.GREEN)} ${this.wrapText(evaluation.recommendation, this.width - 20)}`);
+    }
+
+    lines.push('  │');
+
+    return lines.join('\n');
+  }
+
+  /**
+   * Format a single evaluation in condensed form (for passed/N/A)
+   */
+  private formatEvaluationCondensed(evaluation: HeuristicEvaluation, colorCode: string): string {
+    const statusIcon = evaluation.status === 'pass' ? '✓' : '○';
+    const principle = this.truncate(evaluation.principle, this.width - 30);
+    return this.color(`  │ ${statusIcon} [${evaluation.heuristicId}] ${principle}`, colorCode);
+  }
+
+  /**
+   * Get severity icon
+   */
+  private getSeverityIcon(severity: Severity): string {
+    switch (severity) {
+      case 'critical': return '🔴';
+      case 'high': return '🟠';
+      case 'medium': return '🟡';
+      case 'low': return '⚪';
+      default: return '○';
+    }
+  }
+
+  /**
+   * Wrap text to fit within width, adding indentation for continuation lines
+   */
+  private wrapText(text: string, maxWidth: number): string {
+    const cleaned = text.replace(/\s+/g, ' ').trim();
+    if (cleaned.length <= maxWidth) return cleaned;
+
+    const words = cleaned.split(' ');
+    const lines: string[] = [];
+    let currentLine = '';
+
+    for (const word of words) {
+      if (currentLine.length + word.length + 1 <= maxWidth) {
+        currentLine += (currentLine ? ' ' : '') + word;
+      } else {
+        if (currentLine) lines.push(currentLine);
+        currentLine = word;
+      }
+    }
+    if (currentLine) lines.push(currentLine);
+
+    // Join with proper indentation for continuation
+    return lines.join('\n  │              ');
   }
 
   /**

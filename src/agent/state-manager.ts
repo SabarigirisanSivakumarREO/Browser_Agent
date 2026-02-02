@@ -3,6 +3,7 @@
  *
  * Phase 16 (T080): Manages CRO agent state transitions and termination conditions.
  * Phase 19c (T137): Added coverage tracking integration.
+ * CR-001-B: Added viewport snapshot and phase management for unified vision integration.
  * Handles step counting, failure tracking, insights collection, and memory management.
  */
 
@@ -13,9 +14,12 @@ import type {
   StepRecord,
   CROMemory,
   ScanMode,
+  AgentPhase,
+  ViewportSnapshot,
 } from '../models/index.js';
 import { DEFAULT_CRO_OPTIONS, createInitialState } from '../models/index.js';
 import type { CoverageTracker } from './coverage-tracker.js';
+import type { HeuristicEvaluation } from '../heuristics/vision/types.js';
 
 /**
  * StateManager - Manages agent state throughout analysis
@@ -386,6 +390,7 @@ export class StateManager {
   /**
    * Get a summary of current state (for logging/debugging)
    * Phase 19c: Added scanMode and coveragePercent
+   * CR-001-B: Added agentPhase and snapshotCount
    */
   getSummary(): {
     step: number;
@@ -398,6 +403,8 @@ export class StateManager {
     elapsedMs: number;
     scanMode: ScanMode;
     coveragePercent: number;
+    agentPhase: AgentPhase;
+    snapshotCount: number;
   } {
     return {
       step: this.state.step,
@@ -410,6 +417,149 @@ export class StateManager {
       elapsedMs: this.getElapsedTimeMs(),
       scanMode: this.state.scanMode,
       coveragePercent: this.getCoveragePercent(),
+      agentPhase: this.state.agentPhase,
+      snapshotCount: this.state.viewportSnapshots.length,
     };
+  }
+
+  // ─── CR-001-B: Viewport Snapshot Management ─────────────────────
+
+  /**
+   * Add a viewport snapshot
+   * @param snapshot - ViewportSnapshot to add
+   */
+  addViewportSnapshot(snapshot: ViewportSnapshot): void {
+    this.state.viewportSnapshots.push(snapshot);
+  }
+
+  /**
+   * Get all viewport snapshots
+   */
+  getViewportSnapshots(): ViewportSnapshot[] {
+    return [...this.state.viewportSnapshots];
+  }
+
+  /**
+   * Get latest viewport snapshot
+   */
+  getLatestSnapshot(): ViewportSnapshot | undefined {
+    return this.state.viewportSnapshots[this.state.viewportSnapshots.length - 1];
+  }
+
+  /**
+   * Get viewport snapshot count
+   */
+  getSnapshotCount(): number {
+    return this.state.viewportSnapshots.length;
+  }
+
+  // ─── CR-001-B: Phase Management ─────────────────────────────────
+
+  /**
+   * Get current agent phase
+   */
+  getPhase(): AgentPhase {
+    return this.state.agentPhase;
+  }
+
+  /**
+   * Set agent phase
+   * @param phase - New phase to set
+   */
+  setPhase(phase: AgentPhase): void {
+    this.state.agentPhase = phase;
+  }
+
+  /**
+   * Check if in collection phase
+   */
+  isCollectionPhase(): boolean {
+    return this.state.agentPhase === 'collection';
+  }
+
+  /**
+   * Check if in analysis phase
+   */
+  isAnalysisPhase(): boolean {
+    return this.state.agentPhase === 'analysis';
+  }
+
+  /**
+   * Transition to analysis phase
+   */
+  transitionToAnalysis(): void {
+    this.state.agentPhase = 'analysis';
+  }
+
+  /**
+   * Transition to output phase
+   */
+  transitionToOutput(): void {
+    this.state.agentPhase = 'output';
+  }
+
+  // ─── CR-001-B: Scroll Position Management ───────────────────────
+
+  /**
+   * Update current scroll position
+   * @param scrollY - New scroll Y position
+   */
+  updateScrollPosition(scrollY: number): void {
+    this.state.currentScrollY = Math.max(0, scrollY);
+  }
+
+  /**
+   * Get current scroll position
+   */
+  getCurrentScrollY(): number {
+    return this.state.currentScrollY;
+  }
+
+  /**
+   * Set page height
+   * @param height - Total page height in pixels
+   */
+  setPageHeight(height: number): void {
+    this.state.pageHeight = height;
+  }
+
+  /**
+   * Get page height
+   */
+  getPageHeight(): number {
+    return this.state.pageHeight;
+  }
+
+  /**
+   * Get scroll progress percentage (0-100)
+   */
+  getScrollProgress(): number {
+    const maxScroll = this.state.pageHeight - 720; // Assume 720px viewport
+    if (maxScroll <= 0) return 100;
+    return Math.min(100, (this.state.currentScrollY / maxScroll) * 100);
+  }
+
+  // ─── CR-001-B: Heuristic Evaluation Management ──────────────────
+
+  /**
+   * Add heuristic evaluations
+   * @param evaluations - Array of HeuristicEvaluation to add
+   */
+  addHeuristicEvaluations(evaluations: HeuristicEvaluation[]): void {
+    this.state.heuristicEvaluations.push(...evaluations);
+  }
+
+  /**
+   * Get all heuristic evaluations
+   */
+  getHeuristicEvaluations(): HeuristicEvaluation[] {
+    return [...this.state.heuristicEvaluations];
+  }
+
+  /**
+   * Get heuristic evaluation count
+   */
+  getEvaluationCount(): number {
+    return this.state.heuristicEvaluations.length;
   }
 }

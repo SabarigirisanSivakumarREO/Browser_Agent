@@ -44,8 +44,18 @@ export type { StepRecord, CROMemory } from './cro-memory.js';
 export { createInitialMemory } from './cro-memory.js';
 
 // Agent state
-export type { CROAgentOptions, AgentState } from './agent-state.js';
+export type {
+  CROAgentOptions,
+  AgentState,
+  AgentPhase,
+  ViewportSnapshot,
+  SnapshotScreenshot,
+  SnapshotDOM,
+} from './agent-state.js';
 export { DEFAULT_CRO_OPTIONS, createInitialState } from './agent-state.js';
+
+// Re-export ElementMapping from dom (Phase 21i) for convenience
+export type { ElementMapping, ScreenshotCoords } from '../browser/dom/coordinate-mapper.js';
 
 // Agent output
 export type { CROAgentOutput, ParseResult } from './agent-output.js';

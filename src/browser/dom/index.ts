@@ -37,3 +37,14 @@ export {
 
 // DOM Merger (Phase 19b)
 export { DOMMerger } from './dom-merger.js';
+
+// Coordinate Mapper (Phase 21i)
+export {
+  toScreenshotCoords,
+  mapElementsToScreenshot,
+  filterVisibleElements,
+  getElementByIndex,
+  getElementsByIndices,
+  type ScreenshotCoords,
+  type ElementMapping,
+} from './coordinate-mapper.js';

@@ -107,7 +107,7 @@
 - [x] T021 [US3] Create src/langchain/processor.ts with LangChainProcessor class
   - constructor(config: ProcessingConfig)
   - analyze(extraction: ExtractionResult): Promise<ProcessingResult>
-  - Use ChatOpenAI with gpt-4o model
+  - Use ChatOpenAI with gpt-4o-mini model
   - Create prompt for heading analysis (count summary, categorization, insights)
   - Parse structured response using Zod schema
   - Handle API errors gracefully with fallback

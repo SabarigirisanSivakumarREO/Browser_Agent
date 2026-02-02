@@ -1,6 +1,6 @@
 # Code Walkthrough: Browser Agent
 
-**Last Updated**: 2025-12-16
+**Last Updated**: 2026-01-30 (Reviewed - no changes needed for CR-001)
 
 ---
 
@@ -62,16 +62,23 @@ User provides URL
 browser-agent/
 ├── src/
 │   ├── cli.ts                 # Entry point - parses CLI args
-│   ├── index.ts               # BrowserAgent - orchestrates everything
+│   ├── index.ts               # Main exports
+│   ├── agent/
+│   │   ├── cro-agent.ts       # CRO Agent - orchestrates analysis
+│   │   ├── state-manager.ts   # Agent state management
+│   │   ├── message-manager.ts # LLM conversation handling
+│   │   └── tools/             # CRO analysis tools
 │   ├── browser/
 │   │   ├── browser-manager.ts # Launches/closes Chromium
-│   │   └── page-loader.ts     # Navigates to URLs, waits for load
-│   ├── extraction/
-│   │   └── heading-extractor.ts # Extracts h1-h6 from page
-│   ├── langchain/
-│   │   └── processor.ts       # Sends to GPT-4o-mini, parses response
+│   │   ├── page-loader.ts     # Navigates to URLs, waits for load
+│   │   └── dom/               # DOM extraction
+│   ├── heuristics/
+│   │   ├── heuristic-engine.ts # Rule-based CRO analysis
+│   │   └── rules/             # Individual heuristic rules
 │   ├── output/
-│   │   └── formatter.ts       # Formats results for console
+│   │   ├── agent-progress-formatter.ts # Formats results for console
+│   │   ├── markdown-reporter.ts # Markdown report generation
+│   │   └── json-exporter.ts   # JSON export
 │   ├── types/
 │   │   └── index.ts           # TypeScript interfaces
 │   └── utils/
@@ -96,49 +103,54 @@ browser-agent/
 **What it does**: Parses command line arguments, runs the agent.
 
 ```typescript
-// User runs: npm run start -- https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy --headless
+// User runs: npm run start -- https://www.example.com --headless
 
 // cli.ts does:
 1. Parse URLs from arguments
-2. Parse options (--headless, --timeout, --verbose)
-3. Create BrowserAgent instance
-4. Call agent.processUrl() for each URL
+2. Parse options (--headless, --timeout, --verbose, --vision-agent)
+3. Create CROAgent instance
+4. Call agent.analyze() for each URL
 5. Print formatted results
-6. Clean up and exit
+6. Exit
 ```
 
 **Key code**:
 ```typescript
-const agent = new BrowserAgent({ browser: { headless, timeout } });
-const result = await agent.processUrl(url);
-console.log(agent.formatResult(result));
-await agent.close();
+const agent = new CROAgent({ maxSteps: 10 });
+const result = await agent.analyze(url, { browserConfig, verbose });
+console.log(formatter.formatAnalysisResult(result));
 ```
 
 ---
 
-### 2. Orchestrator: `src/index.ts`
+### 2. CRO Agent: `src/agent/cro-agent.ts`
 
-**What it does**: Coordinates all modules. Main brain of the app.
+**What it does**: Orchestrates CRO analysis with iterative agent loop.
 
 **Flow**:
 ```typescript
-async processUrl(url: string) {
-  // Step 1: Launch browser (if not already running)
+async analyze(url: string, options) {
+  // Step 1: Launch browser
   await this.browserManager.launch();
 
   // Step 2: Load the page
   const pageLoad = await this.pageLoader.load(url);
   if (!pageLoad.success) return error;
 
-  // Step 3: Extract headings
-  const extraction = await this.headingExtractor.extract(page);
+  // Step 3: Extract CRO DOM elements
+  const domTree = await this.domExtractor.extract(page);
 
-  // Step 4: Process with AI
-  const processing = await this.langchainProcessor.analyze(extraction);
+  // Step 4: Run heuristic analysis
+  const heuristicInsights = await this.heuristicEngine.analyze(domTree);
 
-  // Step 5: Return combined result
-  return { success: true, pageLoad, extraction, processing };
+  // Step 5: LLM-guided tool execution loop
+  while (step < maxSteps && !done) {
+    const toolCall = await this.llm.invoke(messages);
+    const result = await this.toolExecutor.execute(toolCall);
+  }
+
+  // Step 6: Generate hypotheses and scores
+  return { insights, hypotheses, scores };
 }
 ```
 
@@ -199,32 +211,23 @@ class PageLoader {
 
 ---
 
-### 4. Extraction Module: `src/extraction/heading-extractor.ts`
+### 4. DOM Extraction: `src/browser/dom/extractor.ts`
 
-**What it does**: Finds all h1-h6 elements, extracts text and level.
+**What it does**: Extracts CRO-relevant DOM elements (CTAs, forms, trust signals, etc.)
 
 ```typescript
-class HeadingExtractor {
+class DOMExtractor {
   async extract(page: Page) {
-    // Find all heading elements
-    const headings = await page.locator('h1, h2, h3, h4, h5, h6').all();
-
-    const results = [];
-    for (const element of headings) {
-      const tagName = await element.evaluate(el => el.tagName); // "H1", "H2", etc.
-      const text = await element.textContent();
-
-      results.push({
-        level: parseInt(tagName[1]),  // 1, 2, 3, 4, 5, or 6
-        text: text.trim(),
-        index: results.length
-      });
-    }
+    // Extract CRO-relevant elements
+    const elements = await page.evaluate(() => {
+      // Find CTAs, forms, trust signals, value props, navigation
+      return buildDOMTree(document.body);
+    });
 
     return {
-      headings: results,
-      totalCount: results.length,
-      countByLevel: { 1: X, 2: Y, ... }  // Summary
+      elements,
+      totalCount: elements.length,
+      byCategory: { ctas: X, forms: Y, ... }
     };
   }
 }
@@ -232,54 +235,18 @@ class HeadingExtractor {
 
 ---
 
-### 5. LangChain Module: `src/langchain/processor.ts`
+### 5. Output Module: `src/output/agent-progress-formatter.ts`
 
-**What it does**: Sends headings to GPT-4o-mini, gets structured insights.
-
-```typescript
-class LangChainProcessor {
-  async analyze(extraction: ExtractionResult) {
-    // Create prompt with heading data
-    const prompt = `Analyze these headings from a webpage:
-      Total: ${extraction.totalCount}
-      Headings: ${JSON.stringify(extraction.headings)}
-
-      Provide:
-      1. Brief summary
-      2. Content categories
-      3. 3-5 insights about structure`;
-
-    // Send to OpenAI
-    const model = new ChatOpenAI({ model: 'gpt-4o-mini' });
-    const response = await model.invoke(prompt);
-
-    // Parse and return structured result
-    return {
-      summary: "...",
-      categories: ["...", "..."],
-      insights: ["...", "...", "..."]
-    };
-  }
-}
-```
-
----
-
-### 6. Output Module: `src/output/formatter.ts`
-
-**What it does**: Formats results into readable console output.
+**What it does**: Formats CRO analysis results into readable console output.
 
 ```typescript
-class ResultFormatter {
-  formatResult(result: AgentResult): string {
-    // Creates box-drawing output like:
-    // ┌──────────────────────────────────┐
-    // │     BROWSER AGENT RESULTS        │
-    // ├──────────────────────────────────┤
-    // │ URL: https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy         │
-    // │ Status: SUCCESS                  │
-    // │ Headings: 39                     │
-    // └──────────────────────────────────┘
+class AgentProgressFormatter {
+  formatAnalysisResult(result: CROAnalysisResult): string {
+    // Creates formatted output with:
+    // - CRO scores by category
+    // - Top insights with severity
+    // - A/B test hypotheses
+    // - Recommendations
   }
 }
 ```

@@ -25,6 +25,7 @@ export interface ToolResult {
  * Categories:
  * - Analysis tools: Examine elements, return CROInsight[]
  * - Navigation tools: Change page state, return no insights
+ * - Collection tools: CR-001-B unified vision integration
  * - Control tools: Agent state management
  */
 export const CROActionNames = [
@@ -39,6 +40,9 @@ export const CROActionNames = [
   'scroll_page',
   'click', // Added Phase 17
   'go_to_url',
+  // Collection tools (CR-001-B)
+  'capture_viewport',
+  'collection_done',
   // Control tools
   'record_insight', // Added Phase 17
   'done',

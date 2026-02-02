@@ -271,6 +271,104 @@ describe('EvidenceSchema', () => {
     const result = EvidenceSchema.safeParse(evidence);
     expect(result.success).toBe(true);
   });
+
+  // Phase 21h: Evidence Capture Tests
+  describe('Phase 21h evidence fields', () => {
+    it('should accept evidence with viewportIndex', () => {
+      const evidence = {
+        text: 'Some text',
+        viewportIndex: 0,
+      };
+
+      const result = EvidenceSchema.safeParse(evidence);
+      expect(result.success).toBe(true);
+    });
+
+    it('should accept evidence with timestamp', () => {
+      const evidence = {
+        text: 'Some text',
+        timestamp: Date.now(),
+      };
+
+      const result = EvidenceSchema.safeParse(evidence);
+      expect(result.success).toBe(true);
+    });
+
+    it('should accept evidence with domElementRefs', () => {
+      const evidence = {
+        text: 'Some text',
+        domElementRefs: [
+          { index: 0, elementType: 'button', textContent: 'Add to Bag' },
+          { index: 5, elementType: 'cta', selector: '.cta-primary' },
+        ],
+      };
+
+      const result = EvidenceSchema.safeParse(evidence);
+      expect(result.success).toBe(true);
+    });
+
+    it('should accept evidence with boundingBox', () => {
+      const evidence = {
+        text: 'Some text',
+        boundingBox: {
+          x: 100,
+          y: 200,
+          width: 150,
+          height: 50,
+          viewportIndex: 0,
+        },
+      };
+
+      const result = EvidenceSchema.safeParse(evidence);
+      expect(result.success).toBe(true);
+    });
+
+    it('should accept evidence with all Phase 21h fields', () => {
+      const evidence = {
+        text: 'CTA button observed at position',
+        selector: '.cta-primary',
+        viewportIndex: 2,
+        timestamp: 1706659200000,
+        domElementRefs: [
+          { index: 3, elementType: 'button', textContent: 'Add to Bag', xpath: '/html/body/button[1]' },
+        ],
+        boundingBox: {
+          x: 120,
+          y: 450,
+          width: 200,
+          height: 60,
+          viewportIndex: 2,
+        },
+      };
+
+      const result = EvidenceSchema.safeParse(evidence);
+      expect(result.success).toBe(true);
+    });
+
+    it('should reject evidence with invalid domElementRefs (missing required fields)', () => {
+      const evidence = {
+        domElementRefs: [
+          { index: 0 }, // Missing elementType
+        ],
+      };
+
+      const result = EvidenceSchema.safeParse(evidence);
+      expect(result.success).toBe(false);
+    });
+
+    it('should reject evidence with invalid boundingBox (missing required fields)', () => {
+      const evidence = {
+        boundingBox: {
+          x: 100,
+          y: 200,
+          // Missing width, height, viewportIndex
+        },
+      };
+
+      const result = EvidenceSchema.safeParse(evidence);
+      expect(result.success).toBe(false);
+    });
+  });
 });
 
 describe('CROActionNames', () => {
@@ -286,9 +384,9 @@ describe('CROActionNames', () => {
     expect(CROActionNames).toContain('done');
   });
 
-  it('should have exactly 11 action names', () => {
-    // 6 analysis + 3 navigation + 2 control = 11
-    expect(CROActionNames.length).toBe(11);
+  it('should have exactly 13 action names', () => {
+    // 6 analysis + 3 navigation + 2 collection + 2 control = 13
+    expect(CROActionNames.length).toBe(13);
   });
 });
 

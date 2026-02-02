@@ -1,7 +1,7 @@
 # Quickstart: Browser Agent Core
 
 **Feature**: `001-browser-agent-core`
-**Last Updated**: 2026-01-05
+**Last Updated**: 2026-01-30
 
 ---
 
@@ -15,13 +15,39 @@ Read specs/001-browser-agent-core/quickstart.md to get the complete project cont
 
 ## Session Bootstrap (READ THIS FIRST)
 
-**Status**: Phase 21 Complete ✅ | Phase 20 Planned 📋
-- Completed: 267/339 tasks (Phases 1-19, 12b, 12c, 21 complete)
-- Phase 21a: PageType Detection Foundation - 8/8 tasks complete ✅
-- Phase 21b: Heuristics Knowledge Base - 14/14 tasks complete ✅
-- Phase 21c: CRO Vision Analyzer - 7/7 tasks complete ✅
-- Phase 21d: Integration - 7/7 tasks complete ✅
-- Phase 20: Unified Extraction Pipeline - 58 tasks planned
+**Status**: CR-001 Architecture Refactor ✅ | Phase 21h ✅ | Phase 21i ✅ | Phase 21j ⏳ IN PROGRESS (6/8)
+- Completed: 431 tasks (Phases 1-19, 12b, 12c, 21a-21j core, CR-001 complete)
+- **CR-001 COMPLETE** (2026-01-30):
+  - ✅ Merged Vision Agent into CRO Agent (single agent loop)
+  - ✅ Removed redundant vision modes (--vision, --full-page-vision, --full-page-screenshot)
+  - ✅ Only `--vision-agent` remains as the ONE vision mode
+  - ✅ Analysis happens AFTER data collection (category-based LLM calls)
+  - Phase 20 (60 tasks) deferred to backlog
+- **Phase 21h COMPLETE** (2026-01-30):
+  - ✅ Evidence capture: viewportIndex, timestamp, screenshotRef, domElementRefs, boundingBox
+  - ✅ Bounding box extraction via Playwright element.boundingBox()
+  - ✅ CLI: --save-evidence, --evidence-dir flags
+- **Phase 21j IN PROGRESS** (2026-02-02): CLI Vision Agent Fix
+  - ✅ T383: Refactored processVisionAgentMode() to use CROAgent unified mode
+  - ✅ T384: CROAgent now returns snapshots in result
+  - ✅ T385: Console shows DOM-Screenshot mapping proof
+  - ✅ T386: Evidence saving works with CROAgent result
+  - ✅ T387: Verbose logging for collection phase
+  - ✅ T388: Updated help text for --vision-agent
+  - 📋 T389-T390: Integration tests (pending)
+
+**Current Focus**:
+- Phase 21k: Deterministic Full-Page Collection (7 tasks) 📋 **NEXT** - Replace LLM-guided collection
+- Phase 21j: CLI Vision Agent Fix (6/8 tasks) ⏳ **IN PROGRESS** - Integration tests remaining
+- Phase 22: New Page Type Knowledge Bases (~38 tasks) 📋 **PLANNED**
+
+**Phase 21k Priority** (blocking issue):
+- Current collection is LLM-guided → only 2-3 viewports captured
+- Fix: Programmatic scrolling based on page height calculation
+- See: `plan/phase-21k.md` and `tasks/phase-21k.md`
+
+**Deferred**:
+- Phase 20: Hybrid Extraction Pipeline (60 tasks) - moved to backlog
 
 **Progress**:
 - Phase 1-12: MVP infrastructure ✅
@@ -55,24 +81,51 @@ Read specs/001-browser-agent-core/quickstart.md to get the complete project cont
 - **Phase 21b-d: PDP Heuristic Rules** 📋 (42 tasks, 70+ tests planned)
 
 **Architecture**:
-- MVP: 5 modules (browser, extraction, langchain, output, orchestrator)
-- CRO Agent: +7 modules (agent, dom, tools, heuristics, models, output extensions, score-calculator)
-- Phase 19: +1 module (coverage-tracker for 100% page coverage)
-- Phase 20 (planned): Hybrid extraction (framework-agnostic selectors + LLM classification)
-- Phase 21 (complete): +2 modules (knowledge base + vision analyzer for CRO heuristics)
 
-**Key insight**: Phase 20 implements a hybrid detection approach: framework-agnostic selectors (semantic HTML, text patterns, ARIA) catch ~70% of elements for free, LLM classification catches the remaining ~25% for ~$0.01-0.02/page. Phase 21's vision analysis provides UX-level insights. Together they achieve 95%+ element detection accuracy on any CSS framework.
+*Module Definition*: A module is a distinct `src/` subdirectory with an `index.ts` barrel export.
 
-**Current milestone**: Phase 21 Complete ✅ - Vision-based CRO analysis fully integrated
+| Module | Path | Files | Purpose |
+|--------|------|-------|---------|
+| agent | `src/agent/` | 8+ | CRO Agent core (state, messages, prompts) |
+| agent/vision | `src/agent/vision/` | 6+ | Vision Agent (@deprecated, merged) |
+| agent/tools | `src/agent/tools/` | 10+ | Agent tool implementations |
+| browser | `src/browser/` | 5+ | Playwright browser lifecycle |
+| browser/dom | `src/browser/dom/` | 4+ | DOM extraction and serialization |
+| detection | `src/detection/` | 2+ | Framework detection utilities |
+| heuristics | `src/heuristics/` | 8+ | Heuristic engine core |
+| heuristics/knowledge | `src/heuristics/knowledge/` | 12+ | PDP knowledge base JSONs |
+| heuristics/rules | `src/heuristics/rules/` | 11+ | H001-H010 rule implementations |
+| heuristics/vision | `src/heuristics/vision/` | 6+ | Vision analyzer components |
+| models | `src/models/` | 10+ | Zod schemas and types |
+| output | `src/output/` | 6+ | Report generation, JSON export |
+| prompts | `src/prompts/` | 3+ | Prompt templates (markdown) |
+| types | `src/types/` | 2+ | Shared TypeScript types |
+| utils | `src/utils/` | 2+ | Shared utilities |
+
+**Total**: 14 modules with index.ts exports (17 including submodules)
+
+**Key insight**: The unified CRO Agent (CR-001) uses a three-phase approach: (1) Data Collection captures DOM + screenshots across the full page, (2) Analysis runs category-based LLM calls against heuristics knowledge base, (3) Output generates insights, hypotheses, and A/B test ideas. Vision analysis provides UX-level insights. Phase 21i's DOM-Screenshot mapping will enable verification of LLM observations against actual element positions.
+
+**Current milestone**: CR-001 ✅ Complete | Phase 21h 📋 Next - Evidence Capture | Phase 21i 📋 Planned - DOM-Screenshot Mapping
 
 **Instructions**: Keep it concise. Compromise on grammar. Clear, to the point. No fluff.
 
 **Context Window Management** (CRITICAL):
+- **Task limit**: 1-5 tasks per session (optimal context usage)
 - Monitor context usage throughout session
 - Optimal range: 40%-60% utilization
 - At 60%: Update SESSION-HANDOFF.md with current progress and request new session
 - Never exceed 70%: LLM performance degrades significantly
 - Always include handoff details before ending session
+
+**Session Chunking** (see SESSION-HANDOFF.md for full breakdown):
+- Session 1: T500-T504 (CR-001-A: Remove vision modes)
+- Session 2: T505-T509 (CR-001-B Part 1)
+- Session 3: T510-T514 (CR-001-B Part 2)
+- Session 4-5: T515-T522 (CR-001-C: Analysis refactor)
+- Session 6-7: T353-T365 (Phase 21h: Evidence)
+- Session 8-10: T366-T382 (Phase 21i: Mapping)
+- Session 11-14: T400-T437 (Phase 22: Knowledge bases)
 
 **Excluded folders** (DO NOT analyze unless explicitly requested):
 - `browser-use/` - Reference codebase only (545 files), not part of this project
@@ -164,14 +217,14 @@ For any feature/bug fix request:
 | File | Purpose |
 |------|---------|
 | `src/cli.ts` | CLI entry point |
-| `src/index.ts` | BrowserAgent orchestrator |
+| `src/index.ts` | Main exports |
+| `src/agent/cro-agent.ts` | CRO Agent orchestrator |
 | `src/browser/browser-manager.ts` | Playwright lifecycle |
 | `src/browser/page-loader.ts` | URL navigation, hybrid wait strategy |
 | `src/browser/dom/extractor.ts` | CRO DOM extraction |
 | `src/browser/dom/serializer.ts` | DOM to LLM format with token budget |
 | `src/models/` | Zod schemas for agent state, insights, output |
-| `src/langchain/processor.ts` | GPT-4o-mini processing |
-| `src/output/formatter.ts` | Console output formatting |
+| `src/output/agent-progress-formatter.ts` | Console output formatting |
 | `src/browser/cookie-handler.ts` | Cookie consent popup dismissal |
 
 ### Design documentation
@@ -186,32 +239,40 @@ For any feature/bug fix request:
 
 ### Recent Changes (keep last 3)
 
-**1. Phase 21d: Vision Integration** - ✅ COMPLETE (2026-01-06)
-- **Purpose**: Integrate GPT-4o Vision analysis into CRO Agent and CLI
-- **Components**:
-  - src/models/page-state.ts - Added visionAnalysis and screenshotBase64 fields
-  - src/agent/cro-agent.ts - Full vision integration (page type detection, screenshot, analysis)
-  - src/cli.ts - --vision, --no-vision, --vision-model flags
-  - src/output/agent-progress-formatter.ts - formatVisionSummary() for console output
-  - tests/integration/vision-analysis.test.ts - 14 integration tests
-  - tests/e2e/vision-analysis-workflow.test.ts - 16 E2E tests
-- **Key Features**:
-  - Automatic page type detection (pdp supported, others skip vision)
-  - Screenshot capture via Playwright page.screenshot()
-  - Vision analysis with gpt-4o or gpt-4o-mini models
-  - Results included in CROAnalysisResult.visionInsights
-  - Color-coded terminal output with severity breakdown
-- **Tasks**: T314-T320 complete (7 tasks, 44+ tests)
-- **CLI**: `npm run start -- --vision https://example.com/product`
+**0. Phase 21j: CLI Vision Agent Fix** - ⏳ IN PROGRESS (2026-02-02)
+- **Purpose**: Fix CLI --vision-agent to use unified CROAgent instead of deprecated VisionAgent
+- **Bug Fixed**: CLI now uses CROAgent with unified mode:
+  - ✅ Enforces full-page coverage (scrolls entire page)
+  - ✅ Captures DOM + screenshots at each viewport
+  - ✅ Shows DOM-Screenshot mapping proof in console
+  - ✅ Evidence saving works correctly
+- **Key Changes**:
+  - `src/cli.ts` - processVisionAgentMode() now uses CROAgent
+  - `src/agent/cro-agent.ts` - Added snapshots to CROAnalysisResult
+  - `src/heuristics/vision/types.ts` - Added coveragePercent to summary
+- **Tasks**: T383-T388 complete (6/8), T389-T390 integration tests pending
 
-**2. Phase 21c: CRO Vision Analyzer** - ✅ COMPLETE (2026-01-05)
-- **Purpose**: GPT-4o Vision integration to analyze screenshots against Baymard heuristics
-- **Tasks**: T307-T313 complete (7 tasks, 44 tests)
+**1. Phase 21h: Evidence Capture** - ✅ COMPLETE (2026-01-30)
+- **Purpose**: Capture and store evidence for each heuristic evaluation
+- **5 Evidence Fields**: viewportIndex, screenshotRef, domElementRefs, boundingBox, timestamp
+- **CLI Flags**: `--save-evidence`, `--evidence-dir <path>`
+- **Key Files Modified**:
+  - `src/output/agent-progress-formatter.ts` - Display evidence fields
+  - `src/agent/vision/vision-prompt-builder.ts` - elementIndices instruction
+  - `src/agent/vision/tools/capture-viewport-tool.ts` - Bounding box extraction
+  - `src/agent/vision/vision-state-manager.ts` - Evidence attachment
+- **Tasks**: 14 tasks, ~49 tests
 
-**3. Phase 21b: Heuristics Knowledge Base** - ✅ COMPLETE (2026-01-05)
-- **Purpose**: Store 35 PDP heuristics from Baymard Institute research in structured JSON
-- **Tasks**: T293-T306 complete (14 tasks, 25 tests)
-- **Key Files**: src/heuristics/knowledge/pdp/*.json (10 category files)
+**2. Phase 21i: DOM-Screenshot Mapping** - ✅ COMPLETE (2026-02-02)
+- **Purpose**: Coordinate mapping between DOM elements and screenshot positions
+- **Key Features**: Coordinate transformation, element visibility, screenshot annotation
+- **CLI Flags**: `--annotate-screenshots`
+- **Key Files Created**:
+  - `src/output/screenshot-annotator.ts` - SVG overlay annotation with sharp
+  - `src/browser/dom/coordinate-mapper.ts` - Page to screenshot coordinate transform
+  - `tests/unit/screenshot-annotator.test.ts` - 27 unit tests
+  - `tests/integration/dom-screenshot-mapping.test.ts` - 19 integration tests
+- **Tasks**: 17 tasks, ~158 tests
 
 ---
 
@@ -219,7 +280,15 @@ For any feature/bug fix request:
 
 | Change | Phase | Tasks | CLI Milestone | Status |
 |--------|-------|-------|---------------|--------|
-| **Vision-Based CRO Heuristics** | 21 | T285-T320 | `--vision` | ✅ |
+| **Architecture Simplification** | CR-001 | 23 | Merge agents, remove modes | ✅ COMPLETE |
+| **Page Type Knowledge Bases** | 22 | ~38 | PLP, Homepage, Cart, Checkout, Generic | 📋 PLANNED |
+| **DOM-Screenshot Mapping** | 21i | 17 | `--annotate-screenshots` | 📋 PLANNED |
+| **Evidence Capture** | 21h | 14 | `--save-evidence` | ✅ COMPLETE |
+| ~~Vision Agent Loop (standalone)~~ | ~~21g~~ | ~~18~~ | - | ✅ MERGED (CR-001) |
+| ~~Full-Page Screenshot Mode~~ | ~~21f~~ | ~~6~~ | ~~`--full-page-screenshot`~~ | ✅ REMOVED (CR-001) |
+| ~~Multi-Viewport Full-Page Vision~~ | ~~21e~~ | ~~8~~ | ~~`--full-page-vision`~~ | ✅ REMOVED (CR-001) |
+| ~~Single Viewport Vision~~ | ~~21d~~ | ~~7~~ | ~~`--vision`~~ | ✅ REMOVED (CR-001) |
+| **Hybrid Extraction Pipeline** | 20 | 60 | - | 📋 DEFERRED |
 | **PageType Detection** | 21a | T285-T292 | - | ✅ |
 | **Heuristics Knowledge Base** | 21b | T293-T306 | - | ✅ |
 | **CRO Vision Analyzer** | 21c | T307-T313 | - | ✅ |
@@ -258,14 +327,18 @@ Phase 14b: npm run start -- --cro-extract https://carwale.com           ✅
 Phase 15b: npm run start -- --cro-extract --tool analyze_ctas https://carwale.com  ✅
 Phase 16-CLI: npm run start -- --analyze --max-steps 5 https://carwale.com  ✅
 Phase 18-CLI: npm run start -- https://carwale.com  (CRO analysis as default)  ✅
-            npm run start -- https://carwale.com --output-format markdown --output-file report.md  ✅
-            npm run start -- --legacy https://carwale.com  (old heading mode)  ✅
 Phase 19-CLI: npm run start -- --scan-mode=full_page https://carwale.com  ✅ (100% coverage)
-            npm run start -- --scan-mode=above_fold https://carwale.com  ✅ (faster)
-            npm run start -- --scan-mode=llm_guided https://carwale.com  ✅ (original)
-Phase 21-CLI: npm run start -- --vision https://example.com/product  (GPT-4o vision analysis)  ✅
-            npm run start -- --no-vision https://example.com  (disable vision)  ✅
-            npm run start -- --vision-model gpt-4o-mini https://example.com  ✅
+
+# SIMPLIFIED VISION CLI (after CR-001 implementation):
+Phase 21g-CLI: npm run start -- --vision-agent https://example.com/product  ✅ (THE ONE MODE)
+            npm run start -- --vision-agent --vision-model gpt-4o https://example.com  ✅
+Phase 21h-CLI: npm run start -- --vision-agent --save-evidence https://example.com  📋 (NOT YET IMPLEMENTED)
+            npm run start -- --vision-agent --evidence-dir ./reports https://example.com  📋 (NOT YET IMPLEMENTED)
+Phase 21i-CLI: npm run start -- --vision-agent --save-evidence --annotate-screenshots https://example.com  ✅
+
+# REMOVED FLAGS (after CR-001):
+# --vision, --vision-only, --full-page-vision, --full-page-screenshot
+# --vision-max-viewports, --no-parallel-vision
 ```
 
 ---
@@ -344,11 +417,18 @@ npm run start -- https://www.peregrineclothing.co.uk/collections/polo-shirts/pro
 ### Programmatic Usage
 
 ```typescript
-import { BrowserAgent } from './src';
+import { CROAgent } from './src/agent';
 
 async function main(): Promise<void> {
-  const agent = new BrowserAgent({
-    browser: {
+  const agent = new CROAgent({
+    maxSteps: 10,
+    actionWaitMs: 500,
+    llmTimeoutMs: 60000,
+    failureLimit: 3,
+  });
+
+  const result = await agent.analyze('https://www.example.com/product', {
+    browserConfig: {
       headless: false,      // Visible browser
       timeout: 60000,       // 60 second timeout
       browserType: 'chromium',
@@ -356,25 +436,15 @@ async function main(): Promise<void> {
       postLoadWait: 5000,   // Wait up to 5s for JS to render after load
       dismissCookieConsent: true  // Auto-dismiss cookie popups (default: true)
     },
-    processing: {
-      model: 'gpt-4o',
-      maxTokens: 1000,
-      temperature: 0.3
-    },
     verbose: true
   });
 
-  try {
-    const result = await agent.processUrl('https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy');
-
-    if (result.success) {
-      console.log('Headings:', result.extraction?.headings);
-      console.log('Insights:', result.processing?.insights);
-    } else {
-      console.error('Failed:', result.error);
-    }
-  } finally {
-    await agent.close();
+  if (result.success) {
+    console.log('Insights:', result.insights);
+    console.log('Hypotheses:', result.hypotheses);
+    console.log('Scores:', result.scores);
+  } else {
+    console.error('Failed:', result.errors);
   }
 }
 
@@ -393,52 +463,12 @@ async function loadPage(): Promise<void> {
   await browser.launch();
 
   const loader = new PageLoader(browser.getPage(), { timeout: 60000 });
-  const result = await loader.load('https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy');
+  const result = await loader.load('https://www.example.com');
 
   console.log('Title:', result.title);
   console.log('Success:', result.success);
 
   await browser.close();
-}
-```
-
-### Extraction Module Only
-
-```typescript
-import { HeadingExtractor } from './src/extraction';
-import { Page } from 'playwright';
-
-async function extractHeadings(page: Page): Promise<void> {
-  const extractor = new HeadingExtractor();
-  const result = await extractor.extract(page);
-
-  console.log('Total headings:', result.totalCount);
-  console.log('By level:', result.countByLevel);
-
-  result.headings.forEach(h => {
-    console.log(`  [h${h.level}] ${h.text}`);
-  });
-}
-```
-
-### LangChain Module Only
-
-```typescript
-import { LangChainProcessor } from './src/langchain';
-import { ExtractionResult } from './src/types';
-
-async function processWithAI(extraction: ExtractionResult): Promise<void> {
-  const processor = new LangChainProcessor({
-    model: 'gpt-4o',
-    maxTokens: 1000,
-    temperature: 0.3
-  });
-
-  const result = await processor.analyze(extraction);
-
-  console.log('Summary:', result.summary);
-  console.log('Categories:', result.categories);
-  console.log('Insights:', result.insights);
 }
 ```
 

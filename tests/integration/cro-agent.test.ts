@@ -2,6 +2,7 @@
  * CROAgent Integration Tests
  *
  * Phase 16 (T086): Integration tests for CROAgent with mock LLM.
+ * T513: Added tests for CR-001-B unified collection/analysis mode.
  * Tests agent loop completion, state management, and failure handling.
  */
 
@@ -12,8 +13,9 @@ import { MessageManager } from '../../src/agent/message-manager.js';
 import { StateManager } from '../../src/agent/state-manager.js';
 import { ToolRegistry, ToolExecutor } from '../../src/agent/tools/index.js';
 import type { Tool } from '../../src/agent/tools/index.js';
-import type { PageState, CROMemory, DOMTree, CROAgentOutput } from '../../src/models/index.js';
+import type { PageState, CROMemory, DOMTree, CROAgentOutput, ViewportSnapshot } from '../../src/models/index.js';
 import { parseAgentOutput } from '../../src/models/index.js';
+import type { HeuristicCategory } from '../../src/heuristics/knowledge/index.js';
 
 // Mock DOM tree
 const createMockDOMTree = (): DOMTree => ({
@@ -469,6 +471,247 @@ describe('CROAgent Integration', () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('Tool execution failed');
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CR-001-B: Unified Collection + Analysis Mode Tests (T513)
+  // ═══════════════════════════════════════════════════════════════════════════
+  describe('CR-001-B: Unified Collection/Analysis Mode', () => {
+    // Create mock viewport snapshot
+    const createMockSnapshot = (index: number, scrollY: number): ViewportSnapshot => ({
+      viewportIndex: index,
+      scrollPosition: scrollY,
+      screenshot: {
+        base64: 'mockBase64ImageData',
+        capturedAt: Date.now(),
+      },
+      dom: {
+        serialized: `[${index}] <button> "Shop Now" [cta]`,
+        elementCount: 5,
+      },
+    });
+
+    // Create mock heuristic category
+    const createMockCategory = (): HeuristicCategory => ({
+      name: 'Imagery',
+      description: 'Product imagery best practices',
+      heuristics: [
+        {
+          id: 'PDP-IMAGERY-001',
+          principle: 'Primary product image should be large and high quality',
+          checkpoints: ['Check image size', 'Check image quality'],
+          severity: 'high',
+          category: 'Imagery',
+        },
+        {
+          id: 'PDP-IMAGERY-002',
+          principle: 'Multiple product angles should be available',
+          checkpoints: ['Check for multiple images'],
+          severity: 'medium',
+          category: 'Imagery',
+        },
+      ],
+    });
+
+    // Test 19: StateManager tracks viewport snapshots
+    it('should track viewport snapshots in state manager (T513)', () => {
+      const stateManager = new StateManager();
+
+      const snapshot1 = createMockSnapshot(0, 0);
+      const snapshot2 = createMockSnapshot(1, 720);
+      const snapshot3 = createMockSnapshot(2, 1440);
+
+      stateManager.addViewportSnapshot(snapshot1);
+      stateManager.addViewportSnapshot(snapshot2);
+      stateManager.addViewportSnapshot(snapshot3);
+
+      const snapshots = stateManager.getViewportSnapshots();
+      expect(snapshots).toHaveLength(3);
+      expect(snapshots[0].scrollPosition).toBe(0);
+      expect(snapshots[1].scrollPosition).toBe(720);
+      expect(snapshots[2].scrollPosition).toBe(1440);
+    });
+
+    // Test 20: StateManager tracks agent phase transitions
+    it('should track agent phase transitions (T513)', () => {
+      const stateManager = new StateManager();
+
+      // Should start in collection phase by default (after enabling unified mode)
+      expect(stateManager.getPhase()).toBe('collection');
+
+      // Transition to analysis phase
+      stateManager.transitionToAnalysis();
+      expect(stateManager.getPhase()).toBe('analysis');
+
+      // Transition to output phase
+      stateManager.transitionToOutput();
+      expect(stateManager.getPhase()).toBe('output');
+    });
+
+    // Test 21: PromptBuilder builds collection phase prompts
+    it('should build collection phase system prompt (T513)', () => {
+      const registry = new ToolRegistry();
+      registry.register(createScrollTool());
+
+      // Register capture_viewport mock tool
+      const captureViewportTool: Tool = {
+        name: 'capture_viewport',
+        description: 'Capture viewport screenshot and DOM',
+        parameters: z.object({ reason: z.string() }),
+        execute: async () => ({ success: true, insights: [] }),
+      };
+      registry.register(captureViewportTool);
+
+      // Register collection_done mock tool
+      const collectionDoneTool: Tool = {
+        name: 'collection_done',
+        description: 'Signal collection is complete',
+        parameters: z.object({
+          summary: z.string(),
+          viewportCount: z.number(),
+          scrollCoverage: z.number(),
+        }),
+        execute: async () => ({ success: true, insights: [] }),
+      };
+      registry.register(collectionDoneTool);
+
+      const builder = new PromptBuilder(registry);
+      const collectionPrompt = builder.buildCollectionSystemPrompt();
+
+      expect(collectionPrompt).toContain('capture_viewport');
+      expect(collectionPrompt).toContain('collection_done');
+      expect(collectionPrompt).toContain('scroll_page');
+    });
+
+    // Test 22: PromptBuilder builds analysis phase prompts
+    it('should build analysis phase prompts with category (T513)', () => {
+      const registry = new ToolRegistry();
+      const builder = new PromptBuilder(registry);
+
+      const snapshots = [
+        createMockSnapshot(0, 0),
+        createMockSnapshot(1, 720),
+      ];
+      const category = createMockCategory();
+
+      const systemPrompt = builder.buildAnalysisSystemPrompt('pdp');
+      const userMessage = builder.buildAnalysisUserMessage(snapshots, category, 'pdp');
+
+      // System prompt should have analysis format
+      expect(systemPrompt).toContain('heuristic');
+      expect(systemPrompt).toContain('evaluation_format');
+
+      // User message should have DOM context, screenshots, and heuristics
+      expect(userMessage).toContain('dom_context');
+      expect(userMessage).toContain('screenshots');
+      expect(userMessage).toContain('heuristics');
+      expect(userMessage).toContain('PDP-IMAGERY-001');
+      expect(userMessage).toContain('PDP-IMAGERY-002');
+      expect(userMessage).toContain('Imagery');
+    });
+
+    // Test 23: MessageManager supports image content
+    it('should support image content in messages (T513)', () => {
+      const manager = new MessageManager('Test system prompt');
+
+      // Add text-only message
+      manager.addUserMessage('Text only message');
+      expect(manager.hasImages()).toBe(false);
+      expect(manager.getImageCount()).toBe(0);
+
+      // Add message with single image
+      manager.addUserMessageWithImage('Message with image', 'base64ImageData1');
+      expect(manager.hasImages()).toBe(true);
+      expect(manager.getImageCount()).toBe(1);
+
+      // Add message with multiple images
+      manager.addUserMessageWithImages('Message with multiple images', [
+        'base64ImageData2',
+        'base64ImageData3',
+      ]);
+      expect(manager.getImageCount()).toBe(3);
+
+      // Check token estimation includes images
+      const tokens = manager.estimateTokenCount();
+      expect(tokens).toBeGreaterThan(0);
+
+      // Check summary
+      const summary = manager.getMessageTypeSummary();
+      expect(summary.images).toBe(3);
+    });
+
+    // Test 24: MessageManager snapshot shows image info
+    it('should include image info in snapshot (T513)', () => {
+      const manager = new MessageManager('Test system prompt');
+      manager.addUserMessageWithImage('Test', 'imageData');
+
+      const snapshot = manager.snapshot();
+      expect(snapshot.imageCount).toBe(1);
+      expect(snapshot.messages[0].hasImage).toBe(true);
+    });
+
+    // Test 25: Collection user message includes snapshot progress
+    it('should include snapshot progress in collection message (T513)', () => {
+      const registry = new ToolRegistry();
+      const builder = new PromptBuilder(registry);
+
+      const state = createMockPageState();
+      const memory = createMockMemory();
+      const snapshots = [
+        createMockSnapshot(0, 0),
+        createMockSnapshot(1, 720),
+      ];
+
+      const message = builder.buildCollectionUserMessage(state, memory, snapshots);
+
+      expect(message).toContain('collection_status');
+      expect(message).toContain('Snapshots captured: 2');
+      expect(message).toContain('[0]');
+      expect(message).toContain('[1]');
+    });
+
+    // Test 26: Collection done transitions to analysis
+    it('should transition to analysis after collection done (T513)', async () => {
+      const registry = new ToolRegistry();
+      const stateManager = new StateManager();
+
+      const collectionDoneTool: Tool = {
+        name: 'collection_done',
+        description: 'Signal collection is complete',
+        parameters: z.object({
+          summary: z.string(),
+          viewportCount: z.number(),
+          scrollCoverage: z.number(),
+        }),
+        execute: async () => ({
+          success: true,
+          insights: [],
+          extracted: {
+            message: 'Collection complete',
+          },
+        }),
+      };
+      registry.register(collectionDoneTool);
+
+      const executor = new ToolExecutor(registry);
+      const mockPage = { url: () => 'https://example.com' } as any;
+
+      // Execute collection_done
+      const result = await executor.execute('collection_done', {
+        summary: 'Captured 3 viewports',
+        viewportCount: 3,
+        scrollCoverage: 100,
+      }, {
+        page: mockPage,
+        state: createMockPageState(),
+      });
+
+      expect(result.success).toBe(true);
+
+      // Simulate state transition
+      stateManager.transitionToAnalysis();
+      expect(stateManager.getPhase()).toBe('analysis');
     });
   });
 });

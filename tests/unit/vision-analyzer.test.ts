@@ -87,7 +87,7 @@ const mockLLMResponse = `{
 describe('Vision Analyzer - Types', () => {
   describe('DEFAULT_VISION_CONFIG', () => {
     it('should have correct default values', () => {
-      expect(DEFAULT_VISION_CONFIG.model).toBe('gpt-4o');
+      expect(DEFAULT_VISION_CONFIG.model).toBe('gpt-4o-mini');  // CR-001: Default is now gpt-4o-mini
       expect(DEFAULT_VISION_CONFIG.maxTokens).toBe(4096);
       expect(DEFAULT_VISION_CONFIG.temperature).toBe(0.1);
       expect(DEFAULT_VISION_CONFIG.includeObservations).toBe(true);
@@ -510,5 +510,182 @@ describe('Vision Analyzer - Integration with Knowledge Base', () => {
     const prompt = buildVisionPrompt(heuristics, mockViewport);
 
     expect(prompt).toContain('35 heuristics');
+  });
+});
+
+describe('Vision Analyzer - Evidence Field Mapping (Phase 21h)', () => {
+  // Import CROVisionAnalyzer
+  let CROVisionAnalyzer: any;
+
+  beforeAll(async () => {
+    const module = await import('../../src/heuristics/vision/analyzer.js');
+    CROVisionAnalyzer = module.CROVisionAnalyzer;
+  });
+
+  it('should map viewportIndex from evaluation to insight evidence', () => {
+    const analyzer = new CROVisionAnalyzer();
+
+    // Access private method via reflection for testing
+    const evaluationToInsight = (analyzer as any).evaluationToInsight.bind(analyzer);
+
+    const evaluation: HeuristicEvaluation = {
+      heuristicId: 'PDP-CTA-001',
+      principle: 'Primary CTA should be visible',
+      status: 'fail',
+      severity: 'critical',
+      observation: 'CTA is below the fold',
+      issue: 'Primary CTA requires scrolling',
+      recommendation: 'Move CTA above the fold',
+      confidence: 0.9,
+      viewportIndex: 2,
+    };
+
+    const insight = evaluationToInsight(evaluation);
+
+    expect(insight.evidence?.viewportIndex).toBe(2);
+    expect(insight.element).toBe('viewport_2');
+  });
+
+  it('should map timestamp from evaluation to insight evidence', () => {
+    const analyzer = new CROVisionAnalyzer();
+    const evaluationToInsight = (analyzer as any).evaluationToInsight.bind(analyzer);
+
+    const timestamp = 1706659200000;
+    const evaluation: HeuristicEvaluation = {
+      heuristicId: 'PDP-PRICE-001',
+      principle: 'Price should be visible',
+      status: 'pass',
+      severity: 'critical',
+      observation: 'Price is clearly visible',
+      confidence: 0.95,
+      timestamp,
+    };
+
+    const insight = evaluationToInsight(evaluation);
+
+    expect(insight.evidence?.timestamp).toBe(timestamp);
+  });
+
+  it('should map domElementRefs from evaluation to insight evidence', () => {
+    const analyzer = new CROVisionAnalyzer();
+    const evaluationToInsight = (analyzer as any).evaluationToInsight.bind(analyzer);
+
+    const domElementRefs = [
+      { index: 3, elementType: 'button', textContent: 'Add to Bag' },
+      { index: 5, elementType: 'cta', selector: '.cta-primary' },
+    ];
+
+    const evaluation: HeuristicEvaluation = {
+      heuristicId: 'PDP-CTA-002',
+      principle: 'CTA text should be action-oriented',
+      status: 'partial',
+      severity: 'high',
+      observation: 'CTA exists but text is vague',
+      confidence: 0.85,
+      domElementRefs,
+    };
+
+    const insight = evaluationToInsight(evaluation);
+
+    expect(insight.evidence?.domElementRefs).toEqual(domElementRefs);
+    expect(insight.evidence?.domElementRefs?.length).toBe(2);
+  });
+
+  it('should map boundingBox from evaluation to insight evidence', () => {
+    const analyzer = new CROVisionAnalyzer();
+    const evaluationToInsight = (analyzer as any).evaluationToInsight.bind(analyzer);
+
+    const boundingBox = {
+      x: 120,
+      y: 450,
+      width: 200,
+      height: 60,
+      viewportIndex: 1,
+    };
+
+    const evaluation: HeuristicEvaluation = {
+      heuristicId: 'PDP-LAYOUT-001',
+      principle: 'Product image should be prominent',
+      status: 'fail',
+      severity: 'high',
+      observation: 'Image is too small',
+      confidence: 0.88,
+      boundingBox,
+    };
+
+    const insight = evaluationToInsight(evaluation);
+
+    expect(insight.evidence?.boundingBox).toEqual(boundingBox);
+  });
+
+  it('should map all evidence fields together from evaluation to insight', () => {
+    const analyzer = new CROVisionAnalyzer();
+    const evaluationToInsight = (analyzer as any).evaluationToInsight.bind(analyzer);
+
+    const evaluation: HeuristicEvaluation = {
+      heuristicId: 'PDP-CTA-001',
+      principle: 'Primary CTA should be visible',
+      status: 'fail',
+      severity: 'critical',
+      observation: 'CTA button is below the fold at viewport 2',
+      issue: 'User must scroll to find Add to Bag button',
+      recommendation: 'Move primary CTA above the fold',
+      confidence: 0.92,
+      viewportIndex: 2,
+      timestamp: 1706659200000,
+      domElementRefs: [
+        { index: 7, elementType: 'button', textContent: 'Add to Bag', xpath: '/html/body/main/button[1]' },
+      ],
+      boundingBox: {
+        x: 350,
+        y: 1200,
+        width: 180,
+        height: 48,
+        viewportIndex: 2,
+      },
+    };
+
+    const insight = evaluationToInsight(evaluation);
+
+    // Verify all evidence fields are mapped
+    expect(insight.evidence?.text).toBe('CTA button is below the fold at viewport 2');
+    expect(insight.evidence?.viewportIndex).toBe(2);
+    expect(insight.evidence?.timestamp).toBe(1706659200000);
+    expect(insight.evidence?.domElementRefs).toHaveLength(1);
+    expect(insight.evidence?.domElementRefs?.[0].index).toBe(7);
+    expect(insight.evidence?.boundingBox?.x).toBe(350);
+    expect(insight.evidence?.boundingBox?.viewportIndex).toBe(2);
+
+    // Verify element field includes viewport info
+    expect(insight.element).toBe('viewport_2');
+  });
+
+  it('should handle evaluation without evidence fields gracefully', () => {
+    const analyzer = new CROVisionAnalyzer();
+    const evaluationToInsight = (analyzer as any).evaluationToInsight.bind(analyzer);
+
+    const evaluation: HeuristicEvaluation = {
+      heuristicId: 'PDP-DESC-001',
+      principle: 'Description should be scannable',
+      status: 'pass',
+      severity: 'medium',
+      observation: 'Description uses bullet points',
+      confidence: 0.9,
+      // No evidence fields
+    };
+
+    const insight = evaluationToInsight(evaluation);
+
+    // Should still have text from observation
+    expect(insight.evidence?.text).toBe('Description uses bullet points');
+
+    // Evidence fields should be undefined, not throw errors
+    expect(insight.evidence?.viewportIndex).toBeUndefined();
+    expect(insight.evidence?.timestamp).toBeUndefined();
+    expect(insight.evidence?.domElementRefs).toBeUndefined();
+    expect(insight.evidence?.boundingBox).toBeUndefined();
+
+    // Element should be default 'viewport'
+    expect(insight.element).toBe('viewport');
   });
 });

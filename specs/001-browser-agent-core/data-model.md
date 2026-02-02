@@ -1,7 +1,7 @@
 # Data Model: Browser Agent Core
 
 **Feature**: `001-browser-agent-core`
-**Last Updated**: 2025-12-16
+**Last Updated**: 2026-01-30
 
 ## Core Types
 
@@ -118,7 +118,7 @@ Configuration for LangChain processing.
  * Configuration for LangChain/OpenAI processing.
  */
 interface ProcessingConfig {
-  /** OpenAI model to use (default: 'gpt-4o') */
+  /** OpenAI model to use (default: 'gpt-4o-mini') */
   model: string;
 
   /** Maximum tokens for response */
@@ -311,7 +311,7 @@ const DEFAULT_BROWSER_CONFIG: BrowserConfig = {
 };
 
 const DEFAULT_PROCESSING_CONFIG: ProcessingConfig = {
-  model: 'gpt-4o',
+  model: 'gpt-4o-mini',
   maxTokens: 1000,
   temperature: 0.3      // Low temperature for consistent categorization
 };

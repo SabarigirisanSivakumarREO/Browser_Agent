@@ -22,8 +22,10 @@ import type {
   ScanMode,
   CoverageConfig,
   PageType,
+  ViewportSnapshot,
 } from '../models/index.js';
 import { DEFAULT_CRO_OPTIONS, parseAgentOutput, DEFAULT_COVERAGE_CONFIG } from '../models/index.js';
+import type { CaptureViewportResult } from './tools/cro/capture-viewport-tool.js';
 import { BrowserManager, PageLoader } from '../browser/index.js';
 import { DOMExtractor, DOMMerger } from '../browser/dom/index.js';
 import { ToolRegistry, ToolExecutor } from './tools/index.js';
@@ -39,13 +41,24 @@ import type { DEFAULT_BROWSER_CONFIG } from '../types/index.js';
 import {
   BusinessTypeDetector,
   createHeuristicEngine,
-  // Phase 21d: Vision analysis imports
+  // Phase 21d: Vision analysis imports (used internally, not exposed to CLI)
   createPageTypeDetector,
   createCROVisionAnalyzer,
   isPageTypeSupported,
   type CROVisionAnalysisResult,
   type CROVisionAnalyzerConfig,
+  // CR-001-C: Analysis orchestrator for category-based evaluation
+  createAnalysisOrchestrator,
+  type AnalysisResult,
+  // NOTE: Multi-viewport vision has been removed per CR-001
+  // Use --vision-agent mode for all vision analysis
 } from '../heuristics/index.js';
+
+// Phase 21g: Vision Agent imports
+import {
+  createVisionAgent,
+  type VisionAgentResult,
+} from './vision/index.js';
 import {
   InsightDeduplicator,
   InsightPrioritizer,
@@ -119,6 +132,12 @@ export interface CROAnalysisResult {
   pageType?: PageType;
   /** Vision analysis result (Phase 21d) */
   visionAnalysis?: CROVisionAnalysisResult;
+  /** Vision Agent result (Phase 21g) */
+  visionAgentResult?: VisionAgentResult;
+  /** CR-001-C: Unified analysis result from orchestrator */
+  unifiedAnalysisResult?: AnalysisResult;
+  /** Phase 21j: Viewport snapshots from unified collection phase */
+  snapshots?: ViewportSnapshot[];
   /** Generated A/B test hypotheses */
   hypotheses: Hypothesis[];
   /** CRO scores (overall and by category) */
@@ -147,6 +166,8 @@ export type OutputFormat = 'console' | 'markdown' | 'json' | 'all';
  * Options for CROAgent.analyze() method
  * Phase 19c: Added scanMode and coverageConfig
  * Phase 21d (T316): Added vision analysis options
+ * Phase 21e (T325): Added full-page vision options
+ * CR-001-B: Added unified mode options
  */
 export interface AnalyzeOptions {
   /** Override browser config (headless, timeout, etc.) */
@@ -167,10 +188,23 @@ export interface AnalyzeOptions {
   coverageConfig?: Partial<CoverageConfig>;
   /** Phase 21d: Enable vision analysis for supported page types (default: true) */
   useVisionAnalysis?: boolean;
-  /** Phase 21d: Vision model to use */
+  /** Vision model to use */
   visionModel?: 'gpt-4o' | 'gpt-4o-mini';
-  /** Phase 21d: Custom vision analyzer config */
+  /** Custom vision analyzer config */
   visionConfig?: Partial<CROVisionAnalyzerConfig>;
+  // NOTE: fullPageVision, visionMaxViewports, parallelVision have been removed per CR-001
+  // Use --vision-agent mode for all vision analysis
+  /** Enable Vision Agent mode with DOM + Vision parallel context (default: false) */
+  visionAgentMode?: boolean;
+  /** Maximum steps for Vision Agent (default: 20) */
+  visionAgentMaxSteps?: number;
+  // CR-001-B: Unified collection + analysis mode
+  /** Enable unified collection→analysis mode (default: false, uses legacy Vision Agent) */
+  enableUnifiedMode?: boolean;
+  /** Enable vision capture during collection (default: true when visionAgentMode is true) */
+  enableVision?: boolean;
+  /** Filter analysis to specific heuristic categories */
+  heuristicCategories?: string[];
 }
 
 /**
@@ -344,17 +378,26 @@ export class CROAgent {
       this.logExtractedElements(domTree, verbose);
 
       // ═══════════════════════════════════════════════════════════════════════════
-      // PHASE 21: VISION ANALYSIS (T315)
+      // PHASE 21: VISION ANALYSIS (T315, T325, T349)
       // ═══════════════════════════════════════════════════════════════════════════
       const useVision = analyzeOptions?.useVisionAnalysis ?? true;
+      const useVisionAgentMode = analyzeOptions?.visionAgentMode ?? false;
       let detectedPageType: PageType | undefined;
       let visionAnalysis: CROVisionAnalysisResult | undefined;
+      let visionAgentResult: VisionAgentResult | undefined;
       let visionInsights: CROInsight[] = [];
       let screenshotBase64: string | undefined;
+      // CR-001-C: Flag to skip agent loop when unified analysis completes
+      let unifiedAnalysisComplete = false;
+      // CR-001-C: Store unified analysis result for report metadata
+      let unifiedAnalysisResult: AnalysisResult | undefined;
+      // Phase 21j: Store collected snapshots for return
+      let collectedViewportSnapshots: ViewportSnapshot[] = [];
 
       if (useVision) {
+        const visionModeLabel = useVisionAgentMode ? 'VISION AGENT (DOM + VISION)' : 'SINGLE VIEWPORT';
         console.log('═'.repeat(80));
-        console.log('  PHASE 21: VISION ANALYSIS (GPT-4o)');
+        console.log(`  PHASE 21: VISION ANALYSIS (${visionModeLabel})`);
         console.log('═'.repeat(80));
 
         // 21a. Detect page type
@@ -382,62 +425,204 @@ export class CROAgent {
 
         // 21b. Check if vision analysis is supported for this page type
         if (isPageTypeSupported(detectedPageType)) {
-          console.log('\n  ┌─ PHASE 21b: Screenshot Capture ─────────────────────────────');
-          // Scroll to top for screenshot
-          await page.evaluate('window.scrollTo(0, 0)');
-          await this.sleep(300);
-
-          // Capture screenshot as base64
-          const screenshotBuffer = await page.screenshot({
-            type: 'png',
-            fullPage: false, // Capture viewport only for vision analysis
-          });
-          screenshotBase64 = screenshotBuffer.toString('base64');
-          console.log(`  │ ${c.success('✓')} Screenshot captured (${(screenshotBuffer.length / 1024).toFixed(1)}KB)`);
-          console.log(`  └${'─'.repeat(60)}`);
-
-          // 21c. Run vision analysis
-          console.log('\n  ┌─ PHASE 21c: Vision Analysis ────────────────────────────────');
-          const visionModel = analyzeOptions?.visionModel ?? 'gpt-4o';
-          const visionConfig = {
-            model: visionModel,
-            ...analyzeOptions?.visionConfig,
+          const viewport = {
+            width: viewportSize.width,
+            height: viewportSize.height,
+            deviceScaleFactor: 1,
+            isMobile: false,
           };
 
-          try {
-            const visionAnalyzer = createCROVisionAnalyzer(visionConfig);
-            const viewport = {
-              width: viewportSize.width,
-              height: viewportSize.height,
-              deviceScaleFactor: 1,
-              isMobile: false,
+          // Phase 21g / CR-001-B: Vision Agent mode (DOM + Vision parallel context)
+          // CR-001-B: Use unified collection + analysis flow when enableUnifiedMode is true
+          const useUnifiedMode = analyzeOptions?.enableUnifiedMode ?? false;
+
+          if (useVisionAgentMode) {
+            // CR-001-B: Unified collection + analysis flow
+            if (useUnifiedMode && isPageTypeSupported(detectedPageType)) {
+              console.log('\n  ┌─ CR-001-B: UNIFIED COLLECTION + ANALYSIS ─────────────────');
+              console.log(`  │ → Page Type: ${detectedPageType.toUpperCase()}`);
+
+              // Initialize components for collection
+              const registry = analyzeOptions?.registry ?? createCRORegistry();
+              const collectionStateManager = new StateManager(this.options, scanMode);
+              collectionStateManager.setPageHeight(pageHeight);
+
+              // Run collection phase
+              const collectedSnapshots = await this.runCollectionPhase(
+                page,
+                domTree,
+                url,
+                pageTitle,
+                collectionStateManager,
+                registry,
+                verbose
+              );
+
+              console.log(`  │ ${c.success('✓')} Collection complete: ${collectedSnapshots.length} snapshots`);
+
+              // Phase 21j: Store snapshots for return
+              collectedViewportSnapshots = collectedSnapshots;
+
+              // CR-001-C: Run category-based analysis on collected snapshots using orchestrator
+              if (collectedSnapshots.length > 0) {
+                console.log(`  │ → Running category-based analysis on collected snapshots...`);
+                const visionModel = analyzeOptions?.visionModel ?? 'gpt-4o-mini';
+
+                try {
+                  // Create analysis orchestrator with category filtering if specified
+                  const orchestrator = createAnalysisOrchestrator({
+                    analyzerConfig: { model: visionModel },
+                    includeCategories: analyzeOptions?.heuristicCategories,
+                    verbose,
+                  });
+
+                  // Run analysis across all categories
+                  const analysisResult = await orchestrator.runAnalysis(
+                    collectedSnapshots,
+                    detectedPageType
+                  );
+
+                  // Store results for return value
+                  visionInsights = analysisResult.insights;
+
+                  // Convert to CROVisionAnalysisResult format for compatibility
+                  visionAnalysis = {
+                    pageType: detectedPageType,
+                    analyzedAt: analysisResult.analyzedAt,
+                    screenshotUsed: true,
+                    viewport,
+                    evaluations: analysisResult.evaluations,
+                    insights: analysisResult.insights,
+                    summary: analysisResult.summary,
+                  };
+
+                  const { summary } = analysisResult;
+                  console.log(`  │ ${c.success('✓')} Analysis complete (${analysisResult.totalTimeMs}ms)`);
+                  console.log(`  │ → Categories: ${analysisResult.categoriesAnalyzed.length} (${analysisResult.categoriesAnalyzed.join(', ')})`);
+                  console.log(`  │ → Heuristics: ${summary.passed} passed, ${summary.failed} failed, ${summary.partial} partial`);
+                  console.log(`  │ → Issues by severity: Critical ${summary.bySeverity.critical}, High ${summary.bySeverity.high}, Medium ${summary.bySeverity.medium}, Low ${summary.bySeverity.low}`);
+
+                  if (visionInsights.length > 0) {
+                    console.log(`  │ → Vision insights:`);
+                    for (const insight of visionInsights.slice(0, 3)) {
+                      console.log(`  │   • ${c.severity(insight.severity)} [${insight.heuristicId}] ${insight.issue?.slice(0, 40)}...`);
+                    }
+                    if (visionInsights.length > 3) {
+                      console.log(`  │   ... and ${visionInsights.length - 3} more`);
+                    }
+                  }
+
+                  // CR-001-C: Mark unified analysis as complete - skip agent loop
+                  unifiedAnalysisComplete = true;
+                  // CR-001-C: Store result for report metadata
+                  unifiedAnalysisResult = analysisResult;
+                } catch (analysisError) {
+                  const errMsg = analysisError instanceof Error ? analysisError.message : 'Analysis failed';
+                  console.log(`  │ ${c.error('✗ Analysis failed:')} ${errMsg}`);
+                  errors.push(`UnifiedAnalysis: ${errMsg}`);
+                }
+              }
+              console.log(`  └${'─'.repeat(60)}`);
+            } else {
+              // Original Vision Agent mode
+              console.log('\n  ┌─ PHASE 21g: Vision Agent (DOM + Vision) ───────────────────');
+              const visionModel = analyzeOptions?.visionModel ?? 'gpt-4o-mini';
+              const maxSteps = analyzeOptions?.visionAgentMaxSteps ?? 20;
+
+              console.log(`  │ → Model: ${visionModel}, Max Steps: ${maxSteps}`);
+              console.log(`  │ → Page Type: ${detectedPageType.toUpperCase()}`);
+
+              try {
+                const visionAgent = createVisionAgent({
+                  model: visionModel,
+                  maxSteps,
+                  verbose,
+                });
+
+                console.log(`  │ → Starting observe-reason-act loop...`);
+                visionAgentResult = await visionAgent.analyze(page, detectedPageType);
+                visionInsights = visionAgentResult.insights;
+
+              const { summary } = visionAgentResult;
+              console.log(`  │ ${c.success('✓')} Vision Agent complete (${visionAgentResult.durationMs}ms)`);
+              console.log(`  │ → Steps: ${visionAgentResult.stepCount}, Viewports: ${visionAgentResult.viewportCount}`);
+              console.log(`  │ → Coverage: ${summary.coveragePercent.toFixed(0)}% (${summary.evaluated}/${summary.totalHeuristics} heuristics)`);
+              console.log(`  │ → Heuristics: ${summary.passed} passed, ${summary.failed} failed, ${summary.partial} partial`);
+              console.log(`  │ → Issues by severity: Critical ${summary.bySeverity.critical}, High ${summary.bySeverity.high}, Medium ${summary.bySeverity.medium}, Low ${summary.bySeverity.low}`);
+              console.log(`  │ → Termination: ${visionAgentResult.terminationReason}`);
+
+              if (visionInsights.length > 0) {
+                console.log(`  │ → Vision insights:`);
+                for (const insight of visionInsights.slice(0, 3)) {
+                  console.log(`  │   • ${c.severity(insight.severity)} [${insight.heuristicId}] ${insight.issue?.slice(0, 40)}...`);
+                }
+                if (visionInsights.length > 3) {
+                  console.log(`  │   ... and ${visionInsights.length - 3} more`);
+                }
+              }
+              } catch (visionError) {
+                const errMsg = visionError instanceof Error ? visionError.message : 'Vision Agent failed';
+                console.log(`  │ ${c.error('✗ Vision Agent failed:')} ${errMsg}`);
+                errors.push(`VisionAgent: ${errMsg}`);
+                this.logger.warn('Vision Agent failed', { error: errMsg });
+              }
+              console.log(`  └${'─'.repeat(60)}`);
+            }
+          } else {
+            // Single viewport vision (original behavior)
+            // NOTE: Full-page multi-viewport mode has been removed per CR-001
+            // Use --vision-agent for comprehensive analysis
+            console.log('\n  ┌─ PHASE 21b: Screenshot Capture ─────────────────────────────');
+            // Scroll to top for screenshot
+            await page.evaluate('window.scrollTo(0, 0)');
+            await this.sleep(300);
+
+            // Capture screenshot as base64
+            const screenshotBuffer = await page.screenshot({
+              type: 'png',
+              fullPage: false, // Capture viewport only for vision analysis
+            });
+            screenshotBase64 = screenshotBuffer.toString('base64');
+            console.log(`  │ ${c.success('✓')} Screenshot captured (${(screenshotBuffer.length / 1024).toFixed(1)}KB)`);
+            console.log(`  └${'─'.repeat(60)}`);
+
+            // 21c. Run vision analysis
+            console.log('\n  ┌─ PHASE 21c: Vision Analysis ────────────────────────────────');
+            const visionModel = analyzeOptions?.visionModel ?? 'gpt-4o-mini';
+            const visionConfig = {
+              model: visionModel,
+              ...analyzeOptions?.visionConfig,
             };
 
-            console.log(`  │ → Analyzing against ${detectedPageType.toUpperCase()} heuristics using ${visionModel}...`);
-            visionAnalysis = await visionAnalyzer.analyze(screenshotBase64, detectedPageType, viewport);
-            visionInsights = visionAnalysis.insights;
+            try {
+              const visionAnalyzer = createCROVisionAnalyzer(visionConfig);
 
-            const { summary } = visionAnalysis;
-            console.log(`  │ ${c.success('✓')} Vision analysis complete`);
-            console.log(`  │ → Heuristics: ${summary.passed} passed, ${summary.failed} failed, ${summary.partial} partial`);
-            console.log(`  │ → Issues by severity: Critical ${summary.bySeverity.critical}, High ${summary.bySeverity.high}, Medium ${summary.bySeverity.medium}, Low ${summary.bySeverity.low}`);
+              console.log(`  │ → Analyzing against ${detectedPageType.toUpperCase()} heuristics using ${visionModel}...`);
+              visionAnalysis = await visionAnalyzer.analyze(screenshotBase64, detectedPageType, viewport);
+              visionInsights = visionAnalysis.insights;
 
-            if (visionInsights.length > 0) {
-              console.log(`  │ → Vision insights:`);
-              for (const insight of visionInsights.slice(0, 3)) {
-                console.log(`  │   • ${c.severity(insight.severity)} [${insight.heuristicId}] ${insight.issue?.slice(0, 40)}...`);
+              const { summary } = visionAnalysis;
+              console.log(`  │ ${c.success('✓')} Vision analysis complete`);
+              console.log(`  │ → Heuristics: ${summary.passed} passed, ${summary.failed} failed, ${summary.partial} partial`);
+              console.log(`  │ → Issues by severity: Critical ${summary.bySeverity.critical}, High ${summary.bySeverity.high}, Medium ${summary.bySeverity.medium}, Low ${summary.bySeverity.low}`);
+
+              if (visionInsights.length > 0) {
+                console.log(`  │ → Vision insights:`);
+                for (const insight of visionInsights.slice(0, 3)) {
+                  console.log(`  │   • ${c.severity(insight.severity)} [${insight.heuristicId}] ${insight.issue?.slice(0, 40)}...`);
+                }
+                if (visionInsights.length > 3) {
+                  console.log(`  │   ... and ${visionInsights.length - 3} more`);
+                }
               }
-              if (visionInsights.length > 3) {
-                console.log(`  │   ... and ${visionInsights.length - 3} more`);
-              }
+            } catch (visionError) {
+              const errMsg = visionError instanceof Error ? visionError.message : 'Vision analysis failed';
+              console.log(`  │ ${c.error('✗ Vision analysis failed:')} ${errMsg}`);
+              errors.push(`Vision: ${errMsg}`);
+              this.logger.warn('Vision analysis failed', { error: errMsg });
             }
-          } catch (visionError) {
-            const errMsg = visionError instanceof Error ? visionError.message : 'Vision analysis failed';
-            console.log(`  │ ${c.error('✗ Vision analysis failed:')} ${errMsg}`);
-            errors.push(`Vision: ${errMsg}`);
-            this.logger.warn('Vision analysis failed', { error: errMsg });
+            console.log(`  └${'─'.repeat(60)}`);
           }
-          console.log(`  └${'─'.repeat(60)}`);
         } else {
           console.log(`\n  ┌─ PHASE 21b-c: Vision Analysis ─────────────────────────────`);
           console.log(`  │ ${c.warn('⏭ SKIPPED')} - Page type '${detectedPageType}' not supported`);
@@ -496,7 +681,7 @@ export class CROAgent {
       }
 
       const llm = new ChatOpenAI({
-        model: 'gpt-4o',
+        model: 'gpt-4o-mini',
         temperature: 0,
         timeout: this.options.llmTimeoutMs,
       });
@@ -520,14 +705,24 @@ export class CROAgent {
 
       // ═══════════════════════════════════════════════════════════════════════════
       // PHASE 16-17: AGENT LOOP (Observe → Reason → Act)
+      // CR-001-C: Skip agent loop when unified analysis is complete
       // ═══════════════════════════════════════════════════════════════════════════
-      console.log('═'.repeat(80));
-      console.log('  PHASE 16-17: AGENT LOOP (OBSERVE → REASON → ACT)');
-      console.log('═'.repeat(80));
-      console.log(`  Max steps: ${this.options.maxSteps}`);
-      console.log('─'.repeat(80));
+      if (unifiedAnalysisComplete) {
+        console.log('═'.repeat(80));
+        console.log('  PHASE 16-17: AGENT LOOP (SKIPPED - UNIFIED ANALYSIS COMPLETE)');
+        console.log('═'.repeat(80));
+        console.log(`  ${c.info('ℹ')} Analysis completed via unified collection + category-based orchestrator`);
+        console.log(`  ${c.info('ℹ')} Skipping tool-based agent loop (analysis already done)`);
+        console.log('═'.repeat(80) + '\n');
+      } else {
+        console.log('═'.repeat(80));
+        console.log('  PHASE 16-17: AGENT LOOP (OBSERVE → REASON → ACT)');
+        console.log('═'.repeat(80));
+        console.log(`  Max steps: ${this.options.maxSteps}`);
+        console.log('─'.repeat(80));
+      }
 
-      while (!stateManager.shouldTerminate()) {
+      while (!unifiedAnalysisComplete && !stateManager.shouldTerminate()) {
         const step = stateManager.getStep();
         console.log(`\n  ┌─ STEP ${step + 1}/${this.options.maxSteps} ${'─'.repeat(60)}`);
         this.logger.info(`Step ${step + 1}/${this.options.maxSteps}`, {
@@ -678,11 +873,13 @@ export class CROAgent {
       // ═══════════════════════════════════════════════════════════════════════════
       // PHASE 16-17: AGENT LOOP COMPLETE
       // ═══════════════════════════════════════════════════════════════════════════
-      console.log('\n' + '─'.repeat(80));
-      console.log(`  Agent loop completed after ${stateManager.getStep()} steps`);
-      console.log(`  Total insights from tools: ${stateManager.getInsights().length}`);
-      console.log('  OUTPUT → Tool insights passed to Phase 18 (Post-Processing)');
-      console.log('═'.repeat(80) + '\n');
+      if (!unifiedAnalysisComplete) {
+        console.log('\n' + '─'.repeat(80));
+        console.log(`  Agent loop completed after ${stateManager.getStep()} steps`);
+        console.log(`  Total insights from tools: ${stateManager.getInsights().length}`);
+        console.log('  OUTPUT → Tool insights passed to Phase 18 (Post-Processing)');
+        console.log('═'.repeat(80) + '\n');
+      }
 
       // ─── 3. POST-PROCESSING PIPELINE ─────────────────────────────
       // Phase 18e (T117): Integrate post-processing after agent loop
@@ -790,16 +987,21 @@ export class CROAgent {
         if (analyzeOptions?.outputFormat && analyzeOptions.outputFormat !== 'console') {
           console.log('\n  ┌─ PHASE 18d: Report Generation ──────────────────────────────');
           report = {};
+          // CR-001-C: Include vision insights and unified analysis metadata in report
           const reportInput = {
             url,
             pageTitle,
             insights: toolInsights,
             heuristicInsights,
+            visionInsights,
             businessType,
+            pageType: detectedPageType,
             hypotheses,
             scores,
             stepsExecuted: stateManager.getStep(),
             totalTimeMs: Date.now() - startTime,
+            unifiedAnalysis: unifiedAnalysisComplete,
+            categoriesAnalyzed: unifiedAnalysisResult?.categoriesAnalyzed,
           };
 
           if (
@@ -844,6 +1046,10 @@ export class CROAgent {
         businessType,
         pageType: detectedPageType,
         visionAnalysis,
+        visionAgentResult,
+        unifiedAnalysisResult,
+        // Phase 21j: Include collected viewport snapshots
+        snapshots: collectedViewportSnapshots.length > 0 ? collectedViewportSnapshots : visionAgentResult?.snapshots,
         hypotheses,
         scores,
         report,
@@ -912,6 +1118,8 @@ export class CROAgent {
         businessType: undefined,
         pageType: undefined,
         visionAnalysis: undefined,
+        visionAgentResult: undefined,
+        snapshots: undefined,
         hypotheses: [],
         scores: emptyScores,
         report: undefined,
@@ -1109,5 +1317,182 @@ export class CROAgent {
    */
   getOptions(): CROAgentOptions {
     return { ...this.options };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // CR-001-B: Collection Phase
+  // ═══════════════════════════════════════════════════════════════════════════════
+
+  /**
+   * CR-001-B: Run the collection phase to capture viewport snapshots
+   *
+   * Uses an agent loop with collection-specific tools:
+   * - capture_viewport: Capture DOM + screenshot at current position
+   * - scroll_page: Scroll to reveal more content
+   * - collection_done: Signal collection is complete
+   *
+   * @param page - Playwright page instance
+   * @param domTree - Initial DOM tree
+   * @param url - Page URL
+   * @param pageTitle - Page title
+   * @param stateManager - State manager
+   * @param registry - Tool registry
+   * @param verbose - Enable verbose logging
+   * @returns Array of collected viewport snapshots
+   */
+  private async runCollectionPhase(
+    page: Page,
+    domTree: DOMTree,
+    url: string,
+    pageTitle: string,
+    stateManager: StateManager,
+    registry: ToolRegistry,
+    verbose: boolean
+  ): Promise<ViewportSnapshot[]> {
+    const maxCollectionSteps = 10; // Limit collection phase steps
+    const snapshots: ViewportSnapshot[] = [];
+
+    console.log('\n' + '═'.repeat(80));
+    console.log('  CR-001-B: COLLECTION PHASE (VISION DATA CAPTURE)');
+    console.log('═'.repeat(80));
+    console.log('  → Capturing viewport snapshots as agent scrolls through page');
+    console.log(`  → Max steps: ${maxCollectionSteps}`);
+
+    // Initialize LLM for collection phase
+    const llm = new ChatOpenAI({
+      model: 'gpt-4o-mini',
+      temperature: 0,
+      timeout: this.options.llmTimeoutMs,
+    });
+
+    // Initialize prompt builder and message manager for collection
+    const promptBuilder = new PromptBuilder(registry);
+    const collectionSystemPrompt = promptBuilder.buildCollectionSystemPrompt();
+    const messageManager = new MessageManager(collectionSystemPrompt);
+    const toolExecutor = new ToolExecutor(registry);
+
+    // Track collection state
+    let collectionComplete = false;
+    let collectionStep = 0;
+
+    // Scroll to top first
+    await page.evaluate('window.scrollTo(0, 0)');
+    await this.sleep(200);
+
+    while (!collectionComplete && collectionStep < maxCollectionSteps) {
+      collectionStep++;
+      console.log(`\n  ┌─ COLLECTION STEP ${collectionStep}/${maxCollectionSteps} ${'─'.repeat(50)}`);
+
+      // Build page state
+      const pageState = await this.buildPageState(page, domTree, url, pageTitle);
+
+      // Build collection user message
+      const userMsg = promptBuilder.buildCollectionUserMessage(
+        pageState,
+        stateManager.getMemory(),
+        snapshots
+      );
+      messageManager.addUserMessage(userMsg);
+
+      // Call LLM
+      let llmResponse: string;
+      try {
+        const result = await llm.invoke(messageManager.getMessages());
+        llmResponse = typeof result.content === 'string' ? result.content : JSON.stringify(result.content);
+        this.logger.debug('Collection LLM response', { length: llmResponse.length });
+      } catch (error) {
+        const errMsg = error instanceof Error ? error.message : 'LLM call failed';
+        this.logger.error('Collection LLM error', { error: errMsg });
+        console.log(`  │ ${c.error('✗ LLM error:')} ${errMsg}`);
+        stateManager.recordFailure(errMsg);
+        continue;
+      }
+
+      // Parse response
+      const parseResult = parseAgentOutput(llmResponse);
+      if (!parseResult.success) {
+        this.logger.warn('Invalid collection output', { error: parseResult.error });
+        console.log(`  │ ${c.warn('⚠ Parse error:')} ${parseResult.error}`);
+        stateManager.recordFailure(parseResult.error!);
+        continue;
+      }
+
+      const output = parseResult.output!;
+      messageManager.addAssistantMessage(output);
+      stateManager.updateFocus(output.next_goal);
+
+      console.log(`  │ Thinking: "${output.thinking.slice(0, 60)}..."`);
+      console.log(`  │ Action: ${output.action.name}`);
+
+      // Execute tool
+      const toolResult = await toolExecutor.execute(
+        output.action.name,
+        output.action.params || {},
+        { page, state: pageState, verbose }
+      ) as CaptureViewportResult;
+
+      if (toolResult.success) {
+        stateManager.resetFailures();
+        console.log(`  │ ${c.success('✓')} Tool succeeded`);
+
+        // Handle capture_viewport result
+        if (output.action.name === 'capture_viewport' && toolResult.snapshot) {
+          const snapshot = {
+            ...toolResult.snapshot,
+            viewportIndex: snapshots.length,
+          };
+          snapshots.push(snapshot);
+          stateManager.addViewportSnapshot(snapshot);
+          console.log(`  │ → Snapshot ${snapshots.length} captured at ${snapshot.scrollPosition}px`);
+          console.log(`  │ → DOM elements: ${snapshot.dom.elementCount}`);
+        }
+
+        // Handle scroll_page result
+        if (output.action.name === 'scroll_page') {
+          const extracted = toolResult.extracted as { newScrollY?: number } | undefined;
+          if (extracted?.newScrollY !== undefined) {
+            stateManager.updateScrollPosition(extracted.newScrollY);
+            console.log(`  │ → Scrolled to ${extracted.newScrollY}px`);
+          }
+        }
+
+        // Handle collection_done
+        if (output.action.name === 'collection_done') {
+          collectionComplete = true;
+          stateManager.transitionToAnalysis();
+          console.log(`  │ ${c.success('✓')} Collection complete - transitioning to analysis`);
+        }
+
+        this.logger.info('Collection tool success', { tool: output.action.name });
+      } else {
+        stateManager.recordFailure(toolResult.error || 'Tool failed');
+        console.log(`  │ ${c.error('✗ Tool failed:')} ${toolResult.error}`);
+        this.logger.warn('Collection tool failed', { error: toolResult.error });
+      }
+
+      console.log(`  └${'─'.repeat(70)}`);
+
+      // Record step
+      const stepRecord: StepRecord = {
+        step: collectionStep,
+        action: output.action.name,
+        params: output.action.params as Record<string, unknown> | undefined,
+        result: toolResult,
+        thinking: output.thinking,
+        timestamp: Date.now(),
+      };
+      stateManager.recordStep(stepRecord);
+
+      // Small delay between steps
+      await this.sleep(this.options.actionWaitMs);
+    }
+
+    // Log collection summary
+    console.log('\n' + '─'.repeat(80));
+    console.log(`  Collection complete: ${snapshots.length} viewport snapshots captured`);
+    console.log(`  Steps taken: ${collectionStep}/${maxCollectionSteps}`);
+    console.log('═'.repeat(80) + '\n');
+
+    return snapshots;
   }
 }

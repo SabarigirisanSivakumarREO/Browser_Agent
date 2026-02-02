@@ -30,3 +30,16 @@ export {
 
 // Coverage tracker (Phase 19a)
 export { CoverageTracker } from './coverage-tracker.js';
+
+// Vision Agent (Phase 21g)
+export {
+  VisionAgent,
+  createVisionAgent,
+  VisionStateManager,
+  VisionPromptBuilder,
+  VisionMessageManager,
+  type VisionAgentOptions,
+  type VisionAgentResult,
+  type VisionAgentState,
+  type ViewportSnapshot,
+} from './vision/index.js';

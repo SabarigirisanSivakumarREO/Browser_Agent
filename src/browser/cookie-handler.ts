@@ -19,6 +19,48 @@ const DYNAMIC_BANNER_TIMEOUT = 2000;
 /** Common button text patterns for heuristic matching */
 const ACCEPT_TEXT_PATTERNS = ['accept', 'allow', 'agree', 'ok', 'got it', 'continue', 'save'];
 
+/** Exclusion patterns - buttons containing these should NOT be clicked (social login, etc.) */
+const EXCLUSION_PATTERNS = [
+  // Social login providers
+  'facebook',
+  'google',
+  'twitter',
+  'apple',
+  'linkedin',
+  'instagram',
+  'github',
+  'microsoft',
+  'amazon',
+  // Authentication actions
+  'login',
+  'log in',
+  'sign in',
+  'sign up',
+  'register',
+  'create account',
+  // Newsletter/marketing
+  'subscribe',
+  'newsletter',
+  'save 10',
+  'save 15',
+  'save 20',
+  '% off',
+  'discount',
+  'promo',
+  'coupon',
+  'get offer',
+  'claim',
+  'unlock',
+  // Purchase actions
+  'checkout',
+  'buy now',
+  'add to cart',
+  'add to bag',
+  'purchase',
+  'shop now',
+  'order now',
+];
+
 /** Aria-labeled banner selectors */
 const ARIA_BANNER_SELECTORS = [
   '[role="region"][aria-label*="cookie" i]',
@@ -49,6 +91,17 @@ const COOKIE_CONTAINER_INDICATORS = [
   '[data-consent]',
   '[data-gdpr]',
 ];
+
+/**
+ * Checks if button text should be excluded (social login, purchase buttons, etc.)
+ * @param text - The button text to check
+ * @returns True if the button should be excluded
+ */
+function shouldExcludeButton(text: string | null | undefined): boolean {
+  if (!text) return false;
+  const lowerText = text.toLowerCase();
+  return EXCLUSION_PATTERNS.some(pattern => lowerText.includes(pattern));
+}
 
 /**
  * Handles automatic dismissal of cookie consent popups.
@@ -246,6 +299,11 @@ export class CookieConsentHandler {
 
             if (buttonVisible) {
               const buttonText = await button.textContent();
+              // Skip if button matches exclusion patterns
+              if (shouldExcludeButton(buttonText)) {
+                logger.debug('Skipping excluded button in aria banner', { text: buttonText });
+                continue;
+              }
               await button.click({ timeout: SELECTOR_TIMEOUT });
               await page.waitForTimeout(300);
               return {
@@ -264,6 +322,11 @@ export class CookieConsentHandler {
 
             if (linkVisible) {
               const linkText = await link.textContent();
+              // Skip if link matches exclusion patterns
+              if (shouldExcludeButton(linkText)) {
+                logger.debug('Skipping excluded link in aria banner', { text: linkText });
+                continue;
+              }
               await link.click({ timeout: SELECTOR_TIMEOUT });
               await page.waitForTimeout(300);
               return {
@@ -321,6 +384,11 @@ export class CookieConsentHandler {
 
             if (buttonVisible) {
               const buttonText = await button.textContent();
+              // Skip if button matches exclusion patterns
+              if (shouldExcludeButton(buttonText)) {
+                logger.debug('Skipping excluded button in container', { text: buttonText });
+                continue;
+              }
               await button.click({ timeout: SELECTOR_TIMEOUT });
               await page.waitForTimeout(300);
               return {
@@ -339,6 +407,11 @@ export class CookieConsentHandler {
 
             if (linkVisible) {
               const linkText = await link.textContent();
+              // Skip if link matches exclusion patterns
+              if (shouldExcludeButton(linkText)) {
+                logger.debug('Skipping excluded link in container', { text: linkText });
+                continue;
+              }
               await link.click({ timeout: SELECTOR_TIMEOUT });
               await page.waitForTimeout(300);
               return {
@@ -357,6 +430,11 @@ export class CookieConsentHandler {
 
             if (roleButtonVisible) {
               const roleButtonText = await roleButton.textContent();
+              // Skip if role button matches exclusion patterns
+              if (shouldExcludeButton(roleButtonText)) {
+                logger.debug('Skipping excluded role button in container', { text: roleButtonText });
+                continue;
+              }
               await roleButton.click({ timeout: SELECTOR_TIMEOUT });
               await page.waitForTimeout(300);
               return {
@@ -412,9 +490,21 @@ export class CookieConsentHandler {
             .isVisible({ timeout: 500 })
             .catch(() => false);
 
+          // Get element text for exclusion check
+          const elementText = await element.textContent().catch(() => null);
+
+          // Skip if button matches exclusion patterns (social login, purchase, etc.)
+          if (shouldExcludeButton(elementText)) {
+            logger.debug('Skipping excluded button', {
+              text: elementText,
+              pattern: textPattern,
+              elementType: elementSelector,
+            });
+            continue;
+          }
+
           // If visible, click immediately
           if (isVisible) {
-            const elementText = await element.textContent();
             logger.debug('Heuristic element found (visible)', {
               text: elementText,
               pattern: textPattern,
@@ -438,7 +528,6 @@ export class CookieConsentHandler {
           });
 
           try {
-            const elementText = await element.textContent();
             await element.click({ force: true, timeout: SELECTOR_TIMEOUT });
             await page.waitForTimeout(300);
 
@@ -493,6 +582,12 @@ export class CookieConsentHandler {
           for (let i = 0; i < buttonCount; i++) {
             const btn = buttons.nth(i);
             const btnText = (await btn.textContent().catch(() => ''))?.toLowerCase() || '';
+
+            // Skip if button matches exclusion patterns (social login, purchase, etc.)
+            if (shouldExcludeButton(btnText)) {
+              logger.debug('Skipping excluded button in sibling search', { text: btnText, index: i });
+              continue;
+            }
 
             // Click the button that has "accept" but NOT "preferences" or "settings"
             if (

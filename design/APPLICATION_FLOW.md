@@ -1,40 +1,40 @@
 # CRO Browser Agent Application Flow
 
-**Last Updated**: 2025-12-23 | **Phase**: 19 Complete | **Phase 20**: Planned
+**Last Updated**: 2026-01-30 | **Phase**: CR-001 ✅ Complete | **Next**: Phase 21h (Evidence Capture)
 
 ## High-Level Architecture
 
 ```
 +-----------------------------------------------------------------------------------+
 |                           CRO BROWSER AGENT SYSTEM                                 |
-|                        Phase 19: 100% Page Coverage System                         |
+|                    CR-001 Complete: Unified Agent Architecture                     |
 +-----------------------------------------------------------------------------------+
 |                                                                                    |
 |    +--------+     +-------------------+     +-----------------+                    |
-|    |  CLI   | --> |    CROAgent       | --> |    Output       |                    |
+|    |  CLI   | --> |  Unified CROAgent | --> |    Output       |                    |
 |    | (User) |     |  (Orchestrator)   |     |   Generation    |                    |
 |    +--------+     +-------------------+     +-----------------+                    |
 |                            |                                                       |
 |         +------------------+------------------+------------------+                  |
 |         |                  |                  |                  |                  |
 |         v                  v                  v                  v                  |
-|   +-----------+    +-------------+    +------------+    +---------------+          |
-|   | Browser   |    | DOM         |    | Agent Core |    | Heuristic     |          |
-|   | Module    |    | Extraction  |    | (GPT-4o)   |    | Engine        |          |
-|   +-----------+    +-------------+    +------------+    +---------------+          |
+|   +-----------+    +-------------+    +---------------+   +---------------+        |
+|   | Browser   |    | DOM + Vision|    | Analysis      |   | Heuristic     |        |
+|   | Module    |    | Capture     |    | Orchestrator  |   | Knowledge     |        |
+|   +-----------+    +-------------+    +---------------+   +---------------+        |
 |         |                |                  |                  |                   |
 |         v                v                  v                  v                   |
-|   +-----------+    +-------------+    +------------+    +---------------+          |
-|   | Playwright|    | CRO         |    | Tool       |    | 10 Heuristic  |          |
-|   | Browser   |    | Classifier  |    | System     |    | Rules (H001-  |          |
-|   +-----------+    +-------------+    | (11 Tools) |    | H010)         |          |
-|         |                |            +------------+    +---------------+          |
-|         v                v                  |                                      |
-|   +-----------+    +-------------+          v                                      |
-|   | Cookie    |    | DOMMerger   |    +------------+                               |
-|   | Handler   |    | (Multi-seg) |    | Coverage   |                               |
-|   +-----------+    +-------------+    | Tracker    |                               |
-|                                       +------------+                               |
+|   +-----------+    +-------------+    +---------------+   +---------------+        |
+|   | Playwright|    | Viewport    |    | Category      |   | PDP (35 rules)|        |
+|   | Browser   |    | Snapshots   |    | Analyzer      |   | + Future KBs  |        |
+|   +-----------+    | (DOM+Image) |    | (per category)|   +---------------+        |
+|         |          +-------------+    +---------------+                            |
+|         v                                                                          |
+|   +-----------+                                                                    |
+|   | Cookie    |    THREE-PHASE FLOW (CR-001):                                      |
+|   | Handler   |    1. COLLECTION: scroll, click, capture DOM + screenshots         |
+|   +-----------+    2. ANALYSIS: LLM calls per heuristic category                   |
+|                    3. OUTPUT: console, JSON, evidence, hypotheses                  |
 |                                                                                    |
 +-----------------------------------------------------------------------------------+
 ```
@@ -545,7 +545,76 @@
 +---------------------------------------------------------------------------------+
 ```
 
-## Agent Loop Flow (Updated for Phase 19)
+## Unified Agent Flow (CR-001 Architecture)
+
+```
++---------------------------------------------------------------------------------+
+|                   UNIFIED CRO AGENT (CR-001 Architecture)                        |
++---------------------------------------------------------------------------------+
+|                                                                                  |
+|   PHASE 1: DATA COLLECTION                                                       |
+|   +---------------------------------------------------------------------+        |
+|   |  Tools: scroll_page, click_element, navigate_to_url, capture_viewport|        |
+|   |                                                                     |        |
+|   |  ┌──────────┐    ┌──────────┐    ┌──────────┐                      |        |
+|   |  │ Scroll   │───▶│ Capture  │───▶│ Store    │                      |        |
+|   |  │ Page     │    │ Viewport │    │ Snapshot │                      |        |
+|   |  └──────────┘    └──────────┘    └──────────┘                      |        |
+|   |                                        │                            |        |
+|   |                                        ▼                            |        |
+|   |                         ┌─────────────────────────────┐            |        |
+|   |                         │ ViewportSnapshot[]          │            |        |
+|   |                         │ - dom: DOMTree              │            |        |
+|   |                         │ - screenshot: Base64        │            |        |
+|   |                         │ - scrollPosition: number    │            |        |
+|   |                         └─────────────────────────────┘            |        |
+|   |                                                                     |        |
+|   |  Signal: collection_done → Triggers Phase 2                        |        |
+|   +---------------------------------------------------------------------+        |
+|                                      │                                           |
+|                                      ▼                                           |
+|   PHASE 2: ANALYSIS (Category-Based LLM Calls)                                   |
+|   +---------------------------------------------------------------------+        |
+|   |  Orchestrator: runAnalysis(snapshots, pageType)                     |        |
+|   |                                                                     |        |
+|   |  For each heuristic category:                                       |        |
+|   |  ┌──────────────────────────────────────────────────────────────┐  |        |
+|   |  │  Category: Layout & Structure                                 │  |        |
+|   |  │  ┌────────────┐   ┌────────────┐   ┌────────────┐           │  |        |
+|   |  │  │ DOM Context│ + │ Screenshots│ + │ Heuristics │ → GPT-4o  │  |        |
+|   |  │  └────────────┘   └────────────┘   └────────────┘           │  |        |
+|   |  │                                                               │  |        |
+|   |  │  → HeuristicEvaluation[] (pass/fail/partial for each rule)   │  |        |
+|   |  └──────────────────────────────────────────────────────────────┘  |        |
+|   |                                                                     |        |
+|   |  Categories: Layout, Imagery, Pricing, Description, Specs,          |        |
+|   |              Reviews, Selection, CTAs, Mobile, Utility              |        |
+|   |                                                                     |        |
+|   |  Output: AnalysisResult { evaluations, insights, summary }         |        |
+|   +---------------------------------------------------------------------+        |
+|                                      │                                           |
+|                                      ▼                                           |
+|   PHASE 3: OUTPUT GENERATION                                                     |
+|   +---------------------------------------------------------------------+        |
+|   |  ┌─────────────┐   ┌─────────────┐   ┌─────────────┐              |        |
+|   |  │ Console     │   │ Markdown    │   │ JSON        │              |        |
+|   |  │ Formatter   │   │ Reporter    │   │ Exporter    │              |        |
+|   |  └─────────────┘   └─────────────┘   └─────────────┘              |        |
+|   |                                                                     |        |
+|   |  CROAnalysisResult:                                                |        |
+|   |  - url, pageType, businessType                                     |        |
+|   |  - insights (DOM + Vision combined)                                |        |
+|   |  - evaluations (per heuristic)                                     |        |
+|   |  - hypotheses (A/B test ideas)                                     |        |
+|   |  - scores (overall CRO grade)                                      |        |
+|   +---------------------------------------------------------------------+        |
+|                                                                                  |
+|   COST: ~$0.005-0.010/page with gpt-4o-mini                                     |
+|                                                                                  |
++---------------------------------------------------------------------------------+
+```
+
+## Agent Loop Flow (Legacy - Phase 19)
 
 ```
 +---------------------------------------------------------------------------------+
@@ -979,7 +1048,7 @@ browser-agent/
 |                              PHASE SUMMARY                                       |
 +---------------------------------------------------------------------------------+
 |                                                                                  |
-|  COMPLETED PHASES (1-19)                                                         |
+|  COMPLETED PHASES (1-19, 21a-d, CR-001)                                          |
 |  +---------------------------------------------------------------------+         |
 |  | Phase 1-12  | Foundation: Browser, extraction, LangChain, cookies   |         |
 |  | Phase 13-15 | CRO models, DOM extraction, tool system               |         |
@@ -987,25 +1056,36 @@ browser-agent/
 |  | Phase 17    | 11 CRO tools (analysis, navigation, control)          |         |
 |  | Phase 18    | Heuristics (10 rules), business type, hypotheses      |         |
 |  | Phase 19    | 100% page coverage system                             |         |
+|  | Phase 21a-d | Vision core: PageType, knowledge base, analyzer       |         |
+|  | CR-001      | Unified agent: merge Vision into CRO Agent            |         |
 |  +---------------------------------------------------------------------+         |
 |                                                                                  |
-|  PLANNED PHASE (20)                                                              |
+|  REMOVED/MERGED (CR-001)                                                         |
 |  +---------------------------------------------------------------------+         |
-|  | Phase 20    | Unified Extraction Pipeline                           |         |
-|  |             | - Layered extraction (0-3)                            |         |
-|  |             | - Strict token budgets                                 |         |
-|  |             | - Multi-strategy selectors                             |         |
-|  |             | - Constraint detection                                 |         |
-|  |             | - 58 tasks, 181 tests planned                          |         |
+|  | Phase 21e   | Multi-Viewport Vision - REMOVED                       |         |
+|  | Phase 21f   | Full-Page Screenshot - REMOVED                        |         |
+|  | Phase 21g   | Vision Agent Loop - MERGED into CRO Agent             |         |
+|  +---------------------------------------------------------------------+         |
+|                                                                                  |
+|  PENDING PHASES                                                                  |
+|  +---------------------------------------------------------------------+         |
+|  | Phase 21h   | Evidence Capture (14 tasks)                           |         |
+|  | Phase 21i   | DOM-Screenshot Mapping (17 tasks)                     |         |
+|  | Phase 22    | Page Type Knowledge Bases (PLP, Homepage, etc.)       |         |
+|  +---------------------------------------------------------------------+         |
+|                                                                                  |
+|  DEFERRED                                                                        |
+|  +---------------------------------------------------------------------+         |
+|  | Phase 20    | Hybrid Extraction Pipeline (60 tasks) - backlog       |         |
 |  +---------------------------------------------------------------------+         |
 |                                                                                  |
 |  STATISTICS                                                                      |
 |  +---------------------------------------------------------------------+         |
-|  | Total Tasks    | 235 (177 complete, 58 pending)                     |         |
-|  | Total Tests    | 476 passing (389 unit, 83 integration, 4 E2E)      |         |
-|  | Modules        | 13 (browser, dom, agent, tools, coverage, etc.)    |         |
-|  | Tools          | 11 CRO tools                                        |         |
-|  | Heuristics     | 10 rules (H001-H010)                                |         |
+|  | Total Tasks    | 394 complete, ~69 pending                          |         |
+|  | Total Tests    | 771+ passing                                        |         |
+|  | Modules        | 15+ (browser, dom, agent, vision, heuristics, etc.) |         |
+|  | Tools          | Collection tools + Analysis orchestration           |         |
+|  | Heuristics     | 35 PDP rules + 10 DOM rules                         |         |
 |  +---------------------------------------------------------------------+         |
 |                                                                                  |
 +---------------------------------------------------------------------------------+

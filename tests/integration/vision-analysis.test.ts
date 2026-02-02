@@ -277,7 +277,7 @@ describe('Vision Analysis Integration', () => {
       const analyzer = createCROVisionAnalyzer();
       const config = analyzer.getConfig();
 
-      expect(config.model).toBe('gpt-4o');
+      expect(config.model).toBe('gpt-4o-mini');  // CR-001: Default is now gpt-4o-mini
       expect(config.maxTokens).toBe(4096);
       expect(config.temperature).toBe(0.1);
     });
@@ -362,7 +362,7 @@ describe('Vision Analysis Integration', () => {
 
       // Step 4: Analyzer would be called here with screenshot
       const analyzer = createCROVisionAnalyzer();
-      expect(analyzer.getConfig().model).toBe('gpt-4o');
+      expect(analyzer.getConfig().model).toBe('gpt-4o-mini');  // CR-001: Default is now gpt-4o-mini
     });
 
     it('should skip vision analysis for unsupported page types', () => {

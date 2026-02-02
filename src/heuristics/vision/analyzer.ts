@@ -187,16 +187,27 @@ export class CROVisionAnalyzer {
     const category = getInsightCategory(evaluation.heuristicId);
     const type = this.heuristicIdToType(evaluation.heuristicId);
 
+    // Build element description with viewport info if available
+    let element = 'viewport';
+    if (evaluation.viewportIndex !== undefined) {
+      element = `viewport_${evaluation.viewportIndex}`;
+    }
+
     return {
       id: uuid(),
       category,
       type,
       severity: evaluation.severity,
-      element: 'viewport', // Vision analysis is viewport-based
+      element,
       issue: evaluation.issue || evaluation.observation,
       recommendation: evaluation.recommendation || this.generateDefaultRecommendation(evaluation),
       evidence: {
         text: evaluation.observation,
+        // Phase 21h: Map evidence capture fields
+        viewportIndex: evaluation.viewportIndex,
+        timestamp: evaluation.timestamp,
+        domElementRefs: evaluation.domElementRefs,
+        boundingBox: evaluation.boundingBox,
       },
       heuristicId: evaluation.heuristicId,
       confidence: evaluation.confidence,
@@ -231,6 +242,7 @@ export class CROVisionAnalyzer {
       failed: 0,
       partial: 0,
       notApplicable: 0,
+      coveragePercent: evaluations.length > 0 ? 100 : 0,  // Phase 21j
       bySeverity: {
         critical: 0,
         high: 0,

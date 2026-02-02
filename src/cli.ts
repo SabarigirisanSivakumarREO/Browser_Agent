@@ -7,7 +7,6 @@
  */
 
 import { config } from 'dotenv';
-import { BrowserAgent } from './index.js';
 import { BrowserManager, PageLoader } from './browser/index.js';
 import { CookieConsentHandler } from './browser/cookie-handler.js';
 import { DOMExtractor } from './browser/dom/index.js';
@@ -17,10 +16,13 @@ import {
   FileWriter,
   MarkdownReporter,
   JSONExporter,
+  ScreenshotWriter,
+  ScreenshotAnnotator,
   type ToolExecutionResult,
 } from './output/index.js';
 import { createCRORegistry, ToolExecutor } from './agent/tools/index.js';
 import { CROAgent, type CROAnalysisResult, type CROScores } from './agent/index.js';
+// Note: createVisionAgent deprecated in Phase 21j - CROAgent unified mode is used instead
 import type { CROActionName, PageState, ScanMode, CoverageConfig } from './models/index.js';
 import { CROActionNames, DEFAULT_COVERAGE_CONFIG } from './models/index.js';
 import type { WaitUntilStrategy } from './types/index.js';
@@ -46,15 +48,18 @@ function parseArgs(): {
   waitUntil: WaitUntilStrategy;
   postLoadWait: number;
   dismissCookieConsent: boolean;
-  legacy: boolean;
   outputFormat: OutputFormat;
   outputFile: string | null;
   maxSteps: number;
   toolName: CROActionName | null;
   scanMode: ScanMode;
   minCoverage: number;
-  useVision: boolean;
   visionModel: VisionModel;
+  visionAgent: boolean;  // Phase 21g: Iterative vision agent mode (THE ONE MODE)
+  visionAgentMaxSteps: number;  // Phase 21g: Max steps for vision agent
+  saveEvidence: boolean;  // Phase 21h: Save screenshots as evidence
+  evidenceDir: string;  // Phase 21h: Directory for evidence files
+  annotateScreenshots: boolean;  // Phase 21i: Annotate screenshots with bounding boxes
   verbose: boolean;
   help: boolean;
 } {
@@ -65,15 +70,18 @@ function parseArgs(): {
   let waitUntil: WaitUntilStrategy = 'load';
   let postLoadWait = 5000;
   let dismissCookieConsent = true;
-  let legacy = false;
   let outputFormat: OutputFormat = 'console';
   let outputFile: string | null = null;
   let maxSteps = 10;
   let toolName: CROActionName | null = null;
   let scanMode: ScanMode = 'full_page';
   let minCoverage = 100;
-  let useVision = true;  // Phase 21d: Vision enabled by default
-  let visionModel: VisionModel = 'gpt-4o';  // Phase 21d: Default vision model
+  let visionModel: VisionModel = 'gpt-4o-mini';  // Default vision model (cost-optimized)
+  let visionAgent = false;  // Vision agent mode (THE ONE MODE for vision analysis)
+  let visionAgentMaxSteps = 20;  // Max steps for vision agent
+  let saveEvidence = false;  // Phase 21h: Save screenshots as evidence
+  let evidenceDir = './evidence';  // Phase 21h: Evidence output directory
+  let annotateScreenshots = false;  // Phase 21i: Annotate screenshots with bounding boxes
   let verbose = false;
   let help = false;
 
@@ -86,8 +94,6 @@ function parseArgs(): {
       headless = true;
     } else if (arg === '--verbose' || arg === '-v') {
       verbose = true;
-    } else if (arg === '--legacy') {
-      legacy = true;
     } else if (arg === '--output-format' && args[i + 1]) {
       const format = args[i + 1] as OutputFormat;
       if (VALID_OUTPUT_FORMATS.includes(format)) {
@@ -168,12 +174,6 @@ function parseArgs(): {
         console.error('Invalid min-coverage value. Must be between 0 and 100.');
         process.exit(1);
       }
-    } else if (arg === '--vision') {
-      // Phase 21d: Enable vision analysis (explicit)
-      useVision = true;
-    } else if (arg === '--no-vision') {
-      // Phase 21d: Disable vision analysis
-      useVision = false;
     } else if (arg === '--vision-model' && args[i + 1]) {
       // Phase 21d: Set vision model
       const model = args[i + 1] as VisionModel;
@@ -195,6 +195,37 @@ function parseArgs(): {
         console.error(`Valid models: ${VALID_VISION_MODELS.join(', ')}`);
         process.exit(1);
       }
+    } else if (arg === '--vision-agent') {
+      // Enable vision agent mode (THE ONE MODE for vision analysis)
+      visionAgent = true;
+    } else if (arg === '--vision-agent-max-steps' && args[i + 1]) {
+      // Phase 21g: Set max steps for vision agent
+      visionAgentMaxSteps = parseInt(args[i + 1] ?? '20', 10);
+      if (isNaN(visionAgentMaxSteps) || visionAgentMaxSteps < 1 || visionAgentMaxSteps > 50) {
+        console.error('Invalid vision-agent-max-steps value. Must be between 1 and 50.');
+        process.exit(1);
+      }
+      i++;
+    } else if (arg?.startsWith('--vision-agent-max-steps=')) {
+      // Phase 21g: Set max steps (= syntax)
+      visionAgentMaxSteps = parseInt(arg.split('=')[1] ?? '20', 10);
+      if (isNaN(visionAgentMaxSteps) || visionAgentMaxSteps < 1 || visionAgentMaxSteps > 50) {
+        console.error('Invalid vision-agent-max-steps value. Must be between 1 and 50.');
+        process.exit(1);
+      }
+    } else if (arg === '--save-evidence') {
+      // Phase 21h: Enable evidence saving
+      saveEvidence = true;
+    } else if (arg === '--annotate-screenshots') {
+      // Phase 21i: Enable screenshot annotation
+      annotateScreenshots = true;
+    } else if (arg === '--evidence-dir' && args[i + 1]) {
+      // Phase 21h: Set evidence output directory
+      evidenceDir = args[i + 1] ?? './evidence';
+      i++;
+    } else if (arg?.startsWith('--evidence-dir=')) {
+      // Phase 21h: Set evidence directory (= syntax)
+      evidenceDir = arg.split('=')[1] ?? './evidence';
     } else if (arg && !arg.startsWith('-')) {
       urls.push(arg);
     }
@@ -207,15 +238,18 @@ function parseArgs(): {
     waitUntil,
     postLoadWait,
     dismissCookieConsent,
-    legacy,
     outputFormat,
     outputFile,
     maxSteps,
     toolName,
     scanMode,
     minCoverage,
-    useVision,
     visionModel,
+    visionAgent,
+    visionAgentMaxSteps,
+    saveEvidence,
+    evidenceDir,
+    annotateScreenshots,
     verbose,
     help,
   };
@@ -260,21 +294,36 @@ CRO ANALYSIS OPTIONS:
                           assess_value_prop, check_navigation, find_friction,
                           scroll_page, go_to_url, done
 
-VISION ANALYSIS OPTIONS (Phase 21):
-  --vision                Enable GPT-4o vision analysis (default: enabled)
-  --no-vision             Disable GPT-4o vision analysis
-  --vision-model <model>  Vision model to use (default: gpt-4o)
-                          - gpt-4o: Best quality, slower and more expensive
-                          - gpt-4o-mini: Faster and cheaper, slightly lower quality
+VISION ANALYSIS OPTIONS:
+  --vision-agent          Enable unified CRO analysis with vision (Phase 21j)
+                          - Enforces full-page coverage (scrolls entire page)
+                          - Captures DOM + screenshots at each viewport
+                          - Maps DOM elements to screenshot coordinates
+                          - Evaluates ALL heuristics systematically
+                          - Uses category-based analysis for thoroughness
+                          - Uses gpt-4o-mini by default (~$0.01-0.02/page)
+  --vision-model <model>  Vision model to use (default: gpt-4o-mini)
+                          - gpt-4o-mini: Fast and cost-effective (default)
+                          - gpt-4o: Higher quality, slower and more expensive
+  --vision-agent-max-steps <N>  Maximum agent loop iterations (default: 20, max: 50)
+
+EVIDENCE CAPTURE OPTIONS (Phase 21h-21i):
+  --save-evidence         Save viewport screenshots as evidence files
+                          Screenshots are saved to the evidence directory
+                          Useful for audit trails and manual review
+  --evidence-dir <path>   Directory for evidence files (default: ./evidence)
+                          Created automatically if it doesn't exist
+  --annotate-screenshots  Annotate saved screenshots with bounding boxes
+                          Red boxes for failed heuristics, green for passed
+                          Element index labels shown near each element
+                          Requires --save-evidence to take effect
 
 MODES:
-  --legacy                Use legacy heading extraction mode (no CRO analysis)
-                          Original behavior: extract h1-h6 + LangChain processing
   --verbose, -v           Enable verbose logging
   --help, -h              Show this help message
 
 ENVIRONMENT:
-  OPENAI_API_KEY          Required for CRO analysis and legacy mode.
+  OPENAI_API_KEY          Required for CRO analysis.
                           Your OpenAI API key for LLM processing.
 
 EXAMPLES:
@@ -299,9 +348,6 @@ EXAMPLES:
   # LLM-guided mode (original behavior)
   npm run start -- --scan-mode=llm_guided https://www.carwale.com
 
-  # Legacy heading extraction mode
-  npm run start -- --legacy https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy
-
   # Process multiple URLs
   npm run start -- https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy https://github.com
 
@@ -311,14 +357,23 @@ EXAMPLES:
   # Execute specific tool for debugging
   npm run start -- --tool analyze_ctas https://www.carwale.com
 
-  # Vision analysis (Phase 21) - enabled by default for PDP pages
-  npm run start -- https://www.peregrineclothing.co.uk/products/lynton-polo-shirt
+  # Vision Agent mode - comprehensive CRO analysis with DOM + Vision
+  npm run start -- --vision-agent https://www.peregrineclothing.co.uk/products/lynton-polo-shirt
 
-  # Disable vision analysis
-  npm run start -- --no-vision https://www.peregrineclothing.co.uk/products/lynton-polo-shirt
+  # Vision Agent with custom max steps
+  npm run start -- --vision-agent --vision-agent-max-steps 30 https://example.com/product
 
-  # Use gpt-4o-mini for faster/cheaper vision analysis
-  npm run start -- --vision-model=gpt-4o-mini https://www.peregrineclothing.co.uk/products/lynton-polo-shirt
+  # Vision Agent with gpt-4o for higher quality analysis
+  npm run start -- --vision-agent --vision-model gpt-4o https://example.com/product
+
+  # Save screenshots as evidence (Phase 21h)
+  npm run start -- --vision-agent --save-evidence https://example.com/product
+
+  # Save evidence to custom directory
+  npm run start -- --vision-agent --save-evidence --evidence-dir ./reports/evidence https://example.com/product
+
+  # Save annotated screenshots (Phase 21i) - shows element boxes and labels
+  npm run start -- --vision-agent --save-evidence --annotate-screenshots https://example.com/product
 `);
 }
 
@@ -466,8 +521,282 @@ async function processToolExecution(
 }
 
 /**
- * Process URL with CRO agent analysis (default mode)
- * Phase 21d (T317): Added vision options
+ * Process URL with Vision Agent mode
+ * Phase 21j: Uses CROAgent unified mode for full-page coverage
+ * Iterative observe-reason-act loop with DOM + Vision context
+ */
+async function processVisionAgentMode(
+  url: string,
+  options: {
+    headless: boolean;
+    timeout: number;
+    waitUntil: WaitUntilStrategy;
+    postLoadWait: number;
+    dismissCookieConsent: boolean;
+    visionModel: VisionModel;
+    maxSteps: number;
+    saveEvidence: boolean;
+    evidenceDir: string;
+    annotateScreenshots: boolean;
+    verbose: boolean;
+  }
+): Promise<void> {
+  const useColors = process.stdout.isTTY ?? false;
+
+  // Check for API key
+  if (!process.env.OPENAI_API_KEY) {
+    console.error('Error: OPENAI_API_KEY environment variable is not set');
+    process.exit(1);
+  }
+
+  // ANSI color codes
+  const GREEN = useColors ? '\x1b[32m' : '';
+  const RED = useColors ? '\x1b[31m' : '';
+  const YELLOW = useColors ? '\x1b[33m' : '';
+  const CYAN = useColors ? '\x1b[36m' : '';
+  const DIM = useColors ? '\x1b[2m' : '';
+  const RESET = useColors ? '\x1b[0m' : '';
+
+  console.log('\n' + '═'.repeat(80));
+  console.log('  VISION AGENT ANALYSIS MODE (Phase 21j - Unified CROAgent)');
+  console.log('═'.repeat(80));
+  console.log(`  URL: ${url}`);
+  console.log(`  Model: ${options.visionModel}`);
+  console.log(`  Max Steps: ${options.maxSteps}`);
+  console.log(`  Scan Mode: full_page (enforced 100% coverage)`);
+  console.log(`  Features: DOM + Vision parallel context, category-based analysis`);
+  console.log('═'.repeat(80) + '\n');
+
+  // Phase 21j: Show collection phase progress
+  if (options.verbose) {
+    console.log(`  ${CYAN}Collection Phase:${RESET}`);
+    console.log(`  • Scan mode: full_page`);
+    console.log(`  • Target coverage: 100%`);
+  }
+
+  try {
+    // Phase 21j: Use CROAgent with unified mode instead of deprecated VisionAgent
+    const croAgent = new CROAgent({
+      maxSteps: options.maxSteps,
+      actionWaitMs: 500,
+      llmTimeoutMs: 60000,
+      failureLimit: 3,
+    });
+
+    const result = await croAgent.analyze(url, {
+      browserConfig: {
+        headless: options.headless,
+        timeout: options.timeout,
+        waitUntil: options.waitUntil,
+        postLoadWait: options.postLoadWait,
+        dismissCookieConsent: options.dismissCookieConsent,
+        browserType: 'chromium',
+      },
+      verbose: options.verbose,
+      // Phase 21j: Enable unified mode for full-page coverage
+      enableUnifiedMode: true,
+      visionAgentMode: true,
+      scanMode: 'full_page',
+      coverageConfig: { minCoveragePercent: 100 },
+      visionModel: options.visionModel,
+      // Skip heuristic rules - use vision-based analysis only
+      skipHeuristics: true,
+    });
+
+    // Phase 21j: Show collection complete summary
+    const snapshotCount = result.snapshots?.length ?? 0;
+    if (options.verbose) {
+      console.log(`  ${GREEN}✓ Collected ${snapshotCount} viewports${RESET}\n`);
+    }
+
+    // Get evaluations from vision analysis
+    const evaluations = result.visionAnalysis?.evaluations ?? [];
+
+    // Display results
+    console.log('\n' + '═'.repeat(80));
+    console.log(`  VISION AGENT RESULTS (${result.pageType?.toUpperCase() ?? 'UNKNOWN'})`);
+    console.log('═'.repeat(80));
+
+    // Summary
+    const summary = result.visionAnalysis?.summary ?? {
+      totalHeuristics: 0,
+      passed: 0,
+      failed: 0,
+      partial: 0,
+      notApplicable: 0,
+      coveragePercent: 0,
+      bySeverity: { critical: 0, high: 0, medium: 0, low: 0 },
+    };
+
+    console.log(`\n  Analysis Summary:`);
+    console.log(`  • Viewports: ${snapshotCount} | Duration: ${(result.totalTimeMs / 1000).toFixed(1)}s`);
+    console.log(`  • Termination: ${result.terminationReason}`);
+
+    console.log(`\n  ${summary.totalHeuristics} heuristics evaluated (${summary.coveragePercent.toFixed(0)}% coverage):`);
+    console.log(`  ${GREEN}✓ Passed: ${summary.passed}${RESET} | ${RED}✗ Failed: ${summary.failed}${RESET} | ${YELLOW}~ Partial: ${summary.partial}${RESET} | N/A: ${summary.notApplicable}`);
+
+    if (summary.failed + summary.partial > 0) {
+      const severityParts: string[] = [];
+      if (summary.bySeverity.critical > 0) severityParts.push(`${RED}${summary.bySeverity.critical} critical${RESET}`);
+      if (summary.bySeverity.high > 0) severityParts.push(`${YELLOW}${summary.bySeverity.high} high${RESET}`);
+      if (summary.bySeverity.medium > 0) severityParts.push(`${summary.bySeverity.medium} medium`);
+      if (summary.bySeverity.low > 0) severityParts.push(`${summary.bySeverity.low} low`);
+      console.log(`  Issues by severity: ${severityParts.join(', ')}`);
+    }
+
+    // Phase 21j: DOM-Screenshot Mapping Summary (T385)
+    if (result.snapshots && result.snapshots.length > 0) {
+      console.log(`\n  ${CYAN}DOM-Screenshot Mapping:${RESET}`);
+      for (const snapshot of result.snapshots) {
+        const mappedCount = snapshot.elementMappings?.length ?? 0;
+        const visibleCount = snapshot.visibleElements?.length ?? 0;
+        console.log(`  • Viewport ${snapshot.viewportIndex} (scroll: ${snapshot.scrollPosition}px): ${mappedCount} mapped, ${visibleCount} visible`);
+      }
+      const totalMapped = result.snapshots.reduce((sum, s) => sum + (s.elementMappings?.length ?? 0), 0);
+      const totalVisible = result.snapshots.reduce((sum, s) => sum + (s.visibleElements?.length ?? 0), 0);
+      console.log(`  ${GREEN}Total: ${totalMapped} element mappings, ${totalVisible} visible across ${result.snapshots.length} viewports${RESET}`);
+    }
+
+    // Detailed evaluations
+    const failed = evaluations.filter(e => e.status === 'fail');
+    const partial = evaluations.filter(e => e.status === 'partial');
+    const passed = evaluations.filter(e => e.status === 'pass');
+
+    // Failed heuristics (full details)
+    if (failed.length > 0) {
+      console.log(`\n  ${RED}┌─ FAILED HEURISTICS ──────────────────────────────────────────────────${RESET}`);
+      for (const evaluation of failed) {
+        const icon = evaluation.severity === 'critical' ? '🔴' : evaluation.severity === 'high' ? '🟠' : '🟡';
+        console.log(`  ${RED}│${RESET}`);
+        console.log(`  ${RED}│ ${icon} [${evaluation.heuristicId}] ${evaluation.severity.toUpperCase()} (${(evaluation.confidence * 100).toFixed(0)}% confidence)${RESET}`);
+        console.log(`  ${RED}│${RESET}   ${DIM}Principle: ${evaluation.principle}${RESET}`);
+        console.log(`  ${RED}│${RESET}   ${CYAN}Observation:${RESET} ${evaluation.observation}`);
+        if (evaluation.issue) {
+          console.log(`  ${RED}│   Issue: ${evaluation.issue}${RESET}`);
+        }
+        if (evaluation.recommendation) {
+          console.log(`  ${RED}│${RESET}   ${GREEN}Recommendation:${RESET} ${evaluation.recommendation}`);
+        }
+      }
+      console.log(`  ${RED}└${'─'.repeat(75)}${RESET}`);
+    }
+
+    // Partial heuristics (full details)
+    if (partial.length > 0) {
+      console.log(`\n  ${YELLOW}┌─ PARTIAL COMPLIANCE ─────────────────────────────────────────────────${RESET}`);
+      for (const evaluation of partial) {
+        console.log(`  ${YELLOW}│${RESET}`);
+        console.log(`  ${YELLOW}│ 🟡 [${evaluation.heuristicId}] ${evaluation.severity.toUpperCase()} (${(evaluation.confidence * 100).toFixed(0)}% confidence)${RESET}`);
+        console.log(`  ${YELLOW}│${RESET}   ${DIM}Principle: ${evaluation.principle}${RESET}`);
+        console.log(`  ${YELLOW}│${RESET}   ${CYAN}Observation:${RESET} ${evaluation.observation}`);
+        if (evaluation.issue) {
+          console.log(`  ${YELLOW}│   Issue: ${evaluation.issue}${RESET}`);
+        }
+        if (evaluation.recommendation) {
+          console.log(`  ${YELLOW}│${RESET}   ${GREEN}Recommendation:${RESET} ${evaluation.recommendation}`);
+        }
+      }
+      console.log(`  ${YELLOW}└${'─'.repeat(75)}${RESET}`);
+    }
+
+    // Passed heuristics (condensed)
+    if (passed.length > 0) {
+      console.log(`\n  ${GREEN}┌─ PASSED HEURISTICS ──────────────────────────────────────────────────${RESET}`);
+      for (const evaluation of passed) {
+        const principle = evaluation.principle.length > 60 ? evaluation.principle.slice(0, 60) + '...' : evaluation.principle;
+        console.log(`  ${GREEN}│ ✓ [${evaluation.heuristicId}] ${principle}${RESET}`);
+      }
+      console.log(`  ${GREEN}└${'─'.repeat(75)}${RESET}`);
+    }
+
+    // Error messages if any
+    if (result.errors.length > 0) {
+      console.log(`\n  ${RED}Errors encountered:${RESET}`);
+      for (const error of result.errors) {
+        console.log(`  ${RED}  • ${error}${RESET}`);
+      }
+    }
+
+    // Phase 21h/21i: Save evidence if requested (T386)
+    if (options.saveEvidence && result.snapshots && result.snapshots.length > 0) {
+      console.log(`\n  ${CYAN}Saving evidence screenshots...${RESET}`);
+
+      const writer = new ScreenshotWriter({
+        outputDir: options.evidenceDir,
+        prefix: 'viewport',
+        format: 'png',
+        includeTimestamp: true,
+      });
+
+      // Phase 21i: Annotate screenshots if requested
+      let screenshotData = result.snapshots.map((snapshot) => ({
+        base64: snapshot.screenshot.base64,
+        viewportIndex: snapshot.viewportIndex,
+        scrollPosition: snapshot.scrollPosition,
+      }));
+
+      if (options.annotateScreenshots) {
+        console.log(`  ${CYAN}Annotating screenshots with element highlights...${RESET}`);
+        const annotator = new ScreenshotAnnotator({
+          highlightIssues: true,
+          showElementIndexes: true,
+          showCoordinates: false,
+        });
+
+        // Annotate each snapshot
+        for (let i = 0; i < screenshotData.length; i++) {
+          const snapshot = result.snapshots[i];
+          if (!snapshot) continue;
+
+          const visibleElements = snapshot.visibleElements ?? [];
+
+          // Get evaluations for this viewport
+          const viewportEvaluations = evaluations.filter(
+            (e) => e.viewportIndex === snapshot.viewportIndex
+          );
+
+          const currentScreenshot = screenshotData[i];
+          if (visibleElements.length > 0 && currentScreenshot) {
+            const annotationResult = await annotator.annotate(
+              currentScreenshot.base64,
+              visibleElements,
+              viewportEvaluations
+            );
+
+            if (annotationResult.success && annotationResult.annotatedBase64) {
+              currentScreenshot.base64 = annotationResult.annotatedBase64;
+            }
+          }
+        }
+        console.log(`  ${GREEN}Annotated ${screenshotData.length} screenshots${RESET}`);
+      }
+
+      const sessionId = Date.now().toString(36);
+      const writeResult = await writer.saveAllViewportScreenshots(screenshotData, sessionId);
+
+      if (writeResult.successful > 0) {
+        console.log(`  ${GREEN}Saved ${writeResult.successful} screenshots to ${writeResult.outputDir}${RESET}`);
+      }
+
+      if (writeResult.failed > 0) {
+        console.log(`  ${YELLOW}Warning: ${writeResult.failed} screenshots failed to save${RESET}`);
+      }
+    }
+
+    console.log('\n' + '═'.repeat(80));
+    console.log('  VISION AGENT ANALYSIS COMPLETE');
+    console.log('═'.repeat(80) + '\n');
+
+  } catch (err) {
+    const error = err instanceof Error ? err.message : 'Unknown error';
+    console.error(`\nError: ${error}`);
+    process.exit(1);
+  }
+}
+
+/**
+ * Process URL with CRO agent analysis (default mode - non-vision)
+ * NOTE: Use --vision-agent for vision analysis (THE ONE MODE)
  */
 async function processAnalysis(
   url: string,
@@ -480,8 +809,6 @@ async function processAnalysis(
     maxSteps: number;
     scanMode: ScanMode;
     minCoverage: number;
-    useVision: boolean;
-    visionModel: VisionModel;
     verbose: boolean;
   }
 ): Promise<CROAnalysisResult> {
@@ -542,9 +869,8 @@ async function processAnalysis(
       skipHeuristics: true,
       scanMode: options.scanMode,
       coverageConfig,
-      // Phase 21d: Vision analysis options
-      useVisionAnalysis: options.useVision,
-      visionModel: options.visionModel,
+      // Vision analysis disabled in default mode - use --vision-agent instead
+      useVisionAnalysis: false,
     });
 
     return result;
@@ -640,15 +966,18 @@ async function main(): Promise<void> {
     waitUntil,
     postLoadWait,
     dismissCookieConsent,
-    legacy,
     outputFormat,
     outputFile,
     maxSteps,
     toolName,
     scanMode,
     minCoverage,
-    useVision,
     visionModel,
+    visionAgent,
+    visionAgentMaxSteps,
+    saveEvidence,
+    evidenceDir,
+    annotateScreenshots,
     verbose,
     help,
   } = parseArgs();
@@ -660,6 +989,26 @@ async function main(): Promise<void> {
   }
 
   const useColors = process.stdout.isTTY ?? false;
+
+  // Vision Agent mode: iterative analysis with DOM + Vision (THE ONE MODE)
+  if (visionAgent) {
+    for (const url of urls) {
+      await processVisionAgentMode(url, {
+        headless,
+        timeout,
+        waitUntil,
+        postLoadWait,
+        dismissCookieConsent,
+        visionModel: visionModel === 'gpt-4o' ? visionModel : 'gpt-4o-mini',  // Default to gpt-4o-mini for cost
+        maxSteps: visionAgentMaxSteps,
+        saveEvidence,
+        evidenceDir,
+        annotateScreenshots,
+        verbose,
+      });
+    }
+    process.exit(0);
+  }
 
   // Tool execution mode (for debugging)
   if (toolName) {
@@ -687,59 +1036,8 @@ async function main(): Promise<void> {
     process.exit(0);
   }
 
-  // Legacy mode: BrowserAgent with LangChain heading extraction
-  if (legacy) {
-    const agent = new BrowserAgent({
-      browser: {
-        headless,
-        timeout,
-        waitUntil,
-        postLoadWait,
-        dismissCookieConsent,
-        browserType: 'chromium',
-      },
-      verbose,
-    });
-
-    try {
-      agent.validateEnvironment();
-
-      if (urls.length === 1) {
-        const url = urls[0];
-        if (!url) {
-          console.error('No URL provided');
-          process.exit(1);
-        }
-
-        console.log(`Processing: ${url}\n`);
-        const result = await agent.processUrl(url);
-        console.log(agent.formatResult(result));
-
-        process.exit(result.success ? 0 : 1);
-      } else {
-        console.log(`Processing ${urls.length} URLs...\n`);
-        const batch = await agent.processBatch(urls);
-        console.log(agent.formatBatch(batch));
-
-        process.exit(batch.failureCount === 0 ? 0 : 1);
-      }
-    } catch (err) {
-      const error = err as Error;
-      console.error(`\nFATAL ERROR: ${error.message}`);
-
-      if (verbose && error.stack) {
-        console.error('\nStack trace:');
-        console.error(error.stack);
-      }
-
-      process.exit(1);
-    } finally {
-      await agent.close();
-    }
-    return;
-  }
-
-  // Default mode: CRO Agent Analysis
+  // Default mode: CRO Agent Analysis (non-vision)
+  // Use --vision-agent for vision analysis
   for (const url of urls) {
     const result = await processAnalysis(url, {
       headless,
@@ -750,8 +1048,6 @@ async function main(): Promise<void> {
       maxSteps,
       scanMode,
       minCoverage,
-      useVision,
-      visionModel,
       verbose,
     });
 

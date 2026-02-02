@@ -2,7 +2,6 @@
  * Output Module Exports - Phase 18d
  */
 
-export { ResultFormatter } from './formatter.js';
 export {
   CROElementFormatter,
   type CROExtractionResult,
@@ -47,3 +46,24 @@ export {
   type FileWriteResult,
   type FileWriterOptions,
 } from './file-writer.js';
+
+// Phase 21h: Screenshot Writer (T358)
+export {
+  ScreenshotWriter,
+  createScreenshotWriter,
+  DEFAULT_SCREENSHOT_WRITE_OPTIONS,
+  type ScreenshotWriteOptions,
+  type ScreenshotWriteResult,
+  type AllViewportsWriteResult,
+  type ViewportScreenshotData,
+} from './screenshot-writer.js';
+
+// Phase 21i: Screenshot Annotator (T377)
+export {
+  ScreenshotAnnotator,
+  createScreenshotAnnotator,
+  annotateScreenshot,
+  DEFAULT_ANNOTATION_OPTIONS,
+  type AnnotationOptions,
+  type AnnotationResult,
+} from './screenshot-annotator.js';

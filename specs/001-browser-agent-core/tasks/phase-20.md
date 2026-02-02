@@ -2,7 +2,13 @@
 
 ---
 
-## Phase 20: Hybrid Extraction Pipeline
+> **⚠️ DEFERRED (CR-001)**: This phase has been moved to the backlog per Change Request 001 (2026-01-29).
+> Current extraction works for most sites. This enhancement can be added later if framework compatibility issues arise.
+> See: `CHANGE-REQUEST-001.md` for details.
+
+---
+
+## Phase 20: Hybrid Extraction Pipeline (DEFERRED)
 
 **Purpose**: Implement framework-agnostic CRO detection with LLM classification fallback for near-100% element detection accuracy
 

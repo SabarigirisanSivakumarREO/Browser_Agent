@@ -81,6 +81,7 @@ export {
 } from './knowledge/index.js';
 
 // Vision Analyzer (Phase 21c)
+// NOTE: Use --vision-agent mode for vision analysis (CR-001 architecture simplification)
 export type {
   CROVisionAnalyzerConfig,
   CROVisionAnalysisResult,
@@ -97,3 +98,32 @@ export {
   parseVisionResponse,
   getInsightCategory,
 } from './vision/index.js';
+
+// NOTE: Multi-Viewport and Full-Page Screenshot modes have been DEPRECATED per CR-001.
+// Use --vision-agent mode for all vision analysis needs.
+
+// Category Grouper (CR-001-C)
+export type { CategoryGroup, GroupingOptions } from './category-grouper.js';
+export {
+  groupHeuristicsByCategory,
+  getTotalHeuristicCount,
+  getAllHeuristicIds,
+  findCategoryForHeuristic,
+  categoryToGroup,
+} from './category-grouper.js';
+
+// Category Analyzer (CR-001-C)
+export type { CategoryAnalyzerConfig, CategoryAnalysisResult } from './category-analyzer.js';
+export {
+  CategoryAnalyzer,
+  createCategoryAnalyzer,
+  DEFAULT_CATEGORY_ANALYZER_CONFIG,
+} from './category-analyzer.js';
+
+// Analysis Orchestrator (CR-001-C)
+export type { AnalysisOrchestratorConfig, AnalysisResult } from './analysis-orchestrator.js';
+export {
+  AnalysisOrchestrator,
+  createAnalysisOrchestrator,
+  DEFAULT_ORCHESTRATOR_CONFIG,
+} from './analysis-orchestrator.js';

@@ -1,4 +1,4 @@
-**Navigation**: [Index](./index.md) | [Previous](./phase-20.md) | Next
+**Navigation**: [Index](./index.md) | [Previous](./phase-20.md) | [Next](./phase-22.md)
 
 ## Phase 21: Vision-Based CRO Heuristics
 
@@ -292,7 +292,7 @@ export class CROVisionAnalyzer {
 
   constructor(config?: Partial<CROVisionAnalyzerConfig>) {
     this.config = {
-      model: 'gpt-4o',
+      model: 'gpt-4o-mini',
       maxTokens: 4096,
       temperature: 0.1,
       ...config,
@@ -499,7 +499,13 @@ export interface PageState {
 | 21a | PageType Detection | 4 | 35+ | COMPLETE ✅ |
 | 21b | Knowledge Base (types + 10 JSON files) | 14 | 25 | COMPLETE ✅ |
 | 21c | Vision Analyzer (analyzer + prompt + parser) | 6 | 44 | COMPLETE ✅ |
-| 21d | Integration (PageState + Agent + CLI) | 5 | 23+ | Pending 📋 |
+| 21d | Integration (PageState + Agent + CLI) | 5 | 44+ | COMPLETE ✅ |
+| ~~21e~~ | ~~Multi-Viewport Full-Page Vision~~ | - | - | ✅ REMOVED (CR-001) |
+| ~~21f~~ | ~~Full-Page Screenshot Mode~~ | - | - | ✅ REMOVED (CR-001) |
+| ~~21g~~ | ~~Vision Agent Loop~~ | - | - | ✅ MERGED into CRO Agent (CR-001) |
+| **CR-001** | **Architecture Simplification** | 8+ | 51 | **COMPLETE ✅** |
+| 21h | Evidence Capture | 14 | 49 | 📋 Pending |
+| 21i | DOM-Screenshot Mapping | 17 | 88 | 📋 Pending |
 
 ---
 
@@ -545,6 +551,314 @@ Phase 21's `CROVisionAnalyzer` can be integrated as Phase 20's vision analysis m
 
 ---
 
+---
+
+## Phase 21e: Multi-Viewport Full-Page Vision Analysis
+
+### Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│               MULTI-VIEWPORT FULL-PAGE VISION ANALYSIS                           │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                 │
+│  LEVERAGES PHASE 19 INFRASTRUCTURE                                              │
+│  ┌─────────────────────────────────────────────────────────────────────────┐   │
+│  │ CoverageTracker → Scroll positions → Multiple viewport screenshots       │   │
+│  └─────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                 │
+│  CAPTURE FLOW                                                                   │
+│  ┌─────────────────────────────────────────────────────────────────────────┐   │
+│  │                                                                         │   │
+│  │  Page (2700px)          Screenshots                                     │   │
+│  │  ┌──────────┐           ┌─────────────────────────────────────────┐    │   │
+│  │  │ 0-900px  │ ────────► │ Viewport 0: screenshot_0.png (base64)   │    │   │
+│  │  ├──────────┤           ├─────────────────────────────────────────┤    │   │
+│  │  │ 900-1800 │ ────────► │ Viewport 1: screenshot_1.png (base64)   │    │   │
+│  │  ├──────────┤           ├─────────────────────────────────────────┤    │   │
+│  │  │1800-2700 │ ────────► │ Viewport 2: screenshot_2.png (base64)   │    │   │
+│  │  └──────────┘           └─────────────────────────────────────────┘    │   │
+│  │                                                                         │   │
+│  └─────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                 │
+│  PARALLEL ANALYSIS (gpt-4o-mini)                                               │
+│  ┌─────────────────────────────────────────────────────────────────────────┐   │
+│  │                                                                         │   │
+│  │  ┌─────────────┐   ┌─────────────┐   ┌─────────────┐                   │   │
+│  │  │ Viewport 0  │   │ Viewport 1  │   │ Viewport 2  │                   │   │
+│  │  │ gpt-4o-mini │   │ gpt-4o-mini │   │ gpt-4o-mini │   ← Parallel      │   │
+│  │  │   ~$0.002   │   │   ~$0.002   │   │   ~$0.002   │     API calls     │   │
+│  │  └──────┬──────┘   └──────┬──────┘   └──────┬──────┘                   │   │
+│  │         │                 │                 │                           │   │
+│  │         ▼                 ▼                 ▼                           │   │
+│  │  ┌─────────────┐   ┌─────────────┐   ┌─────────────┐                   │   │
+│  │  │ Evaluations │   │ Evaluations │   │ Evaluations │                   │   │
+│  │  │  (35 each)  │   │  (35 each)  │   │  (35 each)  │                   │   │
+│  │  └──────┬──────┘   └──────┬──────┘   └──────┬──────┘                   │   │
+│  │         │                 │                 │                           │   │
+│  │         └────────────────┬┴─────────────────┘                           │   │
+│  │                          ▼                                              │   │
+│  │                 ┌─────────────────┐                                     │   │
+│  │                 │ MERGE & DEDUPE  │                                     │   │
+│  │                 └────────┬────────┘                                     │   │
+│  │                          ▼                                              │   │
+│  │                 ┌─────────────────┐                                     │   │
+│  │                 │ Final Result    │                                     │   │
+│  │                 │ ~35-50 findings │   (deduplicated)                    │   │
+│  │                 └─────────────────┘                                     │   │
+│  │                                                                         │   │
+│  └─────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                 │
+│  COST: ~$0.006-0.01 for 3 viewports with gpt-4o-mini                           │
+│                                                                                 │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### File Structure
+
+```
+src/heuristics/vision/
+├── index.ts                    # MODIFY: Add multi-viewport exports
+├── types.ts                    # MODIFY: Add multi-viewport types
+├── analyzer.ts                 # EXISTS: Single viewport analyzer
+├── multi-viewport-analyzer.ts  # NEW: Multi-viewport orchestrator
+├── result-merger.ts            # NEW: Merge & dedupe logic
+├── prompt-builder.ts           # EXISTS: Reused
+└── response-parser.ts          # EXISTS: Reused
+
+src/agent/
+└── cro-agent.ts                # MODIFY: Add full-page-vision mode
+```
+
+### Multi-Viewport Analyzer Class
+
+```typescript
+// src/heuristics/vision/multi-viewport-analyzer.ts
+
+export class MultiViewportVisionAnalyzer {
+  private singleAnalyzer: CROVisionAnalyzer;
+  private config: MultiViewportVisionConfig;
+
+  constructor(config?: Partial<MultiViewportVisionConfig>) {
+    this.config = {
+      model: 'gpt-4o-mini',      // Cost-optimized default
+      parallelAnalysis: true,
+      dedupeThreshold: 0.8,
+      maxViewports: 10,
+      ...config,
+    };
+    this.singleAnalyzer = new CROVisionAnalyzer({ model: this.config.model });
+  }
+
+  /**
+   * Analyze multiple viewport screenshots for full-page coverage
+   */
+  async analyzeFullPage(
+    screenshots: ViewportScreenshot[],
+    pageType: PageType,
+    viewport: ViewportInfo
+  ): Promise<MultiViewportAnalysisResult> {
+    // 1. Limit to maxViewports
+    const limitedScreenshots = screenshots.slice(0, this.config.maxViewports);
+
+    // 2. Analyze each viewport (parallel or sequential)
+    const viewportResults = this.config.parallelAnalysis
+      ? await this.analyzeParallel(limitedScreenshots, pageType, viewport)
+      : await this.analyzeSequential(limitedScreenshots, pageType, viewport);
+
+    // 3. Merge and deduplicate results
+    const merged = mergeViewportResults(viewportResults, this.config.dedupeThreshold);
+
+    return {
+      pageType,
+      analyzedAt: Date.now(),
+      screenshotUsed: true,
+      viewport,
+      viewportCount: limitedScreenshots.length,
+      viewportResults,
+      evaluations: merged.evaluations,
+      mergedEvaluations: merged.evaluations,
+      deduplicatedCount: merged.deduplicatedCount,
+      insights: this.transformToInsights(merged.evaluations),
+      summary: this.calculateSummary(merged.evaluations),
+    };
+  }
+
+  private async analyzeParallel(
+    screenshots: ViewportScreenshot[],
+    pageType: PageType,
+    viewport: ViewportInfo
+  ): Promise<ViewportVisionResult[]> {
+    const promises = screenshots.map(async (ss, index) => {
+      const start = Date.now();
+      const result = await this.singleAnalyzer.analyze(ss.base64, pageType, viewport);
+      return {
+        viewportIndex: index,
+        scrollPosition: ss.scrollPosition,
+        evaluations: result.evaluations,
+        analysisTimeMs: Date.now() - start,
+      };
+    });
+    return Promise.all(promises);
+  }
+}
+```
+
+### Result Merger
+
+```typescript
+// src/heuristics/vision/result-merger.ts
+
+export function mergeViewportResults(
+  results: ViewportVisionResult[],
+  dedupeThreshold: number
+): MergedResult {
+  const allEvaluations: HeuristicEvaluation[] = [];
+  const seenHeuristics = new Map<string, HeuristicEvaluation>();
+  let deduplicatedCount = 0;
+
+  for (const result of results) {
+    for (const evaluation of result.evaluations) {
+      const existing = seenHeuristics.get(evaluation.heuristicId);
+
+      if (existing) {
+        // Same heuristic - keep highest confidence
+        if (evaluation.confidence > existing.confidence) {
+          seenHeuristics.set(evaluation.heuristicId, {
+            ...evaluation,
+            viewportIndex: result.viewportIndex,
+          });
+        }
+        deduplicatedCount++;
+      } else {
+        seenHeuristics.set(evaluation.heuristicId, {
+          ...evaluation,
+          viewportIndex: result.viewportIndex,
+        });
+      }
+    }
+  }
+
+  return {
+    evaluations: Array.from(seenHeuristics.values()),
+    deduplicatedCount,
+  };
+}
+```
+
+### Integration with CRO Agent
+
+```typescript
+// In cro-agent.ts analyze() method
+
+if (useFullPageVision && scanMode === 'full_page') {
+  // Capture screenshots at each scroll position
+  const screenshots: ViewportScreenshot[] = [];
+
+  for (let i = 0; i < segments.length && i < maxViewports; i++) {
+    await page.evaluate(`window.scrollTo(0, ${segments[i].scrollY})`);
+    await this.sleep(300);
+
+    const buffer = await page.screenshot({ type: 'png', fullPage: false });
+    screenshots.push({
+      base64: buffer.toString('base64'),
+      scrollPosition: segments[i].scrollY,
+      viewportIndex: i,
+      coverage: { start: segments[i].scrollY, end: segments[i].scrollY + viewportHeight },
+    });
+  }
+
+  // Run multi-viewport analysis
+  const multiAnalyzer = new MultiViewportVisionAnalyzer({
+    model: visionModel || 'gpt-4o-mini',
+    parallelAnalysis: true,
+  });
+
+  visionAnalysis = await multiAnalyzer.analyzeFullPage(screenshots, detectedPageType, viewport);
+}
+```
+
+### CLI Flags
+
+```bash
+# Enable full-page vision analysis (multi-viewport)
+npm run start -- --full-page-vision https://example.com/product
+
+# With custom max viewports
+npm run start -- --full-page-vision --vision-max-viewports 5 https://example.com/product
+
+# Sequential analysis (disable parallel)
+npm run start -- --full-page-vision --no-parallel-vision https://example.com/product
+
+# Override model (use gpt-4o for higher quality)
+npm run start -- --full-page-vision --vision-model gpt-4o https://example.com/product
+```
+
+---
+
+---
+
+## Phase 21f: Full-Page Screenshot Mode
+
+### Summary
+
+Alternative to multi-viewport analysis: capture the **entire page as ONE tall image** using Playwright's `fullPage: true`, auto-resize if needed, and analyze with existing `CROVisionAnalyzer`.
+
+### Mode Comparison
+
+| Flag | Screenshot | Analysis | Default Model |
+|------|------------|----------|---------------|
+| `--vision-only` | Viewport only | Single | gpt-4o-mini |
+| `--full-page-vision` | Multiple viewports | Merge & dedupe | gpt-4o-mini |
+| `--full-page-screenshot` | Full page (1 tall image) | Single | gpt-4o-mini |
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│               FULL-PAGE SCREENSHOT MODE (Phase 21f)                       │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  1. Capture full page screenshot                                        │
+│     page.screenshot({ type: 'png', fullPage: true })                   │
+│                                                                         │
+│  2. Check dimensions                                                    │
+│     If height > 16000px → resize with sharp                           │
+│     Maintain aspect ratio                                              │
+│                                                                         │
+│  3. Analyze with CROVisionAnalyzer                                     │
+│     Same as --vision-only but with full page content                   │
+│                                                                         │
+│  COST: ~$0.002-0.005 per page with gpt-4o-mini                         │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### File Structure
+
+```
+src/heuristics/vision/
+├── image-resizer.ts            # NEW: processFullPageScreenshot()
+├── types.ts                    # MODIFY: Add FullPageScreenshot types
+└── index.ts                    # MODIFY: Export new functions
+
+src/cli.ts                      # MODIFY: Add --full-page-screenshot flag
+
+package.json                    # MODIFY: Add sharp dependency
+```
+
+### CLI Usage
+
+```bash
+# Basic usage
+npm run start -- --full-page-screenshot https://example.com/product
+
+# With gpt-4o for higher quality
+npm run start -- --full-page-screenshot --vision-model gpt-4o https://example.com/product
+```
+
+---
+
 ### Future Extensions
 
 Adding a new page type (e.g., PLP):
@@ -556,3 +870,547 @@ Adding a new page type (e.g., PLP):
 5. Vision analyzer automatically works with new heuristics
 
 No code changes needed in analyzer - only knowledge base additions.
+
+---
+
+## Phase 21g: Vision Agent Loop with DOM + Vision Context
+
+### Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│               VISION AGENT LOOP (Phase 21g)                                       │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                 │
+│  DUAL CONTEXT: DOM + Vision                                                     │
+│  ┌─────────────────────────────────────────────────────────────────────────┐   │
+│  │                                                                         │   │
+│  │  At Each Scroll Position:                                               │   │
+│  │  ┌──────────────┐   ┌──────────────┐                                   │   │
+│  │  │ DOMExtractor │   │ Screenshot   │   ← Capture BOTH                  │   │
+│  │  │ (existing)   │   │ (Playwright) │                                   │   │
+│  │  └──────┬───────┘   └──────┬───────┘                                   │   │
+│  │         │                  │                                            │   │
+│  │         ▼                  ▼                                            │   │
+│  │  ┌──────────────┐   ┌──────────────┐                                   │   │
+│  │  │ DOMSerializer│   │ Base64 PNG   │                                   │   │
+│  │  │ (existing)   │   │              │                                   │   │
+│  │  └──────┬───────┘   └──────┬───────┘                                   │   │
+│  │         │                  │                                            │   │
+│  │         └────────┬─────────┘                                            │   │
+│  │                  ▼                                                      │   │
+│  │         ┌──────────────────┐                                           │   │
+│  │         │ ViewportSnapshot │  { dom, screenshot, scrollPosition }      │   │
+│  │         └──────────────────┘                                           │   │
+│  │                                                                         │   │
+│  └─────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                 │
+│  AGENT LOOP                                                                     │
+│  ┌─────────────────────────────────────────────────────────────────────────┐   │
+│  │                                                                         │   │
+│  │  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐              │   │
+│  │  │   OBSERVE    │───▶│    REASON    │───▶│     ACT      │              │   │
+│  │  │              │    │              │    │              │              │   │
+│  │  │ - DOM tree   │    │ - GPT-4o-mini│    │ - capture    │              │   │
+│  │  │ - Screenshot │    │ - Cross-ref  │    │ - scroll     │              │   │
+│  │  │ - State      │    │   DOM+Vision │    │ - evaluate   │              │   │
+│  │  │              │    │ - Decide     │    │ - done       │              │   │
+│  │  └──────────────┘    └──────────────┘    └──────────────┘              │   │
+│  │         ▲                                       │                       │   │
+│  │         └───────────────────────────────────────┘                       │   │
+│  │              (until all heuristics evaluated)                           │   │
+│  │                                                                         │   │
+│  └─────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                 │
+│  COST: ~$0.005-0.010/page with gpt-4o-mini                                     │
+│                                                                                 │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### File Structure
+
+```
+src/agent/vision/                    # NEW: Vision agent module
+├── index.ts                         # Exports
+├── types.ts                         # VisionAgentState, ViewportSnapshot, etc.
+├── vision-agent.ts                  # Main VisionAgent class
+├── vision-state-manager.ts          # State tracking
+├── vision-prompt-builder.ts         # Prompt construction with DOM + Vision
+├── vision-message-manager.ts        # Message history
+└── tools/                           # Vision agent tools
+    ├── index.ts
+    ├── create-vision-registry.ts
+    ├── capture-viewport-tool.ts     # Captures DOM + screenshot
+    ├── scroll-page-tool.ts
+    ├── evaluate-batch-tool.ts
+    └── vision-done-tool.ts
+
+tests/
+├── unit/
+│   └── vision-agent.test.ts         # Unit tests
+└── integration/
+    └── vision-agent.test.ts         # Integration tests
+```
+
+### Key Types
+
+```typescript
+// Vision agent state (includes DOM snapshots)
+interface VisionAgentState {
+  step: number;
+  snapshots: ViewportSnapshot[];      // Both DOM + screenshot at each position
+  currentScrollY: number;
+  pageHeight: number;
+  viewportHeight: number;
+  allHeuristicIds: string[];
+  evaluatedHeuristicIds: Set<string>;
+  pendingHeuristicIds: string[];
+  evaluations: HeuristicEvaluation[];
+  isDone: boolean;
+}
+
+// Combined snapshot at each scroll position
+interface ViewportSnapshot {
+  scrollPosition: number;
+  viewportIndex: number;
+  screenshot: {
+    base64: string;
+    capturedAt: number;
+  };
+  dom: {
+    tree: DOMTree;                    // Reuse existing DOMTree type
+    serialized: string;               // Pre-serialized for LLM
+    elementCount: number;
+  };
+  heuristicsEvaluated: string[];
+}
+```
+
+### Prompt Structure
+
+User message includes BOTH contexts:
+- `<dom_context>`: Serialized CRO elements with indexes [0], [1], [2]...
+- `<pending_heuristics>`: Remaining heuristics to evaluate
+- [IMAGE]: Screenshot of current viewport
+
+LLM cross-references: "Element [0] in DOM appears too small in screenshot"
+
+### CLI Usage
+
+```bash
+# Vision agent mode (iterative deep analysis)
+npm run start -- --vision-agent https://example.com/product
+
+# With gpt-4o for higher quality
+npm run start -- --vision-agent --vision-model gpt-4o https://example.com/product
+```
+
+---
+
+## Phase 21h: Evidence Capture for Heuristic Evaluations
+
+### Overview
+
+Enhance HeuristicEvaluation with 5 evidence fields to enable audit trails and visual documentation.
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│               EVIDENCE CAPTURE FLOW (Phase 21h)                                   │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                 │
+│  CAPTURE PHASE (capture-viewport-tool)                                          │
+│  ┌─────────────────────────────────────────────────────────────────────────┐   │
+│  │  1. Screenshot → base64                                                 │   │
+│  │  2. DOM → serialized with element indices [0], [1], [2]...             │   │
+│  │  3. Bounding Boxes → element.boundingBox() for each CRO element        │   │
+│  │                                                                         │   │
+│  │  ViewportSnapshot {                                                     │   │
+│  │    viewportIndex: 0,                                                    │   │
+│  │    screenshot: { base64, capturedAt },                                  │   │
+│  │    dom: { tree, serialized, elementCount },                            │   │
+│  │    elementBoundingBoxes: Map<index, BoundingBox>  ← NEW                │   │
+│  │  }                                                                      │   │
+│  └─────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                 │
+│  EVALUATION PHASE (evaluate-batch-tool → state-manager)                         │
+│  ┌─────────────────────────────────────────────────────────────────────────┐   │
+│  │  LLM returns:                                                           │   │
+│  │  {                                                                      │   │
+│  │    heuristicId: "PDP-PRICE-001",                                       │   │
+│  │    status: "fail",                                                      │   │
+│  │    observation: "Element [12] shows price...",                         │   │
+│  │    elementIndices: [12, 15],  ← NEW: structured element refs           │   │
+│  │    ...                                                                  │   │
+│  │  }                                                                      │   │
+│  │                                                                         │   │
+│  │  State manager enriches with:                                           │   │
+│  │  - viewportIndex: from current snapshot                                 │   │
+│  │  - timestamp: Date.now()                                                │   │
+│  │  - domElementRefs: built from elementIndices + DOM tree                │   │
+│  │  - boundingBox: from elementBoundingBoxes map                          │   │
+│  │  - screenshotRef: set later if --save-evidence                         │   │
+│  └─────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                 │
+│  SAVE PHASE (screenshot-writer, optional)                                       │
+│  ┌─────────────────────────────────────────────────────────────────────────┐   │
+│  │  --save-evidence flag triggers:                                         │   │
+│  │  1. Create evidence/ directory                                          │   │
+│  │  2. Save viewport-0.png, viewport-1.png, ...                           │   │
+│  │  3. Update screenshotRef in evaluations                                │   │
+│  └─────────────────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Type Definitions
+
+```typescript
+// NEW: Evidence types (src/heuristics/vision/types.ts)
+interface DOMElementRef {
+  index: number;           // Element [N] from serialization
+  selector?: string;       // CSS selector
+  xpath?: string;          // XPath
+  elementType?: string;    // cta, form, trust_signal
+  textContent?: string;    // Text snippet
+}
+
+interface BoundingBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  viewportIndex: number;
+}
+
+// EXTENDED: HeuristicEvaluation
+interface HeuristicEvaluation {
+  // ... existing fields ...
+
+  // NEW: Evidence fields
+  viewportIndex?: number;
+  screenshotRef?: string;
+  domElementRefs?: DOMElementRef[];
+  boundingBox?: BoundingBox;
+  timestamp?: number;
+}
+
+// EXTENDED: ViewportSnapshot (src/agent/vision/types.ts)
+interface ViewportSnapshot {
+  // ... existing fields ...
+
+  // NEW: Bounding box cache
+  elementBoundingBoxes?: Map<number, BoundingBox>;
+}
+```
+
+### CLI Integration
+
+```bash
+# Vision agent with evidence saving
+npm run start -- --vision-agent --save-evidence https://example.com/product
+
+# Custom evidence directory
+npm run start -- --vision-agent --save-evidence --evidence-dir ./reports/evidence https://example.com/product
+```
+
+### Output Format
+
+```
+│ 🔴 [PDP-PRICE-001] CRITICAL (80% confidence)
+│   Viewport: 0 | Timestamp: 2026-01-14T14:30:00Z
+│   Screenshot: evidence/viewport-0.png
+│   Elements: [12] .product-price (148,320 72x24), [15] .delivery-info
+│   Principle: The full price should be immediately visible...
+│   Observation: Element [12] shows price but delivery costs not visible...
+│   Issue: Users may be unaware of total costs...
+│   Recommendation: Display all costs near primary action button...
+```
+
+### File Changes
+
+| File | Change |
+|------|--------|
+| `src/heuristics/vision/types.ts` | Add DOMElementRef, BoundingBox, extend HeuristicEvaluation |
+| `src/agent/vision/types.ts` | Add elementIndices to BatchEvaluation, boundingBoxes to ViewportSnapshot |
+| `src/agent/vision/tools/capture-viewport-tool.ts` | Extract bounding boxes via Playwright |
+| `src/agent/vision/tools/evaluate-batch-tool.ts` | Accept elementIndices from LLM |
+| `src/agent/vision/vision-state-manager.ts` | Attach evidence to evaluations |
+| `src/agent/vision/vision-agent.ts` | Pass viewport context |
+| `src/agent/vision/vision-prompt-builder.ts` | Instruct LLM on elementIndices |
+| `src/output/screenshot-writer.ts` | NEW: Save screenshots to files |
+| `src/output/agent-progress-formatter.ts` | Display evidence in output |
+| `src/cli.ts` | Add --save-evidence, --evidence-dir flags |
+
+---
+
+## Phase 21i: DOM-Screenshot Coordinate Mapping
+
+### Summary
+
+Implement **explicit coordinate mapping** between DOM elements and their visual positions in screenshots, enabling verification of LLM observations and precise element targeting.
+
+### Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│               DOM-SCREENSHOT COORDINATE MAPPING (Phase 21i)                      │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                 │
+│  COORDINATE TRANSFORMATION                                                       │
+│  ┌─────────────────────────────────────────────────────────────────────────┐   │
+│  │                                                                         │   │
+│  │  DOM Element                         Screenshot                         │   │
+│  │  ───────────                         ──────────                         │   │
+│  │                                                                         │   │
+│  │  boundingBox: {                      Captured at scrollY = 800          │   │
+│  │    x: 120,      (page coords)        Viewport: 1280 x 720               │   │
+│  │    y: 1150,     ◀────────────────┐                                     │   │
+│  │    width: 200,                   │   ┌────────────────────────┐        │   │
+│  │    height: 50                    │   │                        │        │   │
+│  │  }                               │   │    ┌─────────────┐     │        │   │
+│  │                                  │   │    │ Element [5] │     │  y=350 │   │
+│  │  TRANSFORM:                      │   │    └─────────────┘     │        │   │
+│  │  screenshotY = pageY - scrollY   │   │                        │        │   │
+│  │  screenshotY = 1150 - 800 = 350 ─┘   └────────────────────────┘        │   │
+│  │                                                                         │   │
+│  └─────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                 │
+│  DATA FLOW                                                                       │
+│  ┌─────────────────────────────────────────────────────────────────────────┐   │
+│  │                                                                         │   │
+│  │  1. CAPTURE                                                             │   │
+│  │     page.screenshot() ─────────────────────┐                           │   │
+│  │     domExtractor.extract() ────────────────┼──▶ ViewportSnapshot       │   │
+│  │     mapElementsToScreenshot() ─────────────┘    {                      │   │
+│  │                                                   screenshot,           │   │
+│  │  2. PROMPT                                        dom,                  │   │
+│  │     buildUserPrompt(snapshot, heuristics)         elementMappings,     │   │
+│  │     ↓                                             visibleElements      │   │
+│  │     "[5] <button> 'Add to Cart' → (120, 350)"   }                      │   │
+│  │                                                                         │   │
+│  │  3. LLM EVALUATION                                                      │   │
+│  │     GPT-4o Vision analyzes screenshot + coordinates                    │   │
+│  │     ↓                                                                   │   │
+│  │     "Element [5] at (120, 350) has insufficient contrast..."           │   │
+│  │                                                                         │   │
+│  │  4. PARSE                                                               │   │
+│  │     parseEvaluationWithElements(response)                              │   │
+│  │     ↓                                                                   │   │
+│  │     { heuristicId, status, relatedElements: [5] }                      │   │
+│  │                                                                         │   │
+│  │  5. ENRICH                                                              │   │
+│  │     Lookup element [5] in mappings                                     │   │
+│  │     ↓                                                                   │   │
+│  │     Add xpath, selector, boundingBox to evaluation                     │   │
+│  │                                                                         │   │
+│  │  6. ANNOTATE (optional)                                                 │   │
+│  │     annotateScreenshot() ─────▶ Visual evidence with boxes             │   │
+│  │                                                                         │   │
+│  └─────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                 │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### File Structure
+
+```
+src/browser/dom/
+├── coordinate-mapper.ts          # NEW: Coordinate transformation functions
+└── index.ts                      # MODIFY: Export coordinate mapper
+
+src/agent/vision/
+├── types.ts                      # MODIFY: Add ElementMapping, extend ViewportSnapshot
+├── tools/capture-viewport-tool.ts # MODIFY: Create element mappings
+├── vision-prompt-builder.ts      # MODIFY: Include coordinates in prompt
+└── index.ts                      # MODIFY: Export new types
+
+src/heuristics/vision/
+├── response-parser.ts            # MODIFY: Parse element references from response
+└── types.ts                      # MODIFY: Add relatedElements to evaluation
+
+src/output/
+├── screenshot-annotator.ts       # NEW: Draw bounding boxes on screenshots
+└── index.ts                      # MODIFY: Export annotator
+
+tests/
+├── unit/
+│   ├── coordinate-mapper.test.ts # NEW: Coordinate transformation tests
+│   └── screenshot-annotator.test.ts # NEW: Annotation tests
+└── integration/
+    └── dom-screenshot-mapping.test.ts # NEW: End-to-end mapping tests
+```
+
+### Key Types
+
+```typescript
+// src/browser/dom/coordinate-mapper.ts
+
+interface ScreenshotCoords {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  isVisible: boolean;  // Is element within screenshot bounds?
+}
+
+interface ElementMapping {
+  index: number;              // Element index [5]
+  xpath: string;              // /html/body/.../button
+  text: string;               // Element text content
+  croType: CROType;           // cta, form, trust, etc.
+  pageCoords: BoundingBox;    // Absolute page coordinates
+  screenshotCoords: ScreenshotCoords;  // Relative to screenshot
+}
+
+// Extended ViewportSnapshot (src/agent/vision/types.ts)
+interface ViewportSnapshot {
+  // ... existing fields ...
+
+  // NEW: Element-to-screenshot mapping
+  elementMappings: ElementMapping[];
+  visibleElements: ElementMapping[];  // Filtered to visible only
+}
+
+// Extended HeuristicEvaluation
+interface ParsedEvaluation extends HeuristicEvaluation {
+  relatedElements: number[];  // Element indexes mentioned in observation
+}
+```
+
+### Coordinate Mapper Implementation
+
+```typescript
+// src/browser/dom/coordinate-mapper.ts
+
+/**
+ * Transform page coordinates to screenshot-relative coordinates
+ */
+function toScreenshotCoords(
+  pageCoords: BoundingBox,
+  scrollY: number,
+  viewportHeight: number
+): ScreenshotCoords {
+  const screenshotY = pageCoords.y - scrollY;
+
+  // Element is visible if at least partially in viewport
+  const isVisible = (
+    screenshotY + pageCoords.height > 0 &&  // Not above viewport
+    screenshotY < viewportHeight             // Not below viewport
+  );
+
+  return {
+    x: pageCoords.x,
+    y: screenshotY,
+    width: pageCoords.width,
+    height: pageCoords.height,
+    isVisible
+  };
+}
+
+/**
+ * Map all indexed DOM elements to screenshot coordinates
+ */
+function mapElementsToScreenshot(
+  domTree: DOMTree,
+  scrollY: number,
+  viewport: { width: number; height: number }
+): ElementMapping[] {
+  const mappings: ElementMapping[] = [];
+
+  function traverse(node: DOMNode) {
+    if (node.index !== undefined && node.boundingBox) {
+      const screenshotCoords = toScreenshotCoords(
+        node.boundingBox,
+        scrollY,
+        viewport.height
+      );
+
+      mappings.push({
+        index: node.index,
+        xpath: node.xpath,
+        text: node.text,
+        croType: node.croType,
+        pageCoords: node.boundingBox,
+        screenshotCoords
+      });
+    }
+    node.children.forEach(traverse);
+  }
+
+  traverse(domTree.root);
+  return mappings;
+}
+```
+
+### Prompt Enhancement
+
+```typescript
+// src/agent/vision/vision-prompt-builder.ts
+
+function formatDOMContextWithCoords(
+  visibleElements: ElementMapping[]
+): string {
+  let context = `### Visible Elements (with screenshot coordinates)\n`;
+  context += `Format: [index] <tag> "text" → position (x, y, width × height)\n\n`;
+
+  for (const elem of visibleElements) {
+    const { x, y, width, height } = elem.screenshotCoords;
+    const tag = getTagFromXpath(elem.xpath);
+    const text = elem.text.slice(0, 30);
+    context += `[${elem.index}] <${tag}> "${text}" → (${x}, ${y}, ${width}×${height})\n`;
+  }
+
+  context += `\n### IMPORTANT: Reference Elements by Index\n`;
+  context += `When reporting issues, specify which element [index] is affected.\n`;
+  context += `Example: "Element [5] at (120, 350) has low contrast..."\n`;
+
+  return context;
+}
+```
+
+### Response Parser Enhancement
+
+```typescript
+// src/heuristics/vision/response-parser.ts
+
+function parseEvaluationWithElements(raw: RawLLMEvaluation): ParsedEvaluation {
+  // Extract element references like [5], [12] from text
+  const elementPattern = /\[(\d+)\]/g;
+  const allText = `${raw.observation} ${raw.issue || ''} ${raw.recommendation || ''}`;
+  const matches = [...allText.matchAll(elementPattern)];
+
+  const relatedElements = [...new Set(matches.map(m => parseInt(m[1])))];
+
+  return {
+    heuristicId: raw.heuristicId,
+    status: normalizeStatus(raw.status),
+    observation: raw.observation,
+    issue: raw.issue,
+    recommendation: raw.recommendation,
+    confidence: raw.confidence,
+    relatedElements
+  };
+}
+```
+
+### CLI Integration
+
+```bash
+# Enable annotated screenshots
+npm run start -- --vision-agent --annotate-screenshots https://example.com/product
+
+# With evidence saving (combines with Phase 21h)
+npm run start -- --vision-agent --save-evidence --annotate-screenshots https://example.com/product
+```
+
+### Benefits Summary
+
+| Benefit | Without Mapping | With Mapping |
+|---------|-----------------|--------------|
+| **Verification** | Trust LLM blindly | Validate against actual DOM |
+| **Precision** | "A button somewhere" | "Element [5] at (120,350)" |
+| **Deduplication** | By heuristic ID only | By element identity |
+| **Evidence** | Text description | Annotated screenshot |
+| **Automation** | Manual follow-up | Auto-generate fixes |
+| **Confidence** | LLM self-reported | Validated by system |

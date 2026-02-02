@@ -302,7 +302,7 @@ export class CROAgent {
       const messageManager = new MessageManager(promptBuilder.buildSystemPrompt());
 
       const llm = new ChatOpenAI({
-        model: 'gpt-4o',
+        model: 'gpt-4o-mini',
         temperature: 0,
         timeout: this.options.llmTimeoutMs,
       });

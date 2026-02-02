@@ -92,7 +92,7 @@
 - [x] T081 [US6] Create src/agent/cro-agent.ts with CROAgent class ✅
   - Constructor: options merged with DEFAULT_CRO_OPTIONS
   - Method: analyze(url) returns CROAnalysisResult
-  - Loop: observe→reason→act pattern with LLM (gpt-4o)
+  - Loop: observe→reason→act pattern with LLM (gpt-4o-mini)
   - Error handling: LLM timeout, invalid JSON, tool errors, page errors
   - Re-extracts DOM after scroll/click actions
   - Ref: FR-046, FR-047, FR-048, CR-011, CR-012

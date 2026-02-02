@@ -23,17 +23,26 @@ export interface CROScores {
 /**
  * Extended CRO Analysis Result for report generation
  * This interface will be merged with CROAnalysisResult in Phase 18e
+ * CR-001-C: Added visionInsights and unified analysis metadata
  */
 export interface CROReportInput {
   url: string;
   pageTitle?: string;
   insights: CROInsight[];
   heuristicInsights?: CROInsight[];
+  /** CR-001-C: Vision analysis insights from unified analysis */
+  visionInsights?: CROInsight[];
   businessType?: BusinessTypeResult;
+  /** CR-001-C: Detected page type from vision analysis */
+  pageType?: string;
   hypotheses?: Hypothesis[];
   scores?: CROScores;
   stepsExecuted?: number;
   totalTimeMs?: number;
+  /** CR-001-C: Whether unified analysis was used */
+  unifiedAnalysis?: boolean;
+  /** CR-001-C: Categories analyzed in unified mode */
+  categoriesAnalyzed?: string[];
 }
 
 /**
@@ -90,11 +99,24 @@ export class MarkdownReporter {
 
   /**
    * Generate report header with URL and metadata
+   * CR-001-C: Added page type and unified analysis info
    */
   private generateHeader(result: CROReportInput): string {
     const businessTypeStr = result.businessType
       ? `${result.businessType.type} (${Math.round((result.businessType.confidence || 0) * 100)}% confidence)`
       : 'Unknown';
+
+    const pageTypeStr = result.pageType
+      ? result.pageType.toUpperCase()
+      : 'Unknown';
+
+    const analysisMode = result.unifiedAnalysis
+      ? 'Unified (Collection + Category-Based)'
+      : 'Standard (Tool-Based)';
+
+    const categoriesStr = result.categoriesAnalyzed?.length
+      ? result.categoriesAnalyzed.join(', ')
+      : 'N/A';
 
     return `# CRO Analysis Report
 
@@ -102,6 +124,9 @@ export class MarkdownReporter {
 **Page Title**: ${result.pageTitle || 'N/A'}
 **Analysis Date**: ${new Date().toISOString().split('T')[0]}
 **Business Type**: ${businessTypeStr}
+**Page Type**: ${pageTypeStr}
+**Analysis Mode**: ${analysisMode}
+${result.unifiedAnalysis ? `**Categories Analyzed**: ${categoriesStr}` : ''}
 
 ---`;
   }
@@ -222,9 +247,14 @@ ${result.hypotheses.map((h, i) => this.formatHypothesis(h, i + 1)).join('\n\n')}
 
   /**
    * Get all insights combined
+   * CR-001-C: Includes vision insights from unified analysis
    */
   private getAllInsights(result: CROReportInput): CROInsight[] {
-    return [...result.insights, ...(result.heuristicInsights || [])];
+    return [
+      ...result.insights,
+      ...(result.heuristicInsights || []),
+      ...(result.visionInsights || []),
+    ];
   }
 
   /**

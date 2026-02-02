@@ -22,7 +22,14 @@
       "Bash(grep:*)",
       "Bash(xargs sed:*)",
       "WebFetch(domain:www.peregrineclothing.co.uk)",
-      "WebFetch(domain:shopify.dev)"
+      "WebFetch(domain:shopify.dev)",
+      "Bash(npm run build:*)",
+      "Bash(wc:*)",
+      "Bash(timeout:*)",
+      "Bash(tasklist:*)",
+      "Bash(findstr:*)",
+      "Bash(dir:*)",
+      "Bash(node:*)"
     ],
     "deny": [],
     "ask": []

@@ -12,6 +12,40 @@ import { z } from 'zod';
 export type Severity = 'critical' | 'high' | 'medium' | 'low';
 
 /**
+ * Reference to a DOM element with identifying information
+ * (Imported from vision types for Evidence interface)
+ */
+export interface DOMElementRef {
+  /** Index of the element in the DOM tree (as shown in serialized format [0], [1], etc.) */
+  index: number;
+  /** CSS selector for the element (if available) */
+  selector?: string;
+  /** XPath for the element (if available) */
+  xpath?: string;
+  /** Element type (tag name or CRO type like 'cta', 'form', etc.) */
+  elementType: string;
+  /** Text content of the element (truncated if long) */
+  textContent?: string;
+}
+
+/**
+ * Bounding box coordinates for an element in the screenshot
+ * (Imported from vision types for Evidence interface)
+ */
+export interface BoundingBox {
+  /** X coordinate (left edge) in pixels */
+  x: number;
+  /** Y coordinate (top edge) in pixels */
+  y: number;
+  /** Width in pixels */
+  width: number;
+  /** Height in pixels */
+  height: number;
+  /** Which viewport snapshot this bounding box is relative to */
+  viewportIndex: number;
+}
+
+/**
  * Evidence supporting the insight
  */
 export interface Evidence {
@@ -19,6 +53,16 @@ export interface Evidence {
   screenshot?: string;                 // Base64 or file path (future)
   styles?: Record<string, string>;     // Relevant CSS
   selector?: string;                   // CSS selector for element
+
+  // Phase 21h: Evidence Capture Fields
+  /** Which viewport snapshot the evaluation came from (0-indexed) */
+  viewportIndex?: number;
+  /** Timestamp when evaluation was made (epoch milliseconds) */
+  timestamp?: number;
+  /** References to DOM elements mentioned in the evaluation */
+  domElementRefs?: DOMElementRef[];
+  /** Bounding box of the primary element related to this evaluation */
+  boundingBox?: BoundingBox;
 }
 
 /**
@@ -50,6 +94,28 @@ export interface CROInsight {
 }
 
 /**
+ * Zod schema for DOMElementRef validation
+ */
+export const DOMElementRefSchema = z.object({
+  index: z.number(),
+  selector: z.string().optional(),
+  xpath: z.string().optional(),
+  elementType: z.string(),
+  textContent: z.string().optional(),
+});
+
+/**
+ * Zod schema for BoundingBox validation
+ */
+export const BoundingBoxSchema = z.object({
+  x: z.number(),
+  y: z.number(),
+  width: z.number(),
+  height: z.number(),
+  viewportIndex: z.number(),
+});
+
+/**
  * Zod schema for Evidence validation
  */
 export const EvidenceSchema = z.object({
@@ -57,6 +123,11 @@ export const EvidenceSchema = z.object({
   screenshot: z.string().optional(),
   styles: z.record(z.string(), z.string()).optional(),
   selector: z.string().optional(),
+  // Phase 21h: Evidence Capture Fields
+  viewportIndex: z.number().optional(),
+  timestamp: z.number().optional(),
+  domElementRefs: z.array(DOMElementRefSchema).optional(),
+  boundingBox: BoundingBoxSchema.optional(),
 });
 
 /**

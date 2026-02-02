@@ -33,7 +33,7 @@ Phase 21 implements a **vision-based CRO heuristics system** that uses GPT-4o Vi
 
 ---
 
-## Phase 21b: Heuristics Knowledge Base
+## Phase 21b: Heuristics Knowledge Base - COMPLETE
 
 ### Knowledge Base Structure
 
@@ -134,7 +134,7 @@ interface HeuristicItem {
 
 ---
 
-## Phase 21c: CRO Vision Analyzer
+## Phase 21c: CRO Vision Analyzer - COMPLETE
 
 ### Vision Analyzer Class
 
@@ -202,7 +202,7 @@ interface CROVisionAnalysisResult {
 
 ---
 
-## Phase 21d: Integration
+## Phase 21d: Integration - COMPLETE
 
 ### PageState Extension
 
@@ -240,7 +240,7 @@ interface CROAgentConfig {
 
 ## Configuration Requirements
 
-- **CR-040**: Vision model MUST default to 'gpt-4o' for accuracy
+- **CR-040**: Vision model MUST default to 'gpt-4o-mini' for cost optimization
 - **CR-041**: Vision analysis MUST be enabled by default for supported page types
 - **CR-042**: Heuristics knowledge base MUST be loaded lazily on first use
 - **CR-043**: Vision prompt MUST target < 2000 tokens for heuristics context
@@ -286,6 +286,94 @@ interface CROAgentConfig {
 
 ---
 
+## Phase 21e: Multi-Viewport Full-Page Vision Analysis - REMOVED (CR-001)
+
+### Overview
+
+Phase 21e extends vision analysis to cover the **entire page** using multiple viewport screenshots analyzed with gpt-4o-mini for cost efficiency.
+
+**Problem**: Current vision analysis only captures above-the-fold content, missing CRO issues below the fold.
+
+**Solution**: Capture screenshots at each scroll position (leveraging Phase 19 infrastructure), analyze each with gpt-4o-mini, merge/dedupe results.
+
+**Cost Target**: ~$0.01-0.02/page (vs $0.10-0.20 with gpt-4o multi-viewport)
+
+### Functional Requirements
+
+**FR-260**: System MUST support `fullPageVision` mode that captures multiple viewport screenshots
+**FR-261**: System MUST capture screenshot at each scroll position during full-page scan
+**FR-262**: System MUST run vision analysis on each viewport screenshot independently
+**FR-263**: System MUST merge vision results from multiple viewports into single result
+**FR-264**: System MUST deduplicate findings that appear in overlapping viewport regions
+**FR-265**: System MUST default to `gpt-4o-mini` model for full-page vision to optimize cost
+**FR-266**: System MUST support parallel analysis of viewport screenshots for performance
+**FR-267**: System MUST track which viewport each finding originated from
+
+### Multi-Viewport Types
+
+**FR-268**: System MUST provide these types:
+```typescript
+interface ViewportScreenshot {
+  base64: string;
+  scrollPosition: number;      // Y offset
+  viewportIndex: number;       // 0, 1, 2, ...
+  coverage: { start: number; end: number };  // Pixel range covered
+}
+
+interface MultiViewportVisionConfig {
+  model: 'gpt-4o' | 'gpt-4o-mini';  // Default: gpt-4o-mini
+  parallelAnalysis: boolean;        // Default: true
+  dedupeThreshold: number;          // Similarity threshold (0-1), default: 0.8
+  maxViewports: number;             // Max screenshots, default: 10
+}
+
+interface MultiViewportAnalysisResult extends CROVisionAnalysisResult {
+  viewportCount: number;
+  viewportResults: ViewportVisionResult[];
+  mergedEvaluations: HeuristicEvaluation[];
+  deduplicatedCount: number;
+}
+
+interface ViewportVisionResult {
+  viewportIndex: number;
+  scrollPosition: number;
+  evaluations: HeuristicEvaluation[];
+  analysisTimeMs: number;
+}
+```
+
+### Deduplication Logic
+
+**FR-269**: Deduplication MUST use these rules:
+- Same heuristicId across viewports = dedupe (keep highest confidence)
+- Similar observation text (>80% similarity) = dedupe
+- Different scroll regions with same issue = keep both (different locations)
+
+### CLI Integration
+
+**FR-270**: CLI MUST support multi-viewport vision flags:
+- `--full-page-vision`: Enable multi-viewport full-page vision analysis
+- `--vision-max-viewports <N>`: Maximum viewports to analyze (default: 10)
+- `--no-parallel-vision`: Disable parallel analysis (sequential)
+
+### Configuration Requirements
+
+- **CR-050**: Full-page vision MUST default to `gpt-4o-mini` model
+- **CR-051**: Parallel analysis MUST be enabled by default
+- **CR-052**: Maximum viewports MUST default to 10
+- **CR-053**: Dedupe threshold MUST default to 0.8
+
+### Success Criteria
+
+- **SC-170**: Multi-viewport capture works with Phase 19 scroll infrastructure
+- **SC-171**: Each viewport analyzed independently
+- **SC-172**: Results merged without duplicate findings
+- **SC-173**: Cost per page stays within ~$0.01-0.02 target
+- **SC-174**: CLI --full-page-vision flag works correctly
+- **SC-175**: Parallel analysis completes faster than sequential
+
+---
+
 ## Future Extensions
 
 This architecture supports adding new page types:
@@ -301,3 +389,233 @@ Adding a new page type requires:
 1. Create knowledge JSON files with heuristics
 2. Register page type in knowledge loader
 3. Vision analyzer automatically works with new heuristics
+
+---
+
+## Phase 21g: Vision Agent Loop with DOM + Vision Context - MERGED (CR-001)
+
+### Overview
+
+Phase 21g implements an **iterative Vision Agent** that uses an observe-reason-act loop with parallel DOM + Vision context. Unlike single-pass analysis (21c-21f), this agent scrolls through the page, captures DOM and screenshots at each position, and systematically evaluates all heuristics with deep analysis.
+
+**Key Innovation**: Send BOTH serialized DOM AND screenshot to LLM, enabling cross-referencing:
+- "Element [0] in DOM has text 'Buy Now' but appears too small in screenshot"
+- "Trust badge [5] exists in DOM but is obscured by modal in screenshot"
+
+### Functional Requirements
+
+**Vision Agent Core**:
+- **FR-280**: System MUST provide VisionAgent class implementing observe-reason-act loop
+- **FR-281**: VisionAgent MUST extract DOM AND capture screenshot at each scroll position
+- **FR-282**: VisionAgent MUST serialize DOM using existing DOMSerializer (no changes to extractor)
+- **FR-283**: VisionAgent MUST send both DOM context and screenshot image to LLM
+- **FR-284**: VisionAgent MUST track which heuristics have been evaluated
+- **FR-285**: VisionAgent MUST terminate when all heuristics evaluated OR max steps reached
+
+**Vision Agent State**:
+- **FR-286**: VisionAgentState MUST include ViewportSnapshot[] with both DOM and screenshot
+- **FR-287**: VisionAgentState MUST track evaluatedHeuristicIds and pendingHeuristicIds
+- **FR-288**: VisionAgentState MUST track scroll position, page height, viewport dimensions
+- **FR-289**: VisionStateManager MUST provide getCoveragePercent() for heuristic coverage
+
+**Vision Agent Tools**:
+- **FR-290**: capture_viewport tool MUST capture screenshot AND extract DOM in single call
+- **FR-291**: scroll_page tool MUST scroll page and return new scroll position
+- **FR-292**: evaluate_batch tool MUST accept 5-8 heuristic evaluations with status/observation/issue/recommendation
+- **FR-293**: done tool MUST require coverageConfirmation before allowing termination
+- **FR-294**: done tool MUST block if pending heuristics remain without explanation
+
+**Vision Agent Prompts**:
+- **FR-295**: System prompt MUST instruct LLM to cross-reference DOM elements with visual appearance
+- **FR-296**: User prompt MUST include <dom_context> section with serialized CRO elements
+- **FR-297**: User prompt MUST include <pending_heuristics> section with remaining heuristics
+- **FR-298**: User prompt MUST include screenshot image using GPT-4o Vision API format
+
+**CLI Integration**:
+- **FR-299**: CLI MUST support `--vision-agent` flag for iterative vision analysis
+- **FR-300**: VisionAgent MUST default to gpt-4o-mini model for cost optimization
+- **FR-301**: VisionAgent MUST be compatible with existing --headless, --verbose flags
+
+### Configuration Requirements
+
+- **CR-060**: VisionAgent MUST default to maxSteps: 20
+- **CR-061**: VisionAgent MUST default to batchSize: 5-8 heuristics per evaluation
+- **CR-062**: VisionAgent MUST default to scrollIncrement: 500px
+- **CR-063**: VisionAgent MUST default to domTokenBudget: 4000 tokens
+- **CR-064**: VisionAgent MUST terminate after 3 consecutive failures
+
+### Success Criteria
+
+- **SC-180**: VisionAgent scrolls through entire page
+- **SC-181**: VisionAgent evaluates all 35 PDP heuristics (100% coverage)
+- **SC-182**: VisionAgent sends both DOM context and screenshot to LLM
+- **SC-183**: VisionAgent cross-references DOM elements in evaluations
+- **SC-184**: CLI --vision-agent flag works correctly
+- **SC-185**: Cost per page stays within ~$0.005-0.010 target with gpt-4o-mini
+
+---
+
+## Phase 21h: Evidence Capture for Heuristic Evaluations - PLANNED
+
+### Overview
+
+Phase 21h enhances the Vision Agent to capture and store evidence for each heuristic evaluation, enabling audit trails and visual documentation of CRO issues found.
+
+### Problem Statement
+
+Currently, heuristic evaluations contain only text descriptions (observation, issue, recommendation) with no link to:
+- Which viewport/screenshot the evaluation came from
+- Specific DOM elements referenced
+- Visual coordinates of the issue area
+- When the evaluation was made
+
+This makes it difficult to audit findings, create visual reports, or verify issues later.
+
+### Solution
+
+Add 5 evidence fields to HeuristicEvaluation:
+1. `viewportIndex` - Which viewport snapshot the evaluation came from
+2. `screenshotRef` - Path/reference to the screenshot file (when saved)
+3. `domElementRefs` - Structured references to DOM elements mentioned
+4. `boundingBox` - Coordinates extracted from DOM elements via Playwright
+5. `timestamp` - When evaluation was made (epoch ms)
+
+### Functional Requirements
+
+**Evidence Types**:
+- **FR-302**: System MUST define DOMElementRef interface with index, selector, xpath, elementType, textContent
+- **FR-303**: System MUST define BoundingBox interface with x, y, width, height, viewportIndex
+- **FR-304**: HeuristicEvaluation MUST include optional viewportIndex field
+- **FR-305**: HeuristicEvaluation MUST include optional screenshotRef field
+- **FR-306**: HeuristicEvaluation MUST include optional domElementRefs array field
+- **FR-307**: HeuristicEvaluation MUST include optional boundingBox field
+- **FR-308**: HeuristicEvaluation MUST include optional timestamp field
+
+**Evidence Capture**:
+- **FR-309**: BatchEvaluation MUST accept optional elementIndices array from LLM
+- **FR-310**: evaluate-batch-tool MUST pass viewport context to state manager
+- **FR-311**: vision-state-manager MUST attach viewportIndex to evaluations
+- **FR-312**: vision-state-manager MUST attach timestamp to evaluations
+- **FR-313**: vision-state-manager MUST build domElementRefs from element indices
+- **FR-314**: capture-viewport-tool MUST extract bounding boxes for DOM elements via Playwright
+
+**Screenshot Saving**:
+- **FR-315**: System MUST provide ScreenshotWriter utility for saving base64 to PNG files
+- **FR-316**: CLI MUST support `--save-evidence` flag to enable screenshot saving
+- **FR-317**: CLI MUST support `--evidence-dir <path>` option (default: ./evidence)
+- **FR-318**: When evidence is saved, screenshotRef MUST be set to saved file path
+
+**Output Display**:
+- **FR-319**: Output formatter MUST display viewportIndex for each evaluation
+- **FR-320**: Output formatter MUST display screenshotRef when available
+- **FR-321**: Output formatter MUST display domElementRefs in structured format
+
+### Configuration Requirements
+
+- **CR-065**: Evidence fields MUST be optional (backward compatible)
+- **CR-066**: Screenshot saving MUST be disabled by default (opt-in via --save-evidence)
+- **CR-067**: Default evidence directory MUST be ./evidence
+- **CR-068**: Bounding boxes MUST be extracted from DOM using Playwright element.boundingBox()
+
+### Success Criteria
+
+- **SC-186**: All evaluations have viewportIndex linking to snapshot
+- **SC-187**: All evaluations have timestamp of when evaluation occurred
+- **SC-188**: Element references in observations are captured as structured domElementRefs
+- **SC-189**: --save-evidence flag saves viewport screenshots to evidence directory
+- **SC-190**: Bounding boxes are extracted from Playwright for referenced elements
+- **SC-191**: Output shows evidence metadata (viewport, screenshot path, elements)
+
+---
+
+## Phase 21i: DOM-Screenshot Coordinate Mapping - PLANNED
+
+### Overview
+
+Phase 21i implements **explicit coordinate mapping** between DOM elements and their visual positions in screenshots. This enables verification of LLM observations, precise action targeting, and visual evidence generation.
+
+### Problem Statement
+
+Currently, DOM extraction and screenshot capture are parallel but disconnected:
+- DOM elements have `boundingBox` in absolute page coordinates
+- Screenshots are captured at specific scroll positions
+- LLM must mentally correlate DOM text with visual elements (unreliable)
+- No verification that LLM correctly identified elements
+- No way to highlight specific elements in screenshots for reports
+
+### Solution
+
+Implement coordinate transformation and element mapping:
+1. Transform absolute page coordinates to screenshot-relative coordinates
+2. Track which elements are visible in each screenshot
+3. Include coordinates in LLM prompts for precise element identification
+4. Parse element references from LLM responses
+5. Generate annotated screenshots with element bounding boxes
+
+### Functional Requirements
+
+**Coordinate Mapping**:
+- **FR-322**: System MUST provide `toScreenshotCoords(pageCoords, scrollY, viewportHeight)` function
+- **FR-323**: System MUST calculate screenshot-relative Y as `pageY - scrollY`
+- **FR-324**: System MUST determine element visibility in screenshot based on Y bounds
+- **FR-325**: System MUST provide `mapElementsToScreenshot(domTree, scrollY, viewport)` function
+- **FR-326**: mapElementsToScreenshot MUST return ElementMapping[] with both page and screenshot coords
+
+**ElementMapping Types**:
+- **FR-327**: System MUST define ElementMapping interface:
+```typescript
+interface ElementMapping {
+  index: number;              // Element index [5]
+  xpath: string;              // /html/body/.../button
+  text: string;               // Element text content
+  pageCoords: BoundingBox;    // Absolute page coordinates
+  screenshotCoords: {         // Relative to screenshot
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+  visible: boolean;           // Is element within screenshot bounds?
+}
+```
+
+**ViewportSnapshot Extension**:
+- **FR-328**: ViewportSnapshot MUST include `elementMappings: ElementMapping[]`
+- **FR-329**: ViewportSnapshot MUST include `visibleElements: ElementMapping[]` (filtered)
+
+**Prompt Enhancement**:
+- **FR-330**: Vision prompt MUST include element coordinates in DOM context
+- **FR-331**: Prompt format MUST be: `[index] <tag> "text" → (x, y, width×height)`
+- **FR-332**: Prompt MUST instruct LLM to reference elements by index when reporting issues
+
+**Response Parsing**:
+- **FR-333**: System MUST extract element references ([N]) from LLM observations
+- **FR-334**: ParsedEvaluation MUST include `relatedElements: number[]` array
+- **FR-335**: System MUST match element references to ElementMapping entries
+
+**Screenshot Annotation** (Optional):
+- **FR-336**: System MUST provide `annotateScreenshot(screenshot, mappings, evaluations)` function
+- **FR-337**: Annotations MUST draw bounding boxes around referenced elements
+- **FR-338**: Annotations MUST color-code: red for failed, green for passed
+- **FR-339**: Annotations MUST include element index labels `[5]`
+
+**Capture Integration**:
+- **FR-340**: capture-viewport-tool MUST create element mappings after DOM extraction
+- **FR-341**: capture-viewport-tool MUST filter to visible elements for current viewport
+- **FR-342**: capture-viewport-tool MUST store mappings in ViewportSnapshot
+
+### Configuration Requirements
+
+- **CR-070**: Coordinate mapping MUST be enabled by default
+- **CR-071**: Screenshot annotation MUST be opt-in via `--annotate-screenshots` flag
+- **CR-072**: Element visibility threshold MUST allow partial visibility (>50% visible)
+
+### Success Criteria
+
+- **SC-192**: Element mappings correctly transform page coords to screenshot coords
+- **SC-193**: Visible elements filtered based on scroll position
+- **SC-194**: LLM prompt includes element coordinates
+- **SC-195**: Element references parsed from LLM responses
+- **SC-196**: Evaluations linked to specific ElementMapping entries
+- **SC-197**: Annotated screenshots show correct bounding boxes
+- **SC-198**: Issue elements highlighted in red, passed in green

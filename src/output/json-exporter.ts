@@ -11,6 +11,7 @@ import { createLogger } from '../utils/index.js';
 
 /**
  * JSON export structure
+ * CR-001-C: Added unified analysis metadata
  */
 export interface CROExportData {
   meta: {
@@ -18,9 +19,15 @@ export interface CROExportData {
     pageTitle: string | null;
     analysisDate: string;
     businessType: BusinessTypeResult | null;
+    /** CR-001-C: Detected page type */
+    pageType: string | null;
     stepsExecuted: number;
     totalTimeMs: number;
     version: string;
+    /** CR-001-C: Whether unified analysis was used */
+    unifiedAnalysis: boolean;
+    /** CR-001-C: Categories analyzed in unified mode */
+    categoriesAnalyzed: string[];
   };
   scores: CROScores;
   insights: {
@@ -32,6 +39,12 @@ export interface CROExportData {
       low: CROInsight[];
     };
     byCategory: Record<string, CROInsight[]>;
+    /** CR-001-C: Source breakdown */
+    bySource: {
+      tool: CROInsight[];
+      heuristic: CROInsight[];
+      vision: CROInsight[];
+    };
   };
   hypotheses: Hypothesis[];
 }
@@ -93,9 +106,13 @@ export class JSONExporter {
 
   /**
    * Build the export data structure
+   * CR-001-C: Updated to include vision insights and unified analysis metadata
    */
   private buildExportData(result: CROReportInput): CROExportData {
-    const allInsights = [...result.insights, ...(result.heuristicInsights || [])];
+    const toolInsights = result.insights || [];
+    const heuristicInsights = result.heuristicInsights || [];
+    const visionInsights = result.visionInsights || [];
+    const allInsights = [...toolInsights, ...heuristicInsights, ...visionInsights];
     const scores = result.scores || this.calculateDefaultScores(allInsights);
 
     return {
@@ -104,9 +121,12 @@ export class JSONExporter {
         pageTitle: result.pageTitle || null,
         analysisDate: new Date().toISOString(),
         businessType: result.businessType || null,
+        pageType: result.pageType || null,
         stepsExecuted: result.stepsExecuted || 0,
         totalTimeMs: result.totalTimeMs || 0,
         version: '1.0.0',
+        unifiedAnalysis: result.unifiedAnalysis || false,
+        categoriesAnalyzed: result.categoriesAnalyzed || [],
       },
       scores,
       insights: {
@@ -118,6 +138,11 @@ export class JSONExporter {
           low: this.filterBySeverity(allInsights, 'low'),
         },
         byCategory: this.groupByCategory(allInsights),
+        bySource: {
+          tool: toolInsights,
+          heuristic: heuristicInsights,
+          vision: visionInsights,
+        },
       },
       hypotheses: result.hypotheses || [],
     };

@@ -7,7 +7,7 @@
  * - Tool chaining: scroll → analyze → record (3 tests)
  * - Error propagation through ToolExecutor (4 tests)
  * - ToolResult schema validation (3 tests)
- * - createCRORegistry() returns all 11 tools (3 tests)
+ * - createCRORegistry() returns all 13 tools (3 tests)
  * Total: 18 tests
  */
 
@@ -193,9 +193,9 @@ function createMockExecutionContext(
 // ============================================================================
 
 describe('createCRORegistry', () => {
-  it('returns registry with all 11 tools', () => {
+  it('returns registry with all 13 tools', () => {
     const registry = createCRORegistry();
-    expect(registry.size).toBe(11);
+    expect(registry.size).toBe(13);
   });
 
   it('includes all analysis tools', () => {
@@ -214,6 +214,9 @@ describe('createCRORegistry', () => {
     expect(registry.has('scroll_page')).toBe(true);
     expect(registry.has('click')).toBe(true);
     expect(registry.has('go_to_url')).toBe(true);
+    // Collection tools (CR-001-B)
+    expect(registry.has('capture_viewport')).toBe(true);
+    expect(registry.has('collection_done')).toBe(true);
     // Control tools
     expect(registry.has('record_insight')).toBe(true);
     expect(registry.has('done')).toBe(true);

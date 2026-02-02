@@ -1,7 +1,8 @@
 /**
- * Vision Response Parser - Phase 21c (T309)
+ * Vision Response Parser - Phase 21c (T309) + Phase 21i (T373)
  *
  * Parses and validates GPT-4o Vision responses into structured evaluations.
+ * Phase 21i adds element reference extraction from observation text.
  */
 
 import type { PageTypeHeuristics, HeuristicItem } from '../knowledge/index.js';
@@ -10,6 +11,7 @@ import type {
   RawLLMEvaluation,
   LLMVisionResponse,
   EvaluationStatus,
+  ParsedEvaluation,
 } from './types.js';
 import type { Severity } from '../../models/cro-insight.js';
 
@@ -274,4 +276,88 @@ export function validateCompleteness(
     complete: missing.length === 0,
     missing,
   };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PHASE 21i: Element Reference Extraction (T373)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Regular expression to match element index references like [0], [1], [23], etc.
+ * Matches patterns like:
+ * - "Element [5] shows..."
+ * - "[0] has text..."
+ * - "Elements [3] and [7] are..."
+ */
+const ELEMENT_INDEX_PATTERN = /\[(\d+)\]/g;
+
+/**
+ * Extract element indices from text containing [index] references
+ *
+ * @param text - Text containing element references like [0], [5], [23]
+ * @returns Array of unique element indices, sorted numerically
+ */
+export function extractElementReferences(text: string): number[] {
+  if (!text) return [];
+
+  const matches = text.matchAll(ELEMENT_INDEX_PATTERN);
+  const indices = new Set<number>();
+
+  for (const match of matches) {
+    const captured = match[1];
+    if (captured) {
+      const index = parseInt(captured, 10);
+      if (!isNaN(index) && index >= 0) {
+        indices.add(index);
+      }
+    }
+  }
+
+  // Return sorted unique indices
+  return Array.from(indices).sort((a, b) => a - b);
+}
+
+/**
+ * Parse a HeuristicEvaluation and extract element references from its text fields (Phase 21i T373)
+ *
+ * Extracts element indices from:
+ * - observation text
+ * - issue text
+ * - recommendation text
+ *
+ * @param evaluation - The heuristic evaluation to enhance
+ * @returns ParsedEvaluation with relatedElements array
+ */
+export function parseEvaluationWithElements(evaluation: HeuristicEvaluation): ParsedEvaluation {
+  // Collect all text fields that may contain element references
+  const textsToSearch = [
+    evaluation.observation,
+    evaluation.issue,
+    evaluation.recommendation,
+  ].filter((text): text is string => typeof text === 'string' && text.length > 0);
+
+  // Extract unique element indices from all text fields
+  const allIndices = new Set<number>();
+  for (const text of textsToSearch) {
+    const indices = extractElementReferences(text);
+    for (const idx of indices) {
+      allIndices.add(idx);
+    }
+  }
+
+  // Return ParsedEvaluation with relatedElements
+  return {
+    ...evaluation,
+    relatedElements: Array.from(allIndices).sort((a, b) => a - b),
+  };
+}
+
+/**
+ * Parse multiple evaluations and extract element references from each (Phase 21i T373)
+ *
+ * @param evaluations - Array of heuristic evaluations
+ * @returns Array of ParsedEvaluations with relatedElements populated
+ */
+export function parseEvaluationsWithElements(evaluations: HeuristicEvaluation[]): ParsedEvaluation[] {
+  return evaluations.map(parseEvaluationWithElements);
 }

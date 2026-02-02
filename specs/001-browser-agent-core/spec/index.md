@@ -2,8 +2,16 @@
 
 **Feature Branch**: `001-browser-agent-core`
 **Created**: 2025-01-23
-**Status**: Phase 21a-c Complete (PageType + Knowledge Base + Vision Analyzer), Phase 21d Pending (Integration)
+**Status**: Architecture Refactor (CR-001 Approved) | Phase 21h-21i + Phase 22 Pending
 **Input**: User description: "Build a browser agent that can navigate websites and extract data using LangChain for intelligent processing"
+
+> **Change Request 001 (2026-01-30)**: Architecture simplification ✅ **COMPLETE**
+> - ✅ REMOVED: `--vision`, `--full-page-vision`, `--full-page-screenshot` modes
+> - ✅ KEPT: `--vision-agent` as the ONE vision mode
+> - ✅ MERGED: Vision Agent into CRO Agent (single agent loop)
+> - ✅ Analysis now happens AFTER data collection (category-based LLM calls)
+> - DEFERRED: Phase 20 (60 tasks) to backlog
+> - NEXT: Phase 22 - PLP, Homepage, Cart, Checkout, Generic knowledge bases
 
 ---
 
@@ -15,7 +23,8 @@
 | Foundation Requirements | FR-001 to FR-014, CR-001 to CR-009 | [requirements-foundation.md](./requirements-foundation.md) |
 | CRO Requirements | FR-015 to FR-097, Phases 16-18 | [requirements-cro.md](./requirements-cro.md) |
 | Phase 19-20 Requirements | FR-098 to FR-170, Coverage & Pipeline (10 modules) | [requirements-phase19-20.md](./requirements-phase19-20.md) |
-| Phase 21 Requirements | FR-171 to FR-221, PDP Heuristics (35 rules) | [requirements-phase21.md](./requirements-phase21.md) |
+| Phase 21 Requirements | FR-171 to FR-342, Vision + Evidence + Mapping | [requirements-phase21.md](./requirements-phase21.md) |
+| Phase 22 Requirements | FR-343 to FR-347, Page Type Knowledge Bases | [requirements-phase22.md](./requirements-phase22.md) |
 
 ---
 
@@ -27,18 +36,24 @@
 - **US11-US14**: Advanced (Page Coverage, Unified Pipeline, Constraints, Selectors)
 
 ### Requirements Coverage
-- **Functional Requirements**: FR-001 to FR-221
-- **Configuration Requirements**: CR-001 to CR-040
-- **Success Criteria**: SC-001 to SC-150
+- **Functional Requirements**: FR-001 to FR-347
+- **Configuration Requirements**: CR-001 to CR-043
+- **Success Criteria**: SC-001 to SC-156
 
 ### Phase Mapping
-| Phase | Focus | Requirements |
-|-------|-------|--------------|
-| 1-12 | Foundation | FR-001 to FR-014 |
-| 13-15 | CRO Models & DOM | FR-015 to FR-038 |
-| 16 | Agent Core | FR-039 to FR-048 |
-| 17 | CRO Tools | FR-049 to FR-063 |
-| 18 | Heuristics | FR-064 to FR-097 |
-| 19 | Page Coverage | FR-098 to FR-112 |
-| 20 | Unified Pipeline (10 modules) | FR-113 to FR-170 |
-| 21 | PDP Heuristics (35 rules) | FR-171 to FR-221 |
+| Phase | Focus | Requirements | Status |
+|-------|-------|--------------|--------|
+| 1-12 | Foundation | FR-001 to FR-014 | ✅ Complete |
+| 13-15 | CRO Models & DOM | FR-015 to FR-038 | ✅ Complete |
+| 16 | Agent Core | FR-039 to FR-048 | ✅ Complete |
+| 17 | CRO Tools | FR-049 to FR-063 | ✅ Complete |
+| 18 | Heuristics | FR-064 to FR-097 | ✅ Complete |
+| 19 | Page Coverage | FR-098 to FR-112 | ✅ Complete |
+| ~~20~~ | ~~Unified Pipeline~~ | ~~FR-113 to FR-170~~ | **DEFERRED** |
+| 21a-d | Vision Core | FR-171 to FR-260 | ✅ Complete |
+| ~~21e-f~~ | ~~Multi-Viewport~~ | - | ✅ REMOVED (CR-001) |
+| ~~21g~~ | ~~Vision Agent~~ | ~~FR-280 to FR-301~~ | ✅ MERGED (CR-001) |
+| **CR-001** | **Architecture Simplification** | - | ✅ Complete |
+| 21h | Evidence Capture | FR-302 to FR-321 | 📋 Pending |
+| 21i | Coordinate Mapping | FR-322 to FR-342 | 📋 Pending |
+| **22** | **Page Type KBs** | FR-343 to FR-347 | 📋 Pending |

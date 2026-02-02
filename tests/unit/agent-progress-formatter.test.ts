@@ -2,13 +2,15 @@
  * Agent Progress Formatter Unit Tests
  *
  * Phase 16-CLI (T090): Tests for AgentProgressFormatter.
- * 6 tests covering formatAnalysisStart, formatStepComplete, and formatAnalysisResult.
+ * Phase 21h (T360): Tests for evidence field display.
+ * 10 tests total.
  */
 
 import { describe, it, expect } from 'vitest';
 import { AgentProgressFormatter } from '../../src/output/agent-progress-formatter.js';
 import type { CROAnalysisResult } from '../../src/agent/cro-agent.js';
 import type { CROInsight, Severity } from '../../src/models/index.js';
+import type { CROVisionAnalysisResult, HeuristicEvaluation } from '../../src/heuristics/vision/types.js';
 
 // Helper to create a mock CROInsight
 const createMockInsight = (overrides: Partial<CROInsight> = {}): CROInsight => ({
@@ -124,8 +126,8 @@ describe('AgentProgressFormatter', () => {
       expect(output).toContain('Steps Executed: 8');
       expect(output).toContain('Total Time: 25.00s');
 
-      // Insights section - new format
-      expect(output).toContain('INSIGHTS: 4 tool + 0 heuristic = 4 total');
+      // Insights section - new format (CR-001-C: includes vision count)
+      expect(output).toContain('INSIGHTS: 4 tool + 0 heuristic + 0 vision = 4 total');
       expect(output).toContain('CRITICAL (1)');
       expect(output).toContain('HIGH (1)');
       expect(output).toContain('MEDIUM (1)');
@@ -163,6 +165,183 @@ describe('AgentProgressFormatter', () => {
       expect(output).toContain('Parse error: Invalid JSON');
       expect(output).toContain('INSIGHTS FOUND: 0');
       expect(output).toContain('No CRO issues found');
+    });
+  });
+
+  // Phase 21h (T360): Evidence field display tests
+  describe('formatAnalysisResult with evidence fields', () => {
+    // Test 7: Display viewportIndex and timestamp in evaluation details
+    it('should display viewportIndex and timestamp for evaluations', () => {
+      const formatter = new AgentProgressFormatter({ useColors: false, width: 100 });
+
+      const timestamp = Date.now();
+      const visionAnalysis: CROVisionAnalysisResult = {
+        pageType: 'pdp',
+        analyzedAt: timestamp,
+        screenshotUsed: true,
+        viewport: { width: 1920, height: 1080, deviceScaleFactor: 1, isMobile: false },
+        evaluations: [
+          {
+            heuristicId: 'PDP-CTA-001',
+            principle: 'CTA should be prominent',
+            status: 'fail',
+            severity: 'critical',
+            observation: 'CTA button is too small',
+            issue: 'Button size is below recommended minimum',
+            recommendation: 'Increase button size',
+            confidence: 0.95,
+            viewportIndex: 2,
+            timestamp,
+          },
+        ],
+        insights: [],
+        summary: {
+          totalHeuristics: 1,
+          passed: 0,
+          failed: 1,
+          partial: 0,
+          notApplicable: 0,
+          bySeverity: { critical: 1, high: 0, medium: 0, low: 0 },
+        },
+      };
+
+      const result = createMockResult({
+        visionAnalysis,
+        pageType: 'pdp',
+      });
+
+      const output = formatter.formatAnalysisResult(result);
+
+      expect(output).toContain('viewport: 2');
+      expect(output).toContain('Evidence:');
+    });
+
+    // Test 8: Display screenshotRef when available
+    it('should display screenshotRef when available', () => {
+      const formatter = new AgentProgressFormatter({ useColors: false, width: 100 });
+
+      const visionAnalysis: CROVisionAnalysisResult = {
+        pageType: 'pdp',
+        analyzedAt: Date.now(),
+        screenshotUsed: true,
+        viewport: { width: 1920, height: 1080, deviceScaleFactor: 1, isMobile: false },
+        evaluations: [
+          {
+            heuristicId: 'PDP-PRICE-001',
+            principle: 'Price should be visible',
+            status: 'fail',
+            severity: 'high',
+            observation: 'Price is hidden',
+            issue: 'Price below fold',
+            confidence: 0.9,
+            screenshotRef: './evidence/viewport_v00_y0_1234567890.png',
+          },
+        ],
+        insights: [],
+        summary: {
+          totalHeuristics: 1,
+          passed: 0,
+          failed: 1,
+          partial: 0,
+          notApplicable: 0,
+          bySeverity: { critical: 0, high: 1, medium: 0, low: 0 },
+        },
+      };
+
+      const result = createMockResult({ visionAnalysis, pageType: 'pdp' });
+      const output = formatter.formatAnalysisResult(result);
+
+      expect(output).toContain('screenshot: ./evidence/viewport_v00_y0_1234567890.png');
+    });
+
+    // Test 9: Display domElementRefs with selectors
+    it('should display domElementRefs with element details', () => {
+      const formatter = new AgentProgressFormatter({ useColors: false, width: 100 });
+
+      const visionAnalysis: CROVisionAnalysisResult = {
+        pageType: 'pdp',
+        analyzedAt: Date.now(),
+        screenshotUsed: true,
+        viewport: { width: 1920, height: 1080, deviceScaleFactor: 1, isMobile: false },
+        evaluations: [
+          {
+            heuristicId: 'PDP-IMAGE-001',
+            principle: 'Product images should be high quality',
+            status: 'partial',
+            severity: 'medium',
+            observation: 'Image quality is mixed',
+            confidence: 0.85,
+            domElementRefs: [
+              { index: 0, elementType: 'img', textContent: undefined },
+              { index: 3, elementType: 'cta', textContent: 'Add to Cart' },
+            ],
+          },
+        ],
+        insights: [],
+        summary: {
+          totalHeuristics: 1,
+          passed: 0,
+          failed: 0,
+          partial: 1,
+          notApplicable: 0,
+          bySeverity: { critical: 0, high: 0, medium: 1, low: 0 },
+        },
+      };
+
+      const result = createMockResult({ visionAnalysis, pageType: 'pdp' });
+      const output = formatter.formatAnalysisResult(result);
+
+      expect(output).toContain('Elements:');
+      expect(output).toContain('[0] img');
+      expect(output).toContain('[3] cta "Add to Cart"');
+    });
+
+    // Test 10: Display boundingBox coordinates
+    it('should display boundingBox coordinates', () => {
+      const formatter = new AgentProgressFormatter({ useColors: false, width: 100 });
+
+      const visionAnalysis: CROVisionAnalysisResult = {
+        pageType: 'pdp',
+        analyzedAt: Date.now(),
+        screenshotUsed: true,
+        viewport: { width: 1920, height: 1080, deviceScaleFactor: 1, isMobile: false },
+        evaluations: [
+          {
+            heuristicId: 'PDP-LAYOUT-001',
+            principle: 'Layout should be balanced',
+            status: 'fail',
+            severity: 'low',
+            observation: 'Layout is unbalanced',
+            issue: 'Too much whitespace',
+            confidence: 0.75,
+            boundingBox: {
+              x: 100,
+              y: 250,
+              width: 300,
+              height: 150,
+              viewportIndex: 1,
+            },
+          },
+        ],
+        insights: [],
+        summary: {
+          totalHeuristics: 1,
+          passed: 0,
+          failed: 1,
+          partial: 0,
+          notApplicable: 0,
+          bySeverity: { critical: 0, high: 0, medium: 0, low: 1 },
+        },
+      };
+
+      const result = createMockResult({ visionAnalysis, pageType: 'pdp' });
+      const output = formatter.formatAnalysisResult(result);
+
+      expect(output).toContain('BoundingBox:');
+      expect(output).toContain('x:100');
+      expect(output).toContain('y:250');
+      expect(output).toContain('300×150');
+      expect(output).toContain('(viewport 1)');
     });
   });
 });

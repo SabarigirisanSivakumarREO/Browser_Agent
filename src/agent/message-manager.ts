@@ -2,11 +2,43 @@
  * Message Manager
  *
  * Phase 16 (T079): Manages LangChain message history for CRO agent conversations.
+ * T512: Added image support for unified vision integration.
  * Handles message ordering, trimming, and conversion between formats.
  */
 
 import { HumanMessage, AIMessage, SystemMessage, type BaseMessage } from '@langchain/core/messages';
 import type { CROAgentOutput } from '../models/index.js';
+
+/**
+ * Image content for multimodal messages
+ * T512: Support for vision-enabled analysis
+ */
+export interface ImageContent {
+  type: 'image_url';
+  image_url: {
+    url: string;  // Base64 data URL or HTTP URL
+    detail?: 'low' | 'high' | 'auto';  // Low detail = ~85 tokens
+  };
+}
+
+/**
+ * Text content for multimodal messages
+ */
+export interface TextContent {
+  type: 'text';
+  text: string;
+}
+
+/**
+ * Content that can be in a message (text or image)
+ */
+export type MessageContent = TextContent | ImageContent;
+
+/**
+ * Estimated tokens per image at low detail
+ * OpenAI charges ~85 tokens for low detail images
+ */
+const IMAGE_TOKENS_LOW_DETAIL = 85;
 
 /**
  * MessageManager - Manages conversation history for LLM interaction
@@ -20,6 +52,8 @@ import type { CROAgentOutput } from '../models/index.js';
 export class MessageManager {
   private messages: BaseMessage[] = [];
   private readonly systemMessage: SystemMessage;
+  /** T512: Track image count for token estimation */
+  private imageCount = 0;
 
   /**
    * Create a MessageManager with a system prompt
@@ -35,6 +69,57 @@ export class MessageManager {
    */
   addUserMessage(content: string): void {
     this.messages.push(new HumanMessage(content));
+  }
+
+  /**
+   * T512: Add a user message with a single image
+   * Used for analysis phase with vision context
+   *
+   * @param text - Text content of the message
+   * @param imageBase64 - Base64 encoded image data (without data URL prefix)
+   * @param detail - Image detail level ('low' = ~85 tokens, 'high' = more detailed)
+   */
+  addUserMessageWithImage(text: string, imageBase64: string, detail: 'low' | 'high' = 'low'): void {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const content: any[] = [
+      { type: 'text', text },
+      {
+        type: 'image_url',
+        image_url: {
+          url: `data:image/jpeg;base64,${imageBase64}`,
+          detail,
+        },
+      },
+    ];
+
+    this.messages.push(new HumanMessage({ content }));
+    this.imageCount++;
+  }
+
+  /**
+   * T512: Add a user message with multiple images
+   * Used for analysis phase when analyzing multiple viewport snapshots
+   *
+   * @param text - Text content of the message
+   * @param images - Array of base64 encoded images (without data URL prefix)
+   * @param detail - Image detail level for all images
+   */
+  addUserMessageWithImages(text: string, images: string[], detail: 'low' | 'high' = 'low'): void {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const content: any[] = [{ type: 'text', text }];
+
+    for (const imageBase64 of images) {
+      content.push({
+        type: 'image_url',
+        image_url: {
+          url: `data:image/jpeg;base64,${imageBase64}`,
+          detail,
+        },
+      });
+    }
+
+    this.messages.push(new HumanMessage({ content }));
+    this.imageCount += images.length;
   }
 
   /**
@@ -127,6 +212,7 @@ export class MessageManager {
    */
   clear(): void {
     this.messages = [];
+    this.imageCount = 0;
   }
 
   /**
@@ -147,26 +233,50 @@ export class MessageManager {
 
   /**
    * Estimate token count for all messages
-   * Uses rough heuristic: chars / 4
+   * Uses rough heuristic: chars / 4 for text, ~85 per image (low detail)
+   * T512: Added image token estimation
    * @returns Estimated total token count
    */
   estimateTokenCount(): number {
-    let totalChars = this.systemMessage.content.length;
+    let totalChars = 0;
+    let imageTokens = 0;
 
+    // System message
+    if (typeof this.systemMessage.content === 'string') {
+      totalChars += this.systemMessage.content.length;
+    }
+
+    // Conversation messages
     for (const msg of this.messages) {
       if (typeof msg.content === 'string') {
         totalChars += msg.content.length;
+      } else if (Array.isArray(msg.content)) {
+        // Multimodal content - cast to any[] to handle LangChain's complex types
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const contentArray = msg.content as any[];
+        for (const contentItem of contentArray) {
+          if (typeof contentItem === 'string') {
+            totalChars += contentItem.length;
+          } else if (contentItem && typeof contentItem === 'object' && 'type' in contentItem) {
+            if (contentItem.type === 'text' && contentItem.text) {
+              totalChars += String(contentItem.text).length;
+            } else if (contentItem.type === 'image_url') {
+              imageTokens += IMAGE_TOKENS_LOW_DETAIL;
+            }
+          }
+        }
       }
     }
 
-    return Math.ceil(totalChars / 4);
+    return Math.ceil(totalChars / 4) + imageTokens;
   }
 
   /**
    * Get message types summary (for debugging)
+   * T512: Added image count
    * @returns Object with counts by message type
    */
-  getMessageTypeSummary(): { human: number; ai: number; system: number } {
+  getMessageTypeSummary(): { human: number; ai: number; system: number; images: number } {
     let human = 0;
     let ai = 0;
 
@@ -178,16 +288,34 @@ export class MessageManager {
       }
     }
 
-    return { human, ai, system: 1 };
+    return { human, ai, system: 1, images: this.imageCount };
+  }
+
+  /**
+   * T512: Check if conversation includes any images
+   * @returns true if any messages contain images
+   */
+  hasImages(): boolean {
+    return this.imageCount > 0;
+  }
+
+  /**
+   * T512: Get the number of images in the conversation
+   * @returns Number of images added
+   */
+  getImageCount(): number {
+    return this.imageCount;
   }
 
   /**
    * Create a snapshot of current state (for testing/debugging)
+   * T512: Added imageCount to snapshot
    */
   snapshot(): {
     systemPrompt: string;
     messageCount: number;
-    messages: Array<{ type: string; contentPreview: string }>;
+    imageCount: number;
+    messages: Array<{ type: string; contentPreview: string; hasImage: boolean }>;
   } {
     return {
       systemPrompt:
@@ -195,11 +323,19 @@ export class MessageManager {
           ? this.systemMessage.content.slice(0, 100) + '...'
           : '[complex content]',
       messageCount: this.messages.length,
-      messages: this.messages.map((msg) => ({
-        type: msg instanceof HumanMessage ? 'human' : 'ai',
-        contentPreview:
-          typeof msg.content === 'string' ? msg.content.slice(0, 50) + '...' : '[complex content]',
-      })),
+      imageCount: this.imageCount,
+      messages: this.messages.map((msg) => {
+        const hasImage = typeof msg.content !== 'string' &&
+          Array.isArray(msg.content) &&
+          msg.content.some((c) => typeof c === 'object' && 'type' in c && c.type === 'image_url');
+
+        return {
+          type: msg instanceof HumanMessage ? 'human' : 'ai',
+          contentPreview:
+            typeof msg.content === 'string' ? msg.content.slice(0, 50) + '...' : '[complex content]',
+          hasImage,
+        };
+      }),
     };
   }
 }
