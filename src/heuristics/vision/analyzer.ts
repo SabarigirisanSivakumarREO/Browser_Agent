@@ -19,6 +19,7 @@ import type {
   CROVisionAnalysisResult,
   HeuristicEvaluation,
   VisionAnalysisSummary,
+  CapturedLLMInputs,
 } from './types.js';
 import { DEFAULT_VISION_CONFIG, getInsightCategory } from './types.js';
 import { buildSystemPrompt, buildVisionPrompt } from './prompt-builder.js';
@@ -78,6 +79,13 @@ export class CROVisionAnalyzer {
     // Calculate summary
     const summary = this.calculateSummary(evaluations);
 
+    // Phase 23 (T401): Capture LLM inputs for debugging
+    const capturedInputs: CapturedLLMInputs = {
+      systemPrompt,
+      userPrompt,
+      screenshotBase64: screenshot,
+    };
+
     return {
       pageType,
       analyzedAt: Date.now(),
@@ -86,6 +94,7 @@ export class CROVisionAnalyzer {
       evaluations,
       insights,
       summary,
+      capturedInputs,
     };
   }
 

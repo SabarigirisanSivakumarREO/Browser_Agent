@@ -1,20 +1,18 @@
 /**
  * Heuristics Module - Phase 18b/18c + Phase 21 (T106d, T111c, T289, T294)
+ * CR-002: Rule-based heuristics (H001-H010) removed - vision analysis supersedes
  *
- * Exports for heuristic rule engine, business type detection, page type detection,
- * knowledge base, and rules.
+ * Exports for business type detection, page type detection,
+ * knowledge base, and vision analysis.
  */
 
 // Types
 export type {
-  HeuristicRule,
-  HeuristicResult,
-  HeuristicEngineOptions,
   HeuristicCategory,
 } from './types.js';
 
-// Heuristic Engine
-export { HeuristicEngine } from './heuristic-engine.js';
+// NOTE: HeuristicEngine and rule-based heuristics removed in CR-002
+// Vision-based analysis (Phase 21) supersedes rule-based heuristics
 
 // Business Type Detector
 export type { BusinessTypeDetectorConfig } from './business-type-detector.js';
@@ -36,30 +34,9 @@ export {
   createSeverityScorer,
 } from './severity-scorer.js';
 
-// Heuristic Rules (Phase 18c)
-export {
-  // Factory function (preferred way to get engine with all rules)
-  createHeuristicEngine,
-  // All rules combined
-  allRules,
-  // Rule arrays by category
-  ctaRules,
-  formRules,
-  trustRules,
-  valuePropRules,
-  navigationRules,
-  // Individual rules
-  vagueCTATextRule,
-  noCTAAboveFoldRule,
-  formFieldOverloadRule,
-  missingFieldLabelRule,
-  noTrustAboveFoldRule,
-  noSecurityBadgeRule,
-  unclearValuePropRule,
-  headlineTooLongRule,
-  noBreadcrumbsRule,
-  noSearchEcommerceRule,
-} from './rules/index.js';
+// NOTE: Heuristic Rules (Phase 18c) removed in CR-002
+// createHeuristicEngine, allRules, and individual rules no longer exported
+// Vision-based analysis provides superior accuracy with visual context
 
 // Knowledge Base (Phase 21b)
 export type {
@@ -113,11 +90,16 @@ export {
 } from './category-grouper.js';
 
 // Category Analyzer (CR-001-C)
-export type { CategoryAnalyzerConfig, CategoryAnalysisResult } from './category-analyzer.js';
+// Phase 23: Added CapturedCategoryInputs for LLM input debugging
+// Phase 25-fix: Added element reference parsing utilities
+export type { CategoryAnalyzerConfig, CategoryAnalysisResult, CapturedCategoryInputs, ParsedElementRef } from './category-analyzer.js';
 export {
   CategoryAnalyzer,
   createCategoryAnalyzer,
   DEFAULT_CATEGORY_ANALYZER_CONFIG,
+  parseElementRef,
+  extractElementRefs,
+  toNumericIndex,
 } from './category-analyzer.js';
 
 // Analysis Orchestrator (CR-001-C)
@@ -127,3 +109,46 @@ export {
   createAnalysisOrchestrator,
   DEFAULT_ORCHESTRATOR_CONFIG,
 } from './analysis-orchestrator.js';
+
+// Playwright Page Type Detector (Phase 24)
+export type {
+  PdpSignals,
+  PlaywrightDetectionResult,
+  PlaywrightDetectionEvidence,
+  PlaywrightPageTypeDetectorConfig,
+} from './playwright-page-detector.js';
+export {
+  PlaywrightPageTypeDetector,
+  createPlaywrightPageTypeDetector,
+  detectPdp,
+} from './playwright-page-detector.js';
+
+// Domain Pattern Cache (Phase 24)
+export type {
+  CachedDetectionResult,
+  DomainPatternCacheConfig,
+} from './domain-pattern-cache.js';
+export {
+  DomainPatternCache,
+  createDomainPatternCache,
+} from './domain-pattern-cache.js';
+
+// LLM Page Type Detector (Phase 24)
+export type {
+  LLMDetectionConfig,
+  LLMDetectionResult,
+} from './llm-page-type-detector.js';
+export {
+  LLMPageTypeDetector,
+  createLLMPageTypeDetector,
+} from './llm-page-type-detector.js';
+
+// Hybrid Page Type Detector (Phase 24)
+export type {
+  HybridDetectionConfig,
+  HybridDetectionResult,
+} from './hybrid-page-type-detector.js';
+export {
+  HybridPageTypeDetector,
+  createHybridPageTypeDetector,
+} from './hybrid-page-type-detector.js';

@@ -48,6 +48,8 @@ interface RawCategoryEvaluation {
   issue?: string;
   recommendation?: string;
   evidence?: string;
+  /** How the LLM found this - references elements, classes, screenshot observations */
+  reasoning?: string;
 }
 
 /**
@@ -56,6 +58,33 @@ interface RawCategoryEvaluation {
 interface CategoryAnalysisResponse {
   evaluations: RawCategoryEvaluation[];
   summary: string;
+}
+
+/**
+ * Phase 23 (T402): Captured LLM inputs for a single category analysis
+ */
+export interface CapturedCategoryInputs {
+  /** Category name */
+  categoryName: string;
+  /** System prompt sent to LLM */
+  systemPrompt: string;
+  /** User prompt text (without images) */
+  userPrompt: string;
+  /** Screenshots sent to LLM (base64) */
+  screenshots: Array<{
+    viewportIndex: number;
+    scrollPosition: number;
+    base64: string;
+  }>;
+  /** DOM snapshots included in prompt */
+  domSnapshots: Array<{
+    viewportIndex: number;
+    scrollPosition: number;
+    serialized: string;
+    elementCount: number;
+  }>;
+  /** Timestamp when captured */
+  timestamp: number;
 }
 
 /**
@@ -70,6 +99,8 @@ export interface CategoryAnalysisResult {
   summary: string;
   /** Time taken for analysis in milliseconds */
   analysisTimeMs: number;
+  /** Phase 23: Captured LLM inputs for debugging */
+  capturedInputs?: CapturedCategoryInputs;
 }
 
 /**
@@ -119,6 +150,25 @@ export class CategoryAnalyzer {
     // Build messages array with images
     const messages = this.buildMessagesWithImages(systemPrompt, userMessage, snapshots);
 
+    // Phase 23 (T402): Capture LLM inputs for debugging
+    const capturedInputs: CapturedCategoryInputs = {
+      categoryName: category.name,
+      systemPrompt,
+      userPrompt: userMessage,
+      screenshots: snapshots.map((s) => ({
+        viewportIndex: s.viewportIndex,
+        scrollPosition: s.scrollPosition,
+        base64: s.screenshot.base64,
+      })),
+      domSnapshots: snapshots.map((s) => ({
+        viewportIndex: s.viewportIndex,
+        scrollPosition: s.scrollPosition,
+        serialized: s.dom.serialized,
+        elementCount: s.dom.elementCount,
+      })),
+      timestamp: Date.now(),
+    };
+
     try {
       // Call LLM
       const response = await this.llm.invoke(messages);
@@ -140,17 +190,19 @@ export class CategoryAnalyzer {
         evaluations: parsed.evaluations,
         summary: parsed.summary,
         analysisTimeMs,
+        capturedInputs,
       };
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : 'Analysis failed';
       this.logger.error(`Category analysis failed: ${category.name}`, { error: errMsg });
 
-      // Return empty result on error
+      // Return empty result on error (still include captured inputs for debugging)
       return {
         categoryName: category.name,
         evaluations: [],
         summary: `Analysis failed: ${errMsg}`,
         analysisTimeMs: Date.now() - startTime,
+        capturedInputs,
       };
     }
   }
@@ -177,7 +229,11 @@ For each heuristic, provide:
 - observation: Brief description of what you observed
 - issue: (if fail/partial) Specific problem identified
 - recommendation: (if fail/partial) Actionable fix suggestion
-- evidence: Element index or visual region supporting your evaluation
+- reasoning: REQUIRED - Explain HOW you found this from the input:
+  - Reference specific DOM elements using [v0-5] format (viewport-element)
+  - Mention what you searched for (classes, text, attributes)
+  - Cite screenshot observations (position, visibility, coordinates)
+  - Note if structured data (JSON-LD) was used
 </evaluation_format>
 
 <output_format>
@@ -191,7 +247,7 @@ Respond with valid JSON only:
       "observation": "What you observed",
       "issue": "Problem identified (if any)",
       "recommendation": "Suggested fix (if any)",
-      "evidence": "Element [5] or visual region"
+      "reasoning": "Found gallery element [v0-3] with class='product-gallery'. Screenshot shows 5 thumbnail images at coordinates (50-300, 400-600). DOM contains img tags with srcset for multiple resolutions."
     }
   ],
   "summary": "Brief overall assessment of this category"
@@ -233,6 +289,8 @@ Respond with valid JSON only.`;
 
   /**
    * Build DOM context section from snapshots
+   * Phase 25-fix: Uses V{n}-0 format for viewport identification
+   * Phase 25-fix: Element indices displayed as [v{viewport}-{index}] for LLM clarity
    */
   private buildDOMContextSection(snapshots: ViewportSnapshot[]): string {
     if (snapshots.length === 0) {
@@ -244,14 +302,34 @@ Respond with valid JSON only.`;
     parts.push('');
 
     for (const snapshot of snapshots) {
-      parts.push(`--- Viewport ${snapshot.viewportIndex} (scroll: ${snapshot.scrollPosition}px) ---`);
+      const viewportIndex = snapshot.viewportIndex;
+      parts.push(`--- Viewport-${viewportIndex} (scroll: ${snapshot.scrollPosition}px) ---`);
       parts.push(`Elements: ${snapshot.dom.elementCount}`);
-      parts.push(snapshot.dom.serialized);
+      // Transform [N] to [v{viewport}-N] for LLM display
+      const transformedDom = this.transformElementIndicesForDisplay(
+        snapshot.dom.serialized,
+        viewportIndex
+      );
+      parts.push(transformedDom);
       parts.push('');
     }
 
     parts.push('</dom_context>');
     return parts.join('\n');
+  }
+
+  /**
+   * Transform element indices from [N] to [v{viewport}-N] format for LLM display
+   * This is display-only; internal code still uses numeric indices
+   *
+   * @param serializedDom - Serialized DOM string with [0], [1], etc.
+   * @param viewportIndex - Current viewport index
+   * @returns Transformed string with [v0-0], [v0-1], etc.
+   */
+  private transformElementIndicesForDisplay(serializedDom: string, viewportIndex: number): string {
+    // Replace [N] with [v{viewport}-N] where N is a number
+    // Matches patterns like [0], [1], [42], etc. at the start of element lines
+    return serializedDom.replace(/\[(\d+)\]/g, `[v${viewportIndex}-$1]`);
   }
 
   /**
@@ -281,6 +359,7 @@ Respond with valid JSON only.`;
 
   /**
    * Build screenshot reference section
+   * Phase 25-fix: Uses Viewport-{n} format matching DOM context section
    */
   private buildScreenshotSection(snapshots: ViewportSnapshot[]): string {
     if (snapshots.length === 0) {
@@ -292,11 +371,12 @@ Respond with valid JSON only.`;
     parts.push('');
 
     for (const snapshot of snapshots) {
-      parts.push(`Screenshot ${snapshot.viewportIndex}: Captured at scroll position ${snapshot.scrollPosition}px`);
+      parts.push(`Screenshot Viewport-${snapshot.viewportIndex}: Captured at scroll position ${snapshot.scrollPosition}px`);
     }
 
     parts.push('');
     parts.push('Use these visual references to verify DOM observations and assess visual quality.');
+    parts.push('Reference elements using [v{viewport}-{index}] format (e.g., [v0-5] for element 5 in Viewport-0).');
     parts.push('</screenshots>');
     return parts.join('\n');
   }
@@ -370,6 +450,7 @@ Respond with valid JSON only.`;
         issue: raw.issue,
         recommendation: raw.recommendation,
         confidence: Math.min(1, Math.max(0, raw.confidence)),
+        reasoning: raw.reasoning,
       }));
 
       return {
@@ -417,4 +498,87 @@ export function createCategoryAnalyzer(
   config?: Partial<CategoryAnalyzerConfig>
 ): CategoryAnalyzer {
   return new CategoryAnalyzer(config);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Utility Functions for Element Reference Parsing
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Parsed element reference from LLM response
+ */
+export interface ParsedElementRef {
+  /** Viewport index (0, 1, 2, ...) */
+  viewportIndex: number;
+  /** Element index within DOM (numeric) */
+  elementIndex: number;
+  /** Original reference string (e.g., "[v0-5]") */
+  original: string;
+}
+
+/**
+ * Parse a viewport-prefixed element reference from LLM response
+ * Converts [v0-5] format back to numeric indices for programmatic use
+ *
+ * @param ref - Reference string like "[v0-5]" or "v0-5"
+ * @returns Parsed reference or null if invalid format
+ *
+ * @example
+ * parseElementRef("[v0-5]") // { viewportIndex: 0, elementIndex: 5, original: "[v0-5]" }
+ * parseElementRef("v2-10") // { viewportIndex: 2, elementIndex: 10, original: "v2-10" }
+ * parseElementRef("[42]") // null (old format, not viewport-prefixed)
+ */
+export function parseElementRef(ref: string): ParsedElementRef | null {
+  // Match patterns: [v0-5], v0-5, [V0-5], V0-5 (case insensitive)
+  const match = ref.match(/\[?[vV](\d+)-(\d+)\]?/);
+  if (!match || !match[1] || !match[2]) {
+    return null;
+  }
+
+  return {
+    viewportIndex: parseInt(match[1], 10),
+    elementIndex: parseInt(match[2], 10),
+    original: ref,
+  };
+}
+
+/**
+ * Extract all element references from a text string
+ * Finds all [v{viewport}-{index}] patterns in the text
+ *
+ * @param text - Text containing element references
+ * @returns Array of parsed references
+ *
+ * @example
+ * extractElementRefs("The button [v0-5] and link [v1-3] are visible")
+ * // Returns: [{ viewportIndex: 0, elementIndex: 5, ... }, { viewportIndex: 1, elementIndex: 3, ... }]
+ */
+export function extractElementRefs(text: string): ParsedElementRef[] {
+  const refs: ParsedElementRef[] = [];
+  // Match all [v{n}-{m}] patterns globally
+  const matches = text.matchAll(/\[v(\d+)-(\d+)\]/gi);
+
+  for (const match of matches) {
+    if (match[1] && match[2]) {
+      refs.push({
+        viewportIndex: parseInt(match[1], 10),
+        elementIndex: parseInt(match[2], 10),
+        original: match[0],
+      });
+    }
+  }
+
+  return refs;
+}
+
+/**
+ * Convert a viewport-prefixed reference to a numeric index
+ * For backward compatibility with code expecting numeric indices
+ *
+ * @param ref - Reference string like "[v0-5]"
+ * @returns Numeric element index or null if invalid
+ */
+export function toNumericIndex(ref: string): number | null {
+  const parsed = parseElementRef(ref);
+  return parsed ? parsed.elementIndex : null;
 }

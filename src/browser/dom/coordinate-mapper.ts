@@ -1,13 +1,19 @@
 /**
- * DOM-Screenshot Coordinate Mapper - Phase 21i (T366-T367)
+ * DOM-Screenshot Coordinate Mapper - Phase 21i (T366-T367), Phase 25g (T505)
  *
  * Maps DOM element coordinates to screenshot positions for visual annotations.
  * Handles the transformation from page coordinates (absolute) to screenshot
  * coordinates (viewport-relative).
+ *
+ * Phase 25g additions:
+ * - ElementBox interface with nodeId and confidence
+ * - computeLayoutBoxes() for batch bounding box computation
+ * - getNodeIdsByCROType() for CRO-grouped lookups
  */
 
 import type { DOMTree, DOMNode, BoundingBox, CROType } from '../../models/dom-tree.js';
 import type { ViewportInfo } from '../../models/page-state.js';
+import type { Page } from 'playwright';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Types
@@ -33,10 +39,13 @@ export interface ScreenshotCoords {
 
 /**
  * Complete element mapping with both page and screenshot coordinates
+ * Phase 25-fix: Added viewportId for tracking which viewport the mapping belongs to
  */
 export interface ElementMapping {
   /** Index of the element in the DOM tree (for [index] references) */
   index: number;
+  /** Viewport identifier in format "V{index}-0" (e.g., "V0-0", "V1-0") */
+  viewportId: string;
   /** XPath of the element */
   xpath: string;
   /** Text content of the element (truncated) */
@@ -49,6 +58,45 @@ export interface ElementMapping {
   pageCoords: BoundingBox;
   /** Coordinates in the screenshot (viewport-relative) */
   screenshotCoords: ScreenshotCoords;
+}
+
+/**
+ * Element bounding box with nodeId and confidence (Phase 25g - T505)
+ * Used for evidence packaging and LLM context
+ */
+export interface ElementBox {
+  /** Stable node identifier "n_001", "n_002" */
+  nodeId: string;
+  /** X coordinate (absolute page position) */
+  x: number;
+  /** Y coordinate (absolute page position) */
+  y: number;
+  /** Width of the element */
+  w: number;
+  /** Height of the element */
+  h: number;
+  /** Scroll position when captured */
+  scrollY: number;
+  /** Which viewport this element was captured in */
+  viewportIndex: number;
+  /** CRO classification confidence 0-1 */
+  confidence: number;
+  /** Whether element is visible in the viewport */
+  isVisible: boolean;
+  /** CRO type if classified */
+  croType?: Exclude<CROType, null>;
+  /** Element index if indexed */
+  elementIndex?: number;
+}
+
+/**
+ * Generate a viewport ID string in format "V{index}-{subIndex}"
+ * @param viewportIndex - The viewport index (0, 1, 2, ...)
+ * @param subIndex - Sub-index for multiple captures at same position (default: 0)
+ * @returns Viewport ID string like "V0-0", "V1-0", etc.
+ */
+export function generateViewportId(viewportIndex: number, subIndex: number = 0): string {
+  return `V${viewportIndex}-${subIndex}`;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -133,16 +181,23 @@ function collectIndexedElements(
  * 2. Calculates screenshot coordinates for each element
  * 3. Returns both page and screenshot coordinates for cross-referencing
  *
+ * Phase 25-fix: Added viewportIndex parameter for viewportId generation
+ *
  * @param domTree - The extracted DOM tree
  * @param scrollY - Current vertical scroll position
  * @param viewport - Viewport dimensions
+ * @param viewportIndex - Index of the current viewport (0, 1, 2, ...) for viewportId
  * @returns Array of element mappings with coordinates
  */
 export function mapElementsToScreenshot(
   domTree: DOMTree,
   scrollY: number,
-  viewport: ViewportInfo
+  viewport: ViewportInfo,
+  viewportIndex: number = 0
 ): ElementMapping[] {
+  // Generate viewport ID for this mapping set
+  const viewportId = generateViewportId(viewportIndex);
+
   // Collect all indexed elements from the tree
   const indexedElements: Array<{ node: DOMNode; index: number }> = [];
   collectIndexedElements(domTree.root, indexedElements);
@@ -168,6 +223,7 @@ export function mapElementsToScreenshot(
 
     mappings.push({
       index,
+      viewportId,
       xpath: node.xpath,
       text: node.text,
       croType: node.croType,
@@ -223,4 +279,138 @@ export function getElementsByIndices(
 ): ElementMapping[] {
   const indexSet = new Set(indices);
   return mappings.filter((m) => indexSet.has(m.index));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Phase 25g: Layout Box Functions (T505, T506)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Compute bounding boxes for elements by nodeId
+ * Phase 25g - T505
+ *
+ * Note: Uses pre-extracted bounding boxes from DOM tree, not live page queries.
+ * The page parameter is reserved for future live coordinate queries if needed.
+ *
+ * @param _page - Playwright page instance (reserved for future use)
+ * @param nodeIds - Array of nodeIds to compute boxes for
+ * @param domTree - DOM tree with nodeIndex for lookups
+ * @param scrollY - Current scroll position
+ * @param viewportIndex - Current viewport index
+ * @param viewportHeight - Viewport height for visibility check
+ * @returns Array of ElementBox with computed coordinates
+ */
+export async function computeLayoutBoxes(
+  _page: Page,
+  nodeIds: string[],
+  domTree: DOMTree,
+  scrollY: number,
+  viewportIndex: number,
+  viewportHeight: number = 720
+): Promise<ElementBox[]> {
+  if (!domTree.nodeIndex || nodeIds.length === 0) {
+    return [];
+  }
+
+  const boxes: ElementBox[] = [];
+
+  // Build lookup of nodeId -> node data from nodeIndex
+  for (const nodeId of nodeIds) {
+    const entry = domTree.nodeIndex[nodeId];
+    if (!entry) continue;
+
+    // Find the actual node in the tree to get boundingBox
+    const node = findNodeByNodeId(domTree.root, nodeId);
+    if (!node || !node.boundingBox) continue;
+
+    const { x, y, width, height } = node.boundingBox;
+
+    // Calculate visibility in current viewport
+    const screenshotY = y - scrollY;
+    const isVisible = screenshotY + height > 0 && screenshotY < viewportHeight;
+
+    boxes.push({
+      nodeId,
+      x,
+      y,
+      w: width,
+      h: height,
+      scrollY,
+      viewportIndex,
+      confidence: entry.confidence ?? 0,
+      isVisible,
+      croType: entry.croType,
+      elementIndex: entry.index,
+    });
+  }
+
+  return boxes;
+}
+
+/**
+ * Find a node by nodeId in the DOM tree (recursive search)
+ */
+function findNodeByNodeId(node: DOMNode, nodeId: string): DOMNode | null {
+  if (node.nodeId === nodeId) {
+    return node;
+  }
+  for (const child of node.children) {
+    const found = findNodeByNodeId(child, nodeId);
+    if (found) return found;
+  }
+  return null;
+}
+
+/**
+ * Get nodeIds grouped by CRO type (Phase 25g - T506)
+ *
+ * @param domTree - DOM tree with nodeIndex
+ * @param croTypes - CRO types to filter for (if empty, returns all)
+ * @param topN - Maximum nodes per type (default: 20)
+ * @returns Record of CRO type -> array of nodeIds
+ */
+export function getNodeIdsByCROType(
+  domTree: DOMTree,
+  croTypes: Array<Exclude<CROType, null>> = [],
+  topN: number = 20
+): Record<string, string[]> {
+  const result: Record<string, string[]> = {};
+
+  if (!domTree.nodeIndex) {
+    return result;
+  }
+
+  // Initialize result with requested types (or collect all found types)
+  const targetTypes = croTypes.length > 0 ? croTypes : null;
+
+  for (const [nodeId, entry] of Object.entries(domTree.nodeIndex)) {
+    const croType = entry.croType;
+    if (!croType) continue;
+
+    // Filter by requested types if specified
+    if (targetTypes && !targetTypes.includes(croType)) {
+      continue;
+    }
+
+    if (!result[croType]) {
+      result[croType] = [];
+    }
+
+    // Respect topN limit per type
+    if (result[croType]!.length < topN) {
+      result[croType]!.push(nodeId);
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Collect all nodeIds from a DOM tree
+ */
+export function collectAllNodeIds(domTree: DOMTree): string[] {
+  if (!domTree.nodeIndex) {
+    return [];
+  }
+  return Object.keys(domTree.nodeIndex);
 }

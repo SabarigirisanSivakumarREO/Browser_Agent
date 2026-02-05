@@ -619,3 +619,55 @@ interface ElementMapping {
 - **SC-196**: Evaluations linked to specific ElementMapping entries
 - **SC-197**: Annotated screenshots show correct bounding boxes
 - **SC-198**: Issue elements highlighted in red, passed in green
+
+---
+
+## Phase 21l: Default Evidence & Mapping
+
+**Purpose**: Make evidence saving and screenshot annotation part of the default vision workflow, not opt-in flags.
+
+**Rationale**:
+- DOM-screenshot mapping is a core feature, not optional
+- Evidence capture provides verification and debugging capability by default
+- Users shouldn't need to remember extra flags for core functionality
+- Opt-out is available for users who need minimal output
+
+### Functional Requirements
+
+**Default Behavior Changes**:
+- **FR-343**: System MUST save evidence (screenshots + mappings) by default when `--vision` flag is used
+- **FR-344**: System MUST annotate screenshots with bounding boxes by default when `--vision` flag is used
+- **FR-345**: System MUST create evidence directory automatically if not specified
+- **FR-346**: Default evidence directory MUST be `./evidence/{timestamp}/`
+
+**Opt-Out Flags**:
+- **FR-347**: System MUST provide `--no-save-evidence` flag to disable evidence saving
+- **FR-348**: System MUST provide `--no-annotate-screenshots` flag to disable annotation
+- **FR-349**: Opt-out flags MUST override default-on behavior
+
+**CLI Option Changes**:
+- **FR-350**: `saveEvidence` option MUST default to `true` (was `false`)
+- **FR-351**: `annotateScreenshots` option MUST default to `true` (was `false`)
+- **FR-352**: Help text MUST reflect new default behavior
+
+**Backward Compatibility**:
+- **FR-353**: Existing `--save-evidence` flag MUST be accepted (no-op, already default)
+- **FR-354**: Existing `--annotate-screenshots` flag MUST be accepted (no-op, already default)
+- **FR-355**: Existing `--evidence-dir` flag MUST continue to work
+
+### Configuration Requirements
+
+- **CR-073**: `saveEvidence` MUST default to `true` in VisionAnalysisOptions
+- **CR-074**: `annotateScreenshots` MUST default to `true` in VisionAnalysisOptions
+- **CR-075**: Default evidence directory MUST include timestamp for uniqueness
+- **CR-076**: Evidence saving MUST NOT block or slow down the main workflow significantly
+
+### Success Criteria
+
+- **SC-199**: Running `--vision` without flags saves evidence automatically
+- **SC-200**: Running `--vision` without flags produces annotated screenshots
+- **SC-201**: `--no-save-evidence` disables evidence saving
+- **SC-202**: `--no-annotate-screenshots` disables annotation
+- **SC-203**: Old scripts using `--save-evidence` flag continue to work
+- **SC-204**: Evidence directory created with timestamp if not specified
+- **SC-205**: Help text shows opt-out flags and explains defaults

@@ -22,14 +22,21 @@ import type { DOMTree, DOMNode } from '../../src/models/index.js';
 // =============================================================================
 
 describe('CRO_SELECTORS', () => {
-  it('should have all 5 CRO types defined', () => {
+  it('should have all 10 CRO types defined (including Phase 25b)', () => {
     const types = Object.keys(CRO_SELECTORS);
+    // Original 5 categories
     expect(types).toContain('cta');
     expect(types).toContain('form');
     expect(types).toContain('trust');
     expect(types).toContain('value_prop');
     expect(types).toContain('navigation');
-    expect(types).toHaveLength(5);
+    // Phase 25b: 5 new categories
+    expect(types).toContain('price');
+    expect(types).toContain('variant');
+    expect(types).toContain('stock');
+    expect(types).toContain('shipping');
+    expect(types).toContain('gallery');
+    expect(types).toHaveLength(10);
   });
 
   it('should have valid weight values (0-1) for all patterns', () => {
@@ -227,7 +234,7 @@ describe('DOMSerializer', () => {
       expect(result.elementCount).toBe(1);
     });
 
-    it('should include CRO type annotations', () => {
+    it('should include CRO type annotations with confidence (Phase 25g)', () => {
       const tree = createMockDOMTree([
         { tagName: 'button', index: 0, text: 'Buy Now', croType: 'cta' },
       ]);
@@ -235,7 +242,8 @@ describe('DOMSerializer', () => {
       const serializer = new DOMSerializer();
       const result = serializer.serialize(tree);
 
-      expect(result.text).toContain('[cta]');
+      // Phase 25g format: [cta:0.00] (confidence included)
+      expect(result.text).toContain('[cta:');
     });
 
     it('should truncate at token limit', () => {

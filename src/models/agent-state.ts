@@ -44,13 +44,14 @@ export interface SnapshotDOM {
  * Combined snapshot at a scroll position (DOM + Screenshot)
  * CR-001-B: Unified viewport snapshot for collection phase
  * Phase 21i: Added elementMappings and visibleElements for coordinate mapping
+ * Phase 25-fix: Added fullResolutionBase64 for evidence screenshots
  */
 export interface ViewportSnapshot {
   /** Y scroll position when captured */
   scrollPosition: number;
   /** Index of this viewport in the sequence (0, 1, 2, ...) */
   viewportIndex: number;
-  /** Screenshot data */
+  /** Screenshot data (compressed for LLM) */
   screenshot: SnapshotScreenshot;
   /** DOM data */
   dom: SnapshotDOM;
@@ -60,6 +61,10 @@ export interface ViewportSnapshot {
   elementMappings?: ElementMapping[];
   /** Only visible elements in current viewport (for LLM context) */
   visibleElements?: ElementMapping[];
+
+  // Phase 25-fix: Full resolution screenshot for evidence
+  /** Full resolution PNG screenshot (base64) for evidence files */
+  fullResolutionBase64?: string;
 }
 
 /**

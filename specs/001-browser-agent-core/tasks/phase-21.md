@@ -837,8 +837,14 @@
 # All tests pass
 npm test
 
-# Vision analysis works
+# Vision analysis works (CR-001-D simplified API)
 npm run start -- --vision https://www.peregrineclothing.co.uk/products/...
+
+# With evidence capture
+npm run start -- --vision --save-evidence --annotate-screenshots https://example.com/product
+
+# Deprecated alias still works
+npm run start -- --vision-agent https://example.com/product  # maps to --vision
 
 # Knowledge base loads
 node -e "import('./dist/heuristics/knowledge/index.js').then(m => m.loadHeuristics('pdp').then(h => console.log(h.totalCount)))"

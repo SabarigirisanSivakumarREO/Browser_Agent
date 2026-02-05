@@ -9,7 +9,7 @@ import type { PageType, ViewportSnapshot } from '../models/index.js';
 import type { CROInsight } from '../models/cro-insight.js';
 import type { HeuristicEvaluation, VisionAnalysisSummary } from './vision/types.js';
 import { groupHeuristicsByCategory, getTotalHeuristicCount, type CategoryGroup } from './category-grouper.js';
-import { CategoryAnalyzer, createCategoryAnalyzer, type CategoryAnalyzerConfig, type CategoryAnalysisResult } from './category-analyzer.js';
+import { CategoryAnalyzer, createCategoryAnalyzer, type CategoryAnalyzerConfig, type CategoryAnalysisResult, type CapturedCategoryInputs } from './category-analyzer.js';
 import { isPageTypeSupported } from './knowledge/index.js';
 import { getInsightCategory } from './vision/types.js';
 import { createLogger } from '../utils/index.js';
@@ -62,6 +62,8 @@ export interface AnalysisResult {
   summary: VisionAnalysisSummary;
   /** Total analysis time in milliseconds */
   totalTimeMs: number;
+  /** Phase 23: Captured LLM inputs for each category */
+  capturedInputs?: CapturedCategoryInputs[];
 }
 
 /**
@@ -141,10 +143,16 @@ export class AnalysisOrchestrator {
     // Calculate summary
     const summary = this.calculateSummary(allEvaluations);
 
+    // Phase 23 (T402): Aggregate captured inputs from all categories
+    const capturedInputs = categoryResults
+      .map((r) => r.capturedInputs)
+      .filter((input): input is CapturedCategoryInputs => input !== undefined);
+
     const totalTimeMs = Date.now() - startTime;
     this.logger.info('Analysis complete', {
       evaluationCount: allEvaluations.length,
       insightCount: insights.length,
+      capturedInputsCount: capturedInputs.length,
       totalTimeMs,
     });
 
@@ -158,6 +166,7 @@ export class AnalysisOrchestrator {
       insights,
       summary,
       totalTimeMs,
+      capturedInputs: capturedInputs.length > 0 ? capturedInputs : undefined,
     };
   }
 

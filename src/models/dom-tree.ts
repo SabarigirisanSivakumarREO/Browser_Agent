@@ -21,9 +21,14 @@ export interface BoundingBox {
  * - trust: Trust signals (badges, testimonials, security icons)
  * - value_prop: Value proposition elements
  * - navigation: Navigation elements
+ * - price: Product pricing elements (Phase 25b)
+ * - variant: Product variant selectors (size, color) (Phase 25b)
+ * - stock: Stock/availability indicators (Phase 25b)
+ * - shipping: Shipping/delivery information (Phase 25b)
+ * - gallery: Product image galleries (Phase 25b)
  * - null: Not a CRO-relevant element
  */
-export type CROType = 'cta' | 'form' | 'trust' | 'value_prop' | 'navigation' | null;
+export type CROType = 'cta' | 'form' | 'trust' | 'value_prop' | 'navigation' | 'price' | 'variant' | 'stock' | 'shipping' | 'gallery' | null;
 
 /**
  * Classification metadata for debugging and confidence tracking
@@ -40,6 +45,7 @@ export interface CROClassification {
 export interface DOMNode {
   tagName: string;
   xpath: string;
+  nodeId?: string;                       // Stable identifier "n_001", "n_002" (Phase 25g)
   index?: number;                        // Only for visible CRO elements
   text: string;                          // Truncated to 100 chars (CR-015)
   isInteractive: boolean;
@@ -52,6 +58,31 @@ export interface DOMNode {
 }
 
 /**
+ * Structured product data from JSON-LD (Phase 25c)
+ */
+export interface StructuredProductData {
+  name?: string;
+  price?: number;
+  currency?: string;
+  availability?: string;
+  rating?: number;
+  reviewCount?: number;
+  brand?: string;
+  sku?: string;
+  image?: string;
+}
+
+/**
+ * Node index entry for quick lookups (Phase 25g)
+ */
+export interface NodeIndexEntry {
+  tag: string;
+  croType?: Exclude<CROType, null>;
+  confidence?: number;
+  index?: number;  // Element index if indexed
+}
+
+/**
  * Full DOM tree structure
  */
 export interface DOMTree {
@@ -60,4 +91,6 @@ export interface DOMTree {
   croElementCount: number;
   totalNodeCount: number;    // For debugging
   extractedAt: number;       // Timestamp
+  structuredData?: StructuredProductData | null;  // JSON-LD Product schema (Phase 25c)
+  nodeIndex?: Record<string, NodeIndexEntry>;     // Quick lookup by nodeId (Phase 25g)
 }

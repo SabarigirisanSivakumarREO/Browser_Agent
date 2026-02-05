@@ -149,12 +149,28 @@ export class DOMSerializer {
 
   /**
    * Format a single node
+   * Output format (Phase 25g): [index] [type:confidence] [nodeId=n_001] <tag attrs>text</tag>
+   *
+   * Examples:
+   * - [0] [price:0.92] [nodeId=n_001] <span class="price">₹47,000.00</span>
+   * - [1] [cta:0.85|trust:0.60] [nodeId=n_002] <button>Add to Cart</button>
    */
   private formatNode(node: DOMNode, indent: string): string {
     const parts: string[] = [];
 
     // Index marker
     parts.push(`[${node.index}]`);
+
+    // CRO type annotation with confidence (Phase 25g - T508)
+    if (node.croType) {
+      const confidence = node.croClassification?.confidence ?? 0;
+      parts.push(`[${node.croType}:${confidence.toFixed(2)}]`);
+    }
+
+    // Node ID (Phase 25g - T503)
+    if (node.nodeId) {
+      parts.push(`[nodeId=${node.nodeId}]`);
+    }
 
     // Tag with attributes
     let attrs = '';
@@ -168,17 +184,14 @@ export class DOMSerializer {
       attrs = attrParts.length > 0 ? ' ' + attrParts.join(' ') : '';
     }
 
-    // CRO type annotation
-    const croAnnotation = node.croType ? ` [${node.croType}]` : '';
-
     // Build line
     if (node.text) {
-      parts.push(`<${node.tagName}${attrs}>${node.text}</${node.tagName}>${croAnnotation}`);
+      parts.push(`<${node.tagName}${attrs}>${node.text}</${node.tagName}>`);
     } else {
-      parts.push(`<${node.tagName}${attrs}>${croAnnotation}`);
+      parts.push(`<${node.tagName}${attrs}>`);
     }
 
-    return indent + parts.join('');
+    return indent + parts.join(' ');
   }
 
   /**

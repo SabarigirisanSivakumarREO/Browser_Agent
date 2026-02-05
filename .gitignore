@@ -43,3 +43,17 @@ temp/
 
 # browser use
 browser-use/
+browser-use/tmpclaude*
+
+# Evidence and analysis outputs
+evidence/
+llm-inputs/
+test-evidence/
+
+# Analysis markdown files
+analysisReport.md
+browser-use-cro-analysis.md
+cookieConsentAnalysis.md
+cro-agent-implementation-plan.md
+domSnapshotAnalysis.md
+gptAnalysis.md

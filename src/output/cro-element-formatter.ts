@@ -29,6 +29,12 @@ interface GroupedElements {
   trust: DOMNode[];
   value_prop: DOMNode[];
   navigation: DOMNode[];
+  // Phase 25b: New PDP categories
+  price: DOMNode[];
+  variant: DOMNode[];
+  stock: DOMNode[];
+  shipping: DOMNode[];
+  gallery: DOMNode[];
 }
 
 const CRO_TYPE_LABELS: Record<Exclude<CROType, null>, string> = {
@@ -37,6 +43,12 @@ const CRO_TYPE_LABELS: Record<Exclude<CROType, null>, string> = {
   trust: 'TRUST SIGNALS',
   value_prop: 'VALUE PROPS',
   navigation: 'NAVIGATION',
+  // Phase 25b: New PDP labels
+  price: 'PRICES',
+  variant: 'VARIANTS',
+  stock: 'STOCK STATUS',
+  shipping: 'SHIPPING INFO',
+  gallery: 'GALLERIES',
 };
 
 /**
@@ -83,8 +95,8 @@ export class CROElementFormatter {
       const grouped = this.groupCROElements(result.domTree.root);
       lines.push('');
 
-      // Display each CRO type
-      for (const type of ['cta', 'form', 'trust', 'value_prop', 'navigation'] as const) {
+      // Display each CRO type (including Phase 25b categories)
+      for (const type of ['cta', 'form', 'trust', 'value_prop', 'navigation', 'price', 'variant', 'stock', 'shipping', 'gallery'] as const) {
         const elements = grouped[type];
         const label = CRO_TYPE_LABELS[type];
         lines.push(`${label} (${elements.length} found):`);
@@ -137,6 +149,12 @@ export class CROElementFormatter {
       trust: [],
       value_prop: [],
       navigation: [],
+      // Phase 25b: New PDP categories
+      price: [],
+      variant: [],
+      stock: [],
+      shipping: [],
+      gallery: [],
     };
 
     this.collectCROElements(node, groups);

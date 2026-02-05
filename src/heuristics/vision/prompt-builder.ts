@@ -59,6 +59,7 @@ Analyze the screenshot and evaluate EACH heuristic listed above. Return a JSON o
       "heuristicId": "PDP-LAYOUT-001",
       "status": "pass",
       "observation": "Page has clear vertical flow with product image on left, details on right",
+      "reasoning": "Identified layout from screenshot: gallery container [v0-3] on left (x:0-640px), product details [v0-8] on right (x:640-1280px). DOM shows class='product-layout--two-column'.",
       "confidence": 0.95
     },
     {
@@ -67,6 +68,7 @@ Analyze the screenshot and evaluate EACH heuristic listed above. Return a JSON o
       "observation": "Price is not visible in the screenshot without scrolling",
       "issue": "Price requires scrolling to view, not immediately visible above the fold",
       "recommendation": "Move price to be visible alongside product title in the hero section",
+      "reasoning": "Searched DOM for price elements - found [v1-12] with class='price' at scroll position 850px. Not present in Viewport-0 (above fold). Screenshot confirms no price visible in first viewport.",
       "confidence": 0.92
     },
     {
@@ -75,12 +77,14 @@ Analyze the screenshot and evaluate EACH heuristic listed above. Return a JSON o
       "observation": "Reviews are visible but no filtering options shown",
       "issue": "Users cannot filter reviews by rating or relevance",
       "recommendation": "Add review filtering controls (by rating, date, verified purchase)",
+      "reasoning": "Found reviews section [v0-25] with 5 review items. Searched for filter/sort controls - no elements with class containing 'filter', 'sort', or role='listbox' in reviews area.",
       "confidence": 0.85
     },
     {
       "heuristicId": "PDP-SELECT-002",
       "status": "not_applicable",
       "observation": "No variant selection visible - may be single variant product",
+      "reasoning": "Searched DOM for variant selectors: no swatch, size-selector, color-option classes found. Structured data shows single SKU. Screenshot shows no selection UI.",
       "confidence": 0.80
     }
   ]
@@ -94,7 +98,12 @@ Analyze the screenshot and evaluate EACH heuristic listed above. Return a JSON o
 3. Status must be: "pass", "fail", "partial", or "not_applicable"
 4. Always include observation field with what you see
 5. For "fail" and "partial" status, include issue and recommendation
-6. Confidence between 0.0 and 1.0
+6. **Always include reasoning** - explain HOW you found this:
+   - Reference specific DOM elements using [v0-5] format
+   - Mention what you searched for (classes, text, attributes)
+   - Cite screenshot observations (position, visibility)
+   - Note if structured data (JSON-LD) was used
+7. Confidence between 0.0 and 1.0
 
 Return ONLY the JSON object, no additional text.`;
 }

@@ -3,6 +3,7 @@
  *
  * Phase 15+16: CRO Agent core components.
  * Phase 18e: Added score calculator and extended types.
+ * CR-001-D: Removed Vision Agent (use CROAgent with vision: true instead).
  */
 
 // Tool system (Phase 15)
@@ -15,6 +16,7 @@ export { MessageManager } from './message-manager.js';
 export { StateManager } from './state-manager.js';
 export {
   CROAgent,
+  calculateMaxCollectionSteps, // Phase 25a (T473)
   type CROAnalysisResult,
   type AnalyzeOptions,
   type OutputFormat,
@@ -31,15 +33,7 @@ export {
 // Coverage tracker (Phase 19a)
 export { CoverageTracker } from './coverage-tracker.js';
 
-// Vision Agent (Phase 21g)
-export {
-  VisionAgent,
-  createVisionAgent,
-  VisionStateManager,
-  VisionPromptBuilder,
-  VisionMessageManager,
-  type VisionAgentOptions,
-  type VisionAgentResult,
-  type VisionAgentState,
-  type ViewportSnapshot,
-} from './vision/index.js';
+// NOTE: Vision Agent module removed in CR-001-D
+// For vision analysis, use CROAgent with `vision: true` option:
+//   const agent = new CROAgent();
+//   const result = await agent.analyze(url, { vision: true });

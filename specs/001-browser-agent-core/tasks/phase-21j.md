@@ -4,7 +4,9 @@
 
 ## Phase 21j: CLI Vision Agent Fix
 
-**Purpose**: Fix `--vision-agent` CLI to use unified CROAgent instead of deprecated VisionAgent
+**Purpose**: Fix `--vision` CLI (formerly `--vision-agent`) to use unified CROAgent instead of deprecated VisionAgent
+
+> **Note**: As of CR-001-D, `--vision-agent` is now a deprecated alias for `--vision`. The `src/agent/vision/` module has been deleted.
 
 **Created**: 2026-02-02
 
@@ -242,7 +244,7 @@ describe('CLI --vision-agent mode', () => {
 });
 ```
 
-**Status**: [ ] Pending
+**Status**: [x] ✅ Complete (2026-02-03) - Part of tests/integration/cli-vision-agent.test.ts
 
 ---
 
@@ -267,7 +269,7 @@ describe('Screenshot annotation', () => {
 });
 ```
 
-**Status**: [ ] Pending
+**Status**: [x] ✅ Complete (2026-02-03) - Part of tests/integration/cli-vision-agent.test.ts (17 tests total)
 
 ---
 
@@ -281,9 +283,9 @@ describe('Screenshot annotation', () => {
 | T386 | Fix evidence saving | 3 | [x] ✅ |
 | T387 | Verbose collection logging | 2 | [x] ✅ |
 | T388 | Update help text | 0 | [x] ✅ |
-| T389 | Integration: full-page + evidence | 5 | [ ] 📋 |
-| T390 | Integration: annotated screenshots | 3 | [ ] 📋 |
-| **TOTAL** | **8 tasks** | **20 tests** | **6/8 complete** |
+| T389 | Integration: full-page + evidence | 10 | [x] ✅ |
+| T390 | Integration: annotated screenshots | 7 | [x] ✅ |
+| **TOTAL** | **8 tasks** | **29 tests** | **8/8 complete** |
 
 ---
 
@@ -315,7 +317,7 @@ describe('Screenshot annotation', () => {
 
 **Test command after fix**:
 ```bash
-npm run start -- --vision-agent --save-evidence --annotate-screenshots https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt
+npm run start -- --vision --save-evidence --annotate-screenshots https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt
 ```
 
 **Expected output**:

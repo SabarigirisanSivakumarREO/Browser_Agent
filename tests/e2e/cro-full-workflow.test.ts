@@ -19,9 +19,8 @@ import { MarkdownReporter } from '../../src/output/markdown-reporter.js';
 import { JSONExporter } from '../../src/output/json-exporter.js';
 import { FileWriter } from '../../src/output/file-writer.js';
 import { BusinessTypeDetector } from '../../src/heuristics/business-type-detector.js';
-import { createHeuristicEngine } from '../../src/heuristics/rules/index.js';
 import { ScoreCalculator } from '../../src/agent/score-calculator.js';
-import type { PageState } from '../../src/models/index.js';
+import type { PageState, CROInsight } from '../../src/models/index.js';
 
 // Skip E2E tests in CI environments unless explicitly enabled
 const skipE2E = process.env.CI === 'true' && !process.env.RUN_E2E_TESTS;
@@ -203,18 +202,12 @@ describe.skipIf(skipE2E)('CRO Full Workflow E2E', () => {
       expect(businessType.type).toBe('ecommerce');
       expect(businessType.confidence).toBeGreaterThan(0.5);
 
-      // Run heuristics
-      const engine = createHeuristicEngine();
-      const heuristicResult = engine.run(mockPageState, businessType.type);
-
-      // Page has good CRO elements, should pass most heuristics
-      // Some may fail based on the simplified mock DOM
-      expect(heuristicResult.rulesExecuted).toBeGreaterThan(0);
+      // NOTE: Heuristic rules removed in CR-002, using mock insights for test
+      const mockInsights: CROInsight[] = [];
 
       // Calculate scores
       const scoreCalculator = new ScoreCalculator();
-      const allInsights = heuristicResult.insights;
-      const scores = scoreCalculator.calculateScores(allInsights);
+      const scores = scoreCalculator.calculateScores(mockInsights);
 
       expect(scores.overall).toBeGreaterThanOrEqual(0);
       expect(scores.overall).toBeLessThanOrEqual(100);
@@ -224,8 +217,8 @@ describe.skipIf(skipE2E)('CRO Full Workflow E2E', () => {
       const markdown = reporter.generate({
         url: mockPageState.url,
         pageTitle: mockPageState.title,
-        insights: [],
-        heuristicInsights: heuristicResult.insights,
+        insights: mockInsights,
+        heuristicInsights: [],
         businessType,
         hypotheses: [],
         scores,
@@ -241,8 +234,8 @@ describe.skipIf(skipE2E)('CRO Full Workflow E2E', () => {
       const json = exporter.export({
         url: mockPageState.url,
         pageTitle: mockPageState.title,
-        insights: [],
-        heuristicInsights: heuristicResult.insights,
+        insights: mockInsights,
+        heuristicInsights: [],
         businessType,
         hypotheses: [],
         scores,

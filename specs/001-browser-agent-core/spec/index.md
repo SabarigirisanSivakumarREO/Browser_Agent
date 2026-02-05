@@ -2,7 +2,7 @@
 
 **Feature Branch**: `001-browser-agent-core`
 **Created**: 2025-01-23
-**Status**: Architecture Refactor (CR-001 Approved) | Phase 21h-21i + Phase 22 Pending
+**Status**: Architecture Refactor (CR-001 Approved) | Phase 24 ✅ | Phase 25 📋 | Phase 22 Pending
 **Input**: User description: "Build a browser agent that can navigate websites and extract data using LangChain for intelligent processing"
 
 > **Change Request 001 (2026-01-30)**: Architecture simplification ✅ **COMPLETE**
@@ -25,6 +25,9 @@
 | Phase 19-20 Requirements | FR-098 to FR-170, Coverage & Pipeline (10 modules) | [requirements-phase19-20.md](./requirements-phase19-20.md) |
 | Phase 21 Requirements | FR-171 to FR-342, Vision + Evidence + Mapping | [requirements-phase21.md](./requirements-phase21.md) |
 | Phase 22 Requirements | FR-343 to FR-347, Page Type Knowledge Bases | [requirements-phase22.md](./requirements-phase22.md) |
+| Phase 23 Requirements | FR-360 to FR-372, LLM Input Capture | [requirements-phase23.md](./requirements-phase23.md) |
+| Phase 24 Requirements | FR-380 to FR-389, Hybrid LLM Page Type Detection | [requirements-phase24.md](./requirements-phase24.md) |
+| Phase 25 Requirements | FR-390 to FR-396, Enhanced Extraction & Screenshot Analysis | [requirements-phase25.md](./requirements-phase25.md) |
 
 ---
 
@@ -54,6 +57,9 @@
 | ~~21e-f~~ | ~~Multi-Viewport~~ | - | ✅ REMOVED (CR-001) |
 | ~~21g~~ | ~~Vision Agent~~ | ~~FR-280 to FR-301~~ | ✅ MERGED (CR-001) |
 | **CR-001** | **Architecture Simplification** | - | ✅ Complete |
-| 21h | Evidence Capture | FR-302 to FR-321 | 📋 Pending |
-| 21i | Coordinate Mapping | FR-322 to FR-342 | 📋 Pending |
-| **22** | **Page Type KBs** | FR-343 to FR-347 | 📋 Pending |
+| 21h | Evidence Capture | FR-302 to FR-321 | ✅ Complete |
+| 21i | Coordinate Mapping | FR-322 to FR-342 | ✅ Complete |
+| **21l** | **Default Evidence & Mapping** | FR-343 to FR-355 | ✅ Complete |
+| **22** | **Page Type KBs** | FR-356 to FR-359 | 📋 Pending |
+| **23** | **LLM Input Capture** | FR-360 to FR-372 | ✅ Complete |
+| **24** | **Hybrid LLM Page Detection** | FR-380 to FR-389 | ✅ Complete |

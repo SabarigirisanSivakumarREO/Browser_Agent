@@ -1,8 +1,12 @@
 /**
- * Vision Analysis Integration Tests - Phase 21d (T319)
+ * Vision Analysis Integration Tests
  *
- * Tests for the complete vision analysis flow including page type detection,
- * screenshot capture simulation, and vision analysis with mocked GPT-4o responses.
+ * Tests for the vision analysis components:
+ * - Page type detection
+ * - Heuristics loading
+ * - CROVisionAnalyzer (from heuristics/vision module)
+ *
+ * NOTE: Agent-level vision tests should use CROAgent with `vision: true`.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';

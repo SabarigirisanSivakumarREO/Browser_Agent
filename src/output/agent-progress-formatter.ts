@@ -387,6 +387,11 @@ export class AgentProgressFormatter {
       lines.push(`  │   ${this.color('Recommendation:', COLORS.GREEN)} ${this.wrapText(evaluation.recommendation, this.width - 20)}`);
     }
 
+    // Reasoning (how the LLM found this from the input data)
+    if (evaluation.reasoning) {
+      lines.push(`  │   ${this.color('Reasoning:', COLORS.DIM)} ${this.wrapText(evaluation.reasoning, this.width - 16)}`);
+    }
+
     lines.push('  │');
 
     return lines.join('\n');

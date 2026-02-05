@@ -2,15 +2,20 @@
  * DOM Extraction Module
  */
 
-// Selectors
+// Selectors (Phase 25g: added confidence aggregation)
 export {
   CRO_SELECTORS,
   INTERACTIVE_TAGS,
   INTERACTIVE_ROLES,
   SKIP_TAGS,
   MAX_TEXT_LENGTH,
+  aggregateConfidence,
+  matchElementPatterns,
+  getBestCROMatch,
   type CROSelectorPattern,
   type CROSelectorConfig,
+  type AggregatedConfidence,
+  type CROTypeKey,
 } from './cro-selectors.js';
 
 // DOM tree building
@@ -21,9 +26,10 @@ export {
   type RawDOMTree,
 } from './build-dom-tree.js';
 
-// Extractor
+// Extractor (Phase 25g: added generateNodeId)
 export {
   DOMExtractor,
+  generateNodeId,
   type DOMExtractorOptions,
 } from './extractor.js';
 
@@ -38,13 +44,24 @@ export {
 // DOM Merger (Phase 19b)
 export { DOMMerger } from './dom-merger.js';
 
-// Coordinate Mapper (Phase 21i)
+// Coordinate Mapper (Phase 21i, Phase 25-fix: added generateViewportId, Phase 25g: added ElementBox)
 export {
   toScreenshotCoords,
   mapElementsToScreenshot,
   filterVisibleElements,
   getElementByIndex,
   getElementsByIndices,
+  generateViewportId,
+  computeLayoutBoxes,
+  getNodeIdsByCROType,
+  collectAllNodeIds,
   type ScreenshotCoords,
   type ElementMapping,
+  type ElementBox,
 } from './coordinate-mapper.js';
+
+// Structured Data (Phase 25c)
+export {
+  extractStructuredData,
+  type StructuredProductData,
+} from './structured-data.js';

@@ -1,6 +1,6 @@
 # Session Handoff - CRO Browser Agent
 
-**Last Updated**: 2026-01-30 (Spec kit sync complete)
+**Last Updated**: 2026-02-04 (Phase 25 Bug Fixes - screenshot size, scroll position, fold line, viewport refs)
 
 ---
 
@@ -20,21 +20,197 @@ Automatically analyze websites for CRO issues (CTAs, forms, trust signals, value
 
 ## Current State
 
-**Phase**: Phase 21j CLI Vision Agent Fix - PLANNED 📋
-**Status**: CR-001 ✅, Phase 21h ✅, Phase 21i ✅, Phase 21j 📋 (8 tasks pending)
-**Tests**: 925+ tests passing
+**Phase**: Phase 25 - Enhanced Extraction & Screenshot Analysis - ⏳ IN PROGRESS
+**Status**: CR-001 ✅, Phase 21h ✅, Phase 21i ✅, CR-001-D ✅, CR-002 ✅, Phase 21l ✅, Phase 23 ✅, Phase 24 ✅, Phase 25a-f ✅
+**Tests**: 622/624 passing (2 pre-existing URL validation failures)
 **Build**: Compiles successfully ✅
 
-### BUG FOUND (2026-02-02): CLI --vision-agent uses deprecated VisionAgent
+### Phase 25 Bug Fixes (2026-02-04) - ✅ COMPLETE
 
-**Symptoms**:
-1. Only 1 viewport captured (should be 3-5 for full page)
-2. Evidence not saving to ./evidence/ directory
-3. No DOM-Screenshot mapping proof in console output
+**Purpose**: Fix screenshot size, scroll position, fold line, and DOM-screenshot mapping issues.
 
-**Root Cause**: `src/cli.ts:643` uses deprecated `createVisionAgent()` instead of CROAgent unified mode
+**Fixes Completed**:
 
-**Fix**: Phase 21j - Replace VisionAgent with CROAgent({ enableUnifiedMode: true })
+1. **Screenshot Size Fixed** (was 384x216, now 1280x720)
+   - Added `fullResolutionBase64` field to `ViewportSnapshot` interface
+   - Evidence files now save full resolution PNGs
+   - Compressed JPEG (384px) still used for LLM to save tokens
+   - Files: `src/models/agent-state.ts`, `src/agent/cro-agent.ts`, `src/cli.ts`
+
+2. **Scroll Position Fixed** (was stuck at ~2004px, now starts at 0)
+   - Added `scrollToPositionWithVerification()` method with retry logic
+   - Uses 3 different scroll methods with 5px tolerance verification
+   - File: `src/agent/cro-agent.ts`
+
+3. **Fold Line Annotation Fixed**
+   - Now correctly annotates at 720px on first viewport when scroll=0
+   - Annotation happens on full-res image before compression
+   - File: `src/agent/cro-agent.ts`
+
+4. **DOM-Screenshot Mapping Enhancement** - Viewport-prefixed element references
+   - `ElementMapping` now includes `viewportId` (e.g., "V0-0", "V1-0")
+   - Added `generateViewportId()` helper function
+   - File: `src/browser/dom/coordinate-mapper.ts`
+
+5. **LLM Prompts Use `[v{viewport}-{index}]` Format**
+   ```
+   --- Viewport-0 (scroll: 0px) ---
+   [v0-0]  "Skip to content" [interactive]
+   [v0-1]  "Add to Basket" [cta]
+   ```
+   - Internal numeric indices preserved for programmatic use
+   - File: `src/heuristics/category-analyzer.ts`
+
+6. **Parsing Utilities Added** for converting LLM references back:
+   - `parseElementRef("[v0-5]")` → `{ viewportIndex: 0, elementIndex: 5 }`
+   - `extractElementRefs(text)` → array of all refs in text
+   - `toNumericIndex("[v0-5]")` → `5`
+   - Exported from `src/heuristics/index.ts`
+
+7. **Screenshot Annotation Uses Same Format** (2026-02-04)
+   - Evidence screenshots now show `[v0-0]`, `[v1-3]` labels instead of `[0]`, `[3]`
+   - Matches LLM prompt format for better continuity during analysis
+   - File: `src/output/screenshot-annotator.ts`
+
+8. **Added `reasoning` Field to Evaluations** (2026-02-04)
+   - New field explains HOW the LLM found the evidence from input data
+   - References specific elements `[v0-5]`, classes, screenshot coordinates
+   - Displayed in console output under each evaluation
+   - Files: `src/heuristics/vision/types.ts`, `src/heuristics/category-analyzer.ts`, `src/heuristics/vision/prompt-builder.ts`, `src/output/agent-progress-formatter.ts`
+
+**Files Modified**:
+- `src/models/agent-state.ts` - Added `fullResolutionBase64` to ViewportSnapshot
+- `src/agent/cro-agent.ts` - Scroll verification, full-res screenshots, viewportId
+- `src/cli.ts` - Use `fullResolutionBase64` for evidence files
+- `src/browser/dom/coordinate-mapper.ts` - Added `viewportId` field and `generateViewportId()`
+- `src/browser/dom/index.ts` - Export `generateViewportId`
+- `src/heuristics/category-analyzer.ts` - Display format, parsing utils, `reasoning` field support
+- `src/heuristics/index.ts` - Export parsing utilities
+- `src/heuristics/vision/types.ts` - Added `reasoning` field to HeuristicEvaluation
+- `src/heuristics/vision/prompt-builder.ts` - Updated prompt to request `reasoning`
+- `src/output/screenshot-annotator.ts` - Element labels now use `[v0-0]` format
+- `src/output/agent-progress-formatter.ts` - Display `reasoning` field in output
+
+**Test Command**:
+```bash
+npm run start -- --vision https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt
+```
+
+**Verify**:
+1. Evidence screenshots in `./evidence/{timestamp}/` are 1280x720
+2. First viewport captured at scroll 0px
+3. Fold line visible on first screenshot
+4. LLM inputs in `./llm-inputs/{timestamp}/` show `[v0-0]`, `[v1-0]` format
+
+---
+
+### Phase 24: Hybrid Page Type Detection (2026-02-03) - ✅ COMPLETE
+
+**Purpose**: Improve page type detection for edge cases (Burberry, luxury brands) using 3-tier hybrid approach.
+
+**Completed**:
+- ✅ T450-T455: `PlaywrightPageTypeDetector` - User's `detectPdp()` integrated
+- ✅ T456-T458: Wrapper class with homepage detection
+- ✅ T459-T460: `DomainPatternCache` - In-memory cache by domain
+- ✅ T461-T464: `LLMPageTypeDetector` - Tier 3 fallback
+- ✅ T465-T468: `HybridPageTypeDetector` - 3-tier orchestrator core
+- ✅ T470-T471: Exports + CROAgent integration
+- ✅ T472: CLI flags + E2E tests
+- ✅ 55 tests passing (39 unit + 9 integration + 7 E2E)
+
+**Files Created**:
+- `src/heuristics/playwright-page-detector.ts` - detectPdp(), JSON-LD, CTA, variants, anti-signals
+- `src/heuristics/domain-pattern-cache.ts` - Cache with TTL, eviction
+- `src/heuristics/llm-page-type-detector.ts` - gpt-4o-mini fallback
+- `src/heuristics/hybrid-page-type-detector.ts` - 3-tier orchestrator
+
+**CLI Flags Added**:
+- `--no-llm-page-detection` - Disable LLM fallback
+- `--force-llm-detection` - Force LLM (skip Playwright)
+- `--llm-detection-threshold <n>` - Confidence threshold (default: 0.5)
+
+**Unit Tests Created**: 39 new tests (playwright-page-detector, domain-pattern-cache, llm-page-type, hybrid-page-type)
+
+### Phase 23: LLM Input Capture (2026-02-03) - ✅ COMPLETE
+
+**Purpose**: Capture and store all LLM inputs (DOM, screenshots, prompts) for debugging/auditing.
+
+**Completed** (T400-T408):
+- ✅ T400: Created `LLMInputWriter` class in `src/output/llm-input-writer.ts`
+- ✅ T401: Added `capturedInputs` to `CROVisionAnalyzer`
+- ✅ T402: Added `capturedInputs` to `CategoryAnalyzer` & `AnalysisOrchestrator`
+- ✅ T403: Passed `llmInputs` through `CROAgent` result
+- ✅ T404: Integrated `LLMInputWriter` in CLI
+- ✅ T405: Exported from output module
+- ✅ T406: Updated help text
+- ✅ T407: Unit tests (13 tests)
+- ✅ T408: Integration tests (5 tests)
+
+**Output Structure**:
+```
+./llm-inputs/{timestamp}/
+├── DOM-snapshots/viewport-*.json
+├── Screenshots/viewport-*.png
+└── Prompts/system-prompt.txt, viewport-*-prompt.txt
+```
+
+**Key Files Created/Modified**:
+- `src/output/llm-input-writer.ts` (new)
+- `src/heuristics/vision/types.ts` (added CapturedLLMInputs)
+- `src/heuristics/category-analyzer.ts` (captures inputs per category)
+- `src/heuristics/analysis-orchestrator.ts` (aggregates inputs)
+- `src/agent/cro-agent.ts` (passes llmInputs in result)
+- `src/cli.ts` (saves LLM inputs when evidence enabled)
+
+### Phase 21l: Default Evidence & Mapping (2026-02-03) - ⏳ 7/9 COMPLETE
+
+**Purpose**: Make evidence saving and screenshot annotation part of default vision workflow.
+
+**Completed** (T391-T397):
+- ✅ `saveEvidence` default: `false` → `true`
+- ✅ `annotateScreenshots` default: `false` → `true`
+- ✅ `--no-save-evidence` opt-out flag added
+- ✅ `--no-annotate-screenshots` opt-out flag added
+- ✅ Default evidence directory: `./evidence/{timestamp}/`
+- ✅ Help text and examples updated
+
+**Remaining** (T398-T399):
+- 📋 T398: Unit tests for CLI defaults
+- 📋 T399: Integration tests for evidence creation
+
+**See**: `specs/001-browser-agent-core/tasks/phase-21l.md`
+
+---
+
+### CR-002: Heuristic Rules Removal (2026-02-03) - COMPLETE ✅
+
+**Changes**:
+- Deleted `src/heuristics/rules/` directory (6 files: cta-rules, form-rules, trust-rules, value-prop-rules, navigation-rules, index)
+- Deleted `src/heuristics/heuristic-engine.ts`
+- Deleted `tests/unit/heuristic-rules.test.ts`, `tests/unit/heuristic-engine.test.ts`
+- Removed `createHeuristicEngine` import and Phase 18b-c block from `cro-agent.ts`
+- Removed `HeuristicRule` interface from types.ts (kept `HeuristicCategory`)
+- Updated post-processing.test.ts and cro-full-workflow.test.ts
+
+**Backward Compatibility**:
+- `heuristicInsights` field kept as empty array in `CROAnalysisResult`
+- `bySource.heuristic` kept as empty array in JSON export
+
+**Why Removed**: Vision-based analysis (Phase 21) supersedes rule-based heuristics with 80% overlap and better accuracy through visual context.
+
+### CR-001-D: Vision Mode Consolidation (2026-02-03) - COMPLETE ✅
+
+**Changes**:
+- `--vision` is now the primary CLI flag (renamed from `--vision-agent`)
+- `vision: true` is the new API option (replaces `visionAgentMode`, `enableUnifiedMode`)
+- Deleted 12 deprecated files in `src/agent/vision/` module
+- Added `normalizeVisionOptions()` helper for backward compatibility
+
+**Deprecated Aliases** (still work):
+- `--vision-agent` → `--vision`
+- `--vision-agent-max-steps` → `--vision-max-steps`
+- `visionAgentMode: true` → `vision: true`
+- `enableUnifiedMode: true` → `vision: true`
 
 ### Phase 21h Progress (2026-01-30) - COMPLETE ✅
 - ✅ T353: DOMElementRef, BoundingBox interfaces added
@@ -117,16 +293,21 @@ Automatically analyze websites for CRO issues (CTAs, forms, trust signals, value
   - Test element references parsed from mock responses
   - Test annotated screenshot output with color coding
 
-### CHANGE REQUEST 001: Architecture Simplification - APPROVED 🔄
+### CHANGE REQUEST 001: Architecture Simplification - COMPLETE ✅
 
 **See**: `CHANGE-REQUEST-001.md` for full details
 
 **Key Decisions**:
-1. **REMOVE**: `--vision`, `--full-page-vision`, `--full-page-screenshot` modes
-2. **KEEP**: `--vision-agent` as the ONE vision mode
+1. **REMOVE**: `--full-page-vision`, `--full-page-screenshot` modes
+2. **SIMPLIFY**: `--vision` as the ONE vision mode (renamed from `--vision-agent`)
 3. **MERGE**: Vision Agent into CRO Agent (single agent loop)
 4. **DEFER**: Phase 20 (60 tasks) to backlog
 5. **ADD NOW**: PLP, Homepage, Cart, Checkout, Generic knowledge bases
+
+**CR-001-D Update** (2026-02-03):
+- Consolidated to single `vision: true` API flag
+- Deleted 12 deprecated files in `src/agent/vision/`
+- Added `normalizeVisionOptions()` helper for backward compatibility
 
 **Target Architecture**:
 ```
@@ -150,43 +331,36 @@ Unified CRO Agent
 
 | Priority | Task | Tasks |
 |----------|------|-------|
-| 1 | **Phase 21j: CLI Vision Agent Fix** | **8** |
-| 2 | Phase 22: New Page Type Knowledge Bases | ~38 |
+| 1 | **Phase 22: New Page Type Knowledge Bases** | **~38** |
 
-### Phase 21j: CLI Vision Agent Fix - NEXT 📋
+### CR-001-D: Vision Mode Consolidation - COMPLETE ✅
 
-**Purpose**: Fix CLI --vision-agent to use unified CROAgent instead of deprecated VisionAgent
+**Purpose**: Simplify vision API to single `--vision` flag and `vision: true` option
 
-**Bug Summary**:
-- CLI `processVisionAgentMode()` at line 643 uses `createVisionAgent()` (DEPRECATED)
-- VisionAgent relies on LLM to decide when to scroll/capture
-- LLM may stop after 1 viewport
-- No enforced full-page coverage
+**Changes** (2026-02-03):
+- `--vision` is now the primary CLI flag (replaces `--vision-agent`)
+- `vision: true` is the new API option (replaces `visionAgentMode`, `enableUnifiedMode`)
+- Deleted 12 deprecated files in `src/agent/vision/` module
+- Added `normalizeVisionOptions()` helper for backward compatibility
 
-**Solution**: Use CROAgent with unified mode:
+**Simplified API**:
 ```typescript
-// Replace this (cli.ts:643):
-const visionAgent = createVisionAgent({...});
-const result = await visionAgent.analyze(page, pageType);
+// CLI
+npm run start -- --vision https://example.com/product
 
-// With this:
-const croAgent = new CROAgent({...});
-const result = await croAgent.analyze(url, {
-  enableUnifiedMode: true,
-  visionAgentMode: true,
-  scanMode: 'full_page',
+// Programmatic
+const result = await agent.analyze(url, {
+  vision: true,
+  visionModel: 'gpt-4o-mini',
+  visionMaxSteps: 20,
 });
 ```
 
-**Tasks**: T383-T390 (8 tasks, ~20 tests)
-- T383: Refactor processVisionAgentMode() to use CROAgent
-- T384: Update CROAgent to return snapshots in result
-- T385: Add console output for DOM-Screenshot mapping proof
-- T386: Fix evidence saving to use CROAgent result
-- T387: Add verbose logging for collection phase
-- T388: Update CLI help text
-- T389: Integration test: full-page + evidence
-- T390: Integration test: annotated screenshots
+**Deprecated Aliases** (still work):
+- `--vision-agent` → `--vision`
+- `--vision-agent-max-steps` → `--vision-max-steps`
+- `visionAgentMode: true` → `vision: true`
+- `enableUnifiedMode: true` → `vision: true`
 
 **Files**: See `plan/phase-21j.md` and `tasks/phase-21j.md`
 
@@ -292,26 +466,37 @@ CROAgent.analyze(url, { enableUnifiedMode: true, visionAgentMode: true })
 ## CLI Usage
 
 ```bash
-# Vision agent mode (THE ONE MODE after CR-001)
-npm run start -- --vision-agent https://example.com/product
+# Vision mode (THE ONE MODE after CR-001-D consolidation)
+npm run start -- --vision https://example.com/product
 
 # With specific model (default: gpt-4o-mini)
-npm run start -- --vision-agent --vision-model gpt-4o https://example.com/product
+npm run start -- --vision --vision-model gpt-4o https://example.com/product
+
+# With custom max steps
+npm run start -- --vision --vision-max-steps 25 https://example.com/product
 
 # With evidence saving (Phase 21h)
-npm run start -- --vision-agent --save-evidence https://example.com/product
+npm run start -- --vision --save-evidence https://example.com/product
 
 # With screenshot annotation (Phase 21i)
-npm run start -- --vision-agent --annotate-screenshots https://example.com/product
+npm run start -- --vision --annotate-screenshots https://example.com/product
 
 # Combined with other flags
-npm run start -- --vision-agent --headless --verbose https://example.com/product
+npm run start -- --vision --headless --verbose https://example.com/product
+
+# Deprecated aliases (still work):
+npm run start -- --vision-agent https://example.com/product  # maps to --vision
+npm run start -- --vision-agent-max-steps 25 https://example.com/product  # maps to --vision-max-steps
 ```
 
 **Removed Flags** (after CR-001 implementation):
-- `--vision`, `--vision-only`, `--no-vision`
+- `--vision-only`, `--no-vision`
 - `--full-page-vision`, `--vision-max-viewports`, `--no-parallel-vision`
 - `--full-page-screenshot`
+
+**Deprecated Aliases** (CR-001-D, still work):
+- `--vision-agent` → `--vision`
+- `--vision-agent-max-steps` → `--vision-max-steps`
 
 ---
 
@@ -378,14 +563,13 @@ npm run start -- --vision-agent --headless --verbose https://example.com/product
 | `src/agent/tools/cro/collection-done-tool.ts` | Signals collection complete |
 | `src/prompts/system-collection.md` | Collection phase prompt |
 
-### Phase 21g Vision Agent (deprecated - merged)
+### Phase 21g Vision Agent (DELETED in CR-001-D)
 
-**Clarification on "Merged" Status**:
-- **"Merged"** means Vision Agent functionality is now part of the unified CRO Agent
-- `src/agent/vision/` directory **still exists** (kept for backwards compatibility)
-- Vision Agent files are marked `@deprecated` - use unified mode via `--vision-agent` flag
-- The standalone VisionAgent class is NOT deleted, just deprecated
-- Unified mode in CRO Agent is the primary path for all new development
+**Update (CR-001-D, 2026-02-03)**:
+- **DELETED**: `src/agent/vision/` directory (12 files) completely removed
+- Vision Agent functionality is now ONLY available via unified CRO Agent
+- Use `--vision` flag (or deprecated alias `--vision-agent`)
+- Programmatic API: `agent.analyze(url, { vision: true })`
 
 | File | Purpose |
 |------|---------|
@@ -448,8 +632,8 @@ npm test -- tests/integration/unified-agent-flow.test.ts tests/integration/cro-a
 # Run vision agent tests
 npm test -- tests/unit/vision-state-manager.test.ts tests/unit/vision-agent.test.ts tests/integration/vision-agent.test.ts
 
-# Run unified mode (CR-001)
-npm run start -- --vision-agent https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt
+# Run unified mode (CR-001-D simplified API)
+npm run start -- --vision https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt
 ```
 
 ---
@@ -468,8 +652,14 @@ npm run start -- --vision-agent https://www.peregrineclothing.co.uk/collections/
 | **CR-001** | **Architecture Refactor** | **23** | **COMPLETE ✅** |
 | **21h** | **Evidence Capture** | **15** | **COMPLETE ✅** |
 | **21i** | **DOM-Screenshot Mapping** | **17** | **COMPLETE ✅** |
-| **21j** | **CLI Vision Agent Fix** | **8** | **📋 NEXT** |
-| **22** | **New Page Type KBs** | **~38** | **📋 PLANNED** |
+| **CR-001-D** | **Vision Mode Consolidation** | **-** | **COMPLETE ✅** |
+| **21l** | **Default Evidence & Mapping** | **9** | **COMPLETE ✅** |
+| **23** | **LLM Input Capture** | **9** | **COMPLETE ✅** |
+| **24** | **Hybrid Page Type Detection** | **23** | **COMPLETE ✅** |
+| **25a-f** | **Enhanced Extraction (Core)** | **30** | **COMPLETE ✅** |
+| **25-bugfix** | **Screenshot/Scroll/Fold Fixes** | **-** | **COMPLETE ✅** |
+| **25g-i** | **Evidence + Hybrid Collection** | **46** | **📋 NEXT** |
+| **22** | **New Page Type KBs** | **~38** | **📋 Pending** |
 | ~~20~~ | ~~Hybrid Extraction~~ | ~~60~~ | ~~📋 DEFERRED~~ |
 
 ---
@@ -676,56 +866,69 @@ SESSION 10: T377-T382 (Screenshot annotator & tests)
 File: specs/001-browser-agent-core/tasks/phase-21.md
 ```
 
-### Session 11: Phase 21j (8 tasks) - CLI Vision Agent Fix 📋 NEXT
+### Session 11: Phase 21j (8 tasks) - CLI Vision Agent Fix ✅ COMPLETE
 ```
-The new session can read these for full context:
-    - specs/001-browser-agent-core/quickstart.md - Project overview
-    - specs/001-browser-agent-core/SESSION-HANDOFF.md - Technical deep-dive
+COMPLETED: 2026-02-03
+
+CR-001-D Consolidation completed:
+- `--vision` is now the primary CLI flag (replaces `--vision-agent`)
+- `vision: true` is the new API option (replaces `visionAgentMode`, `enableUnifiedMode`)
+- Deleted 12 deprecated files in `src/agent/vision/` module
+- Added `normalizeVisionOptions()` helper for backward compatibility
+
+Test command:
+npm run start -- --vision --save-evidence --annotate-screenshots https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt
+
+Deprecated aliases still work:
+npm run start -- --vision-agent --save-evidence https://example.com/product  # maps to --vision
+```
+
+### Session 12: Phase 23 - LLM Input Capture (9 tasks) - 📋 NEXT
+```
+Read specs/001-browser-agent-core/quickstart.md to get the complete project context.
 
 PROJECT: Browser Agent - TypeScript CRO analysis tool using Playwright + GPT-4o Vision
-GOAL: Analyze websites for CRO issues, generate hypotheses and A/B test ideas
+PREVIOUS: Phase 21l partial (7/9) - Evidence saving defaults done, tests pending
 
-BUG FOUND (2026-02-02): CLI --vision-agent uses deprecated VisionAgent
-- Only 1 viewport captured (LLM-guided, not enforced full-page)
-- Evidence not saving (empty snapshots)
-- No DOM-Screenshot mapping proof in console
+SESSION TASKS: T400-T408 (LLM Input Capture)
+File: specs/001-browser-agent-core/tasks/phase-23.md
 
-SOLUTION: Replace deprecated VisionAgent with CROAgent unified mode
+T400: Create LLMInputWriter class in src/output/llm-input-writer.ts
+  - LLMInputData interface (viewportIndex, scrollPosition, domSnapshot, screenshotBase64, systemPrompt, userPrompt)
+  - saveAll() method creates ./llm-inputs/{timestamp}/ directory structure
+  - Subdirs: DOM-snapshots/, Screenshots/, Prompts/
 
-SESSION TASKS: T383-T390 (8 tasks)
-File: specs/001-browser-agent-core/tasks/phase-21j.md
+T401: Add capturedInputs to CROVisionAnalyzer.analyze()
+  - Return { ...result, capturedInputs: { systemPrompt, userPrompt, screenshotBase64 } }
 
-Implementation Order:
-1. T384: CROAgent returns snapshots (foundation)
-2. T383: Refactor CLI to use CROAgent
-3. T385: Add mapping proof output
-4. T386: Fix evidence saving
-5. T387: Add verbose logging
-6. T388: Update help text
-7. T389: Integration tests (full-page)
-8. T390: Integration tests (annotation)
+T402: Add capturedInputs to MultiViewportVisionAnalyzer
+  - Collect inputs per viewport, include DOM snapshot
+  - Return llmInputs[] array in analyzeFullPage() result
 
-Key files to read:
-- src/cli.ts - processVisionAgentMode() at line 540
-- src/agent/cro-agent.ts - analyze() method, unified mode
-- src/agent/tools/cro/capture-viewport-tool.ts - how snapshots are created
+T403: Pass llmInputs through CROAgent.analyze() result
+  - Add llmInputs field to CROAnalysisResult type
 
-Test command after fix:
-npm run start -- --vision-agent --save-evidence --annotate-screenshots https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt
+T404: Integrate LLMInputWriter in processVisionMode()
+  - Save when saveEvidence=true (default)
+  - Use same timestamp as evidence directory
 
-Expected output after fix:
-- Multiple viewports captured (3-5 for typical PDP)
-- Evidence saved to ./evidence/ directory
-- Annotated screenshots with bounding boxes
-- Console shows DOM-Screenshot mapping counts
+T405: Export LLMInputWriter from src/output/index.ts
+
+T406: Update help text to mention LLM inputs
+
+T407: Unit tests (8 tests) - tests/unit/llm-input-writer.test.ts
+
+T408: Integration tests (4 tests) - tests/integration/llm-input-capture.test.ts
+
+Run tests after changes. Mark tasks complete when done.
 ```
 
-### Session 12-15: Phase 22 (38 tasks total)
+### Session 13-16: Phase 22 (38 tasks total)
 ```
-SESSION 12: T400-T409 (PLP knowledge base)
-SESSION 13: T410-T417 (Homepage knowledge base)
-SESSION 14: T418-T433 (Cart + Checkout)
-SESSION 15: T434-T437 (Generic knowledge base)
+SESSION 13: T410-T419 (PLP knowledge base)
+SESSION 14: T420-T427 (Homepage knowledge base)
+SESSION 15: T428-T443 (Cart + Checkout)
+SESSION 16: T444-T447 (Generic knowledge base)
 File: specs/001-browser-agent-core/tasks/phase-22.md
 ```
 
@@ -741,12 +944,26 @@ The new session can read these for full context:
 PROJECT: Browser Agent - TypeScript CRO analysis tool using Playwright + GPT-4o Vision
 GOAL: Analyze websites for CRO issues, generate hypotheses and A/B test ideas
 
-CURRENT WORK: CR-001 Architecture Refactor
-- Merge Vision Agent into CRO Agent (single agent loop)
-- Remove redundant vision modes (keep only --vision-agent)
-- Analysis happens AFTER data collection (not during)
+CURRENT STATE: Phase 25a-f complete, bug fixes applied (2026-02-04)
+- Unified CRO Agent with `--vision` flag (single vision mode)
+- Simple API: `agent.analyze(url, { vision: true })`
+- Evidence saving + annotation DEFAULT ON
+- Screenshot size: 1280x720 (full-res), compressed for LLM
+- Element refs: `[v0-0]`, `[v1-0]` format (viewport-prefixed)
+- Parsing utils: `parseElementRef()`, `extractElementRefs()`, `toNumericIndex()`
 
-SESSION TASK: T353-T365 (Phase 21h - see tasks/phase-21.md)
+NEXT WORK: Phase 25g - Evidence Mapping + Confidence + Packaging (T503-T520)
+- Add stable nodeId to DOM nodes
+- Create layout-mapper.ts for bounding box computation
+- Build EvidencePackage with confidence scores
+- See: specs/001-browser-agent-core/tasks/phase-25.md
+
+KEY FILES TO MODIFY:
+- src/browser/dom/extractor.ts (nodeId)
+- src/browser/layout/layout-mapper.ts (NEW)
+- src/types/evidence-schema.ts (NEW)
+- src/output/evidence-packager.ts (NEW)
+- src/browser/dom/serializer.ts (confidence + nodeId format)
 
 Complete 1-5 tasks max. Run tests. Update task status when done.
 ```

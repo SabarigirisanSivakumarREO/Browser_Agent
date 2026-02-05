@@ -22,7 +22,11 @@
 | ~~Phase 20~~ | ~~Hybrid Extraction Pipeline~~ | [phase-20.md](./phase-20.md) | **DEFERRED** |
 | Phase 21 | Vision + Evidence + Mapping | [phase-21.md](./phase-21.md) |
 | **Phase 21j** | **CLI Vision Agent Fix** | [phase-21j.md](./phase-21j.md) |
+| **Phase 21l** | **Default Evidence & Mapping** | [phase-21.md](./phase-21.md#phase-21l-default-evidence--mapping) |
 | **Phase 22** | **Page Type Knowledge Bases** | [phase-22.md](./phase-22.md) |
+| **Phase 23** | **LLM Input Capture** | [phase-23.md](./phase-23.md) |
+| **Phase 24** | **Hybrid LLM Page Type Detection** | [phase-24.md](./phase-24.md) |
+| **Phase 25** | **Enhanced Extraction & Screenshot Analysis** | [phase-25.md](./phase-25.md) |
 
 ---
 
@@ -43,8 +47,11 @@
 | **CR-001** | **Architecture Refactor** | **Unified CRO Agent, category-based analysis** | ✅ Complete |
 | 21h | Evidence | 5 evidence fields, screenshot saving | ✅ Complete |
 | 21i | Mapping | Coordinate transformation, screenshot annotation | ✅ Complete |
-| **21j** | **CLI Fix** | **Fix --vision-agent to use CROAgent unified mode** | 📋 NEXT |
+| **21j** | **CLI Fix** | **Fix --vision-agent to use CROAgent unified mode** | ⏳ 6/8 |
+| **21l** | **Default Evidence** | **Flip defaults: evidence + annotation ON by default** | ⏳ 7/9 |
 | **22** | **Page Types** | **PLP, Homepage, Cart, Checkout, Generic KBs** | 📋 Pending |
+| **23** | **LLM Input Capture** | **Save DOM, screenshots, prompts for debugging** | ✅ Complete |
+| **24** | **Hybrid Detection** | **LLM fallback for page type detection** | 📋 NEXT |
 
 ## Related Files
 

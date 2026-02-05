@@ -1,5 +1,5 @@
 /**
- * Vision Analysis E2E Workflow Tests - Phase 21d (T320)
+ * Vision Analysis E2E Workflow Tests
  *
  * Tests the complete vision analysis workflow:
  * - Page type detection for PDP pages
@@ -7,8 +7,8 @@
  * - GPT-4o vision analysis (requires OPENAI_API_KEY)
  * - Vision insights generation
  *
- * Note: These tests require OPENAI_API_KEY to be set and will
- * incur API costs when run.
+ * NOTE: For agent-level vision tests, use CROAgent with `vision: true`.
+ * These tests require OPENAI_API_KEY and incur API costs when run.
  */
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';

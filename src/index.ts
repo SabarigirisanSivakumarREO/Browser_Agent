@@ -27,8 +27,8 @@ export {
   ToolExecutor,
 } from './agent/tools/index.js';
 export {
-  createHeuristicEngine,
-  HeuristicEngine,
+  // NOTE: createHeuristicEngine and HeuristicEngine removed in CR-002
+  // Vision-based analysis supersedes rule-based heuristics
   BusinessTypeDetector,
   SeverityScorer,
 } from './heuristics/index.js';

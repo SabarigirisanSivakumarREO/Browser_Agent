@@ -66,4 +66,28 @@ export {
   DEFAULT_ANNOTATION_OPTIONS,
   type AnnotationOptions,
   type AnnotationResult,
+  // Phase 25d: Fold Line Annotation (T489-T491)
+  annotateFoldLine,
+  type FoldLineOptions,
+  type FoldLineResult,
 } from './screenshot-annotator.js';
+
+// Phase 23: LLM Input Writer (T400)
+export {
+  LLMInputWriter,
+  createLLMInputWriter,
+  DEFAULT_LLM_INPUT_CONFIG,
+  type LLMInputData,
+  type LLMInputWriterConfig,
+  type LLMInputWriteResult,
+} from './llm-input-writer.js';
+
+// Phase 25e: Tiled Screenshot Mode (T493-T498)
+export {
+  captureTiledScreenshots,
+  tilesToSnapshots,
+  DEFAULT_TILED_CONFIG,
+  type TiledScreenshotConfig,
+  type ScreenshotTile,
+  type TiledScreenshotResult,
+} from './tiled-screenshot.js';

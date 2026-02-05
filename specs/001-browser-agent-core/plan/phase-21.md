@@ -998,11 +998,14 @@ LLM cross-references: "Element [0] in DOM appears too small in screenshot"
 ### CLI Usage
 
 ```bash
-# Vision agent mode (iterative deep analysis)
-npm run start -- --vision-agent https://example.com/product
+# Vision mode (iterative deep analysis) - CR-001-D simplified API
+npm run start -- --vision https://example.com/product
 
 # With gpt-4o for higher quality
-npm run start -- --vision-agent --vision-model gpt-4o https://example.com/product
+npm run start -- --vision --vision-model gpt-4o https://example.com/product
+
+# Deprecated aliases still work:
+npm run start -- --vision-agent https://example.com/product  # maps to --vision
 ```
 
 ---
@@ -1107,11 +1110,14 @@ interface ViewportSnapshot {
 ### CLI Integration
 
 ```bash
-# Vision agent with evidence saving
-npm run start -- --vision-agent --save-evidence https://example.com/product
+# Vision mode with evidence saving - CR-001-D simplified API
+npm run start -- --vision --save-evidence https://example.com/product
 
 # Custom evidence directory
-npm run start -- --vision-agent --save-evidence --evidence-dir ./reports/evidence https://example.com/product
+npm run start -- --vision --save-evidence --evidence-dir ./reports/evidence https://example.com/product
+
+# Deprecated aliases still work:
+npm run start -- --vision-agent --save-evidence https://example.com/product
 ```
 
 ### Output Format
@@ -1397,11 +1403,14 @@ function parseEvaluationWithElements(raw: RawLLMEvaluation): ParsedEvaluation {
 ### CLI Integration
 
 ```bash
-# Enable annotated screenshots
-npm run start -- --vision-agent --annotate-screenshots https://example.com/product
+# Enable annotated screenshots - CR-001-D simplified API
+npm run start -- --vision --annotate-screenshots https://example.com/product
 
 # With evidence saving (combines with Phase 21h)
-npm run start -- --vision-agent --save-evidence --annotate-screenshots https://example.com/product
+npm run start -- --vision --save-evidence --annotate-screenshots https://example.com/product
+
+# Deprecated alias still works:
+npm run start -- --vision-agent --annotate-screenshots https://example.com/product
 ```
 
 ### Benefits Summary
@@ -1414,3 +1423,127 @@ npm run start -- --vision-agent --save-evidence --annotate-screenshots https://e
 | **Evidence** | Text description | Annotated screenshot |
 | **Automation** | Manual follow-up | Auto-generate fixes |
 | **Confidence** | LLM self-reported | Validated by system |
+
+---
+
+## Phase 21l: Default Evidence & Mapping
+
+### Summary
+
+Make DOM-screenshot mapping and evidence saving part of the default vision workflow. Currently these features require explicit CLI flags (`--save-evidence`, `--annotate-screenshots`). This phase flips the defaults so they're ON by default, with opt-out flags for minimal output.
+
+### Motivation
+
+```
+CURRENT (suboptimal):
+npm run start -- --vision https://example.com
+→ No evidence saved, no annotations
+
+npm run start -- --vision --save-evidence --annotate-screenshots https://example.com
+→ Full evidence (but user must remember 2 extra flags)
+
+AFTER PHASE 21l:
+npm run start -- --vision https://example.com
+→ Full evidence saved by default
+
+npm run start -- --vision --no-save-evidence https://example.com
+→ Opt-out when needed
+```
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                     DEFAULT EVIDENCE FLOW (Phase 21l)                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  CLI: --vision https://example.com                                          │
+│       │                                                                     │
+│       ▼                                                                     │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │ parseArgs()                                                          │   │
+│  │   saveEvidence = true        (was false)                            │   │
+│  │   annotateScreenshots = true (was false)                            │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│       │                                                                     │
+│       ▼                                                                     │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │ Default Evidence Directory                                           │   │
+│  │   if (!evidenceDir) {                                                │   │
+│  │     evidenceDir = `./evidence/${timestamp}`;                        │   │
+│  │   }                                                                  │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│       │                                                                     │
+│       ▼                                                                     │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │ Vision Analysis                                                      │   │
+│  │   → Capture viewports (existing)                                     │   │
+│  │   → Map DOM to screenshots (existing)                                │   │
+│  │   → Annotate screenshots (now default)                               │   │
+│  │   → Save evidence (now default)                                      │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│       │                                                                     │
+│       ▼                                                                     │
+│  Output: ./evidence/2026-02-03T10-30-00/                                    │
+│          ├── viewport-0.png (annotated)                                     │
+│          ├── viewport-1.png (annotated)                                     │
+│          └── evidence.json                                                  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### CLI Changes
+
+| Before | After |
+|--------|-------|
+| `--save-evidence` (opt-in) | `--no-save-evidence` (opt-out) |
+| `--annotate-screenshots` (opt-in) | `--no-annotate-screenshots` (opt-out) |
+| Default: no evidence | Default: evidence saved |
+
+### Implementation Details
+
+```typescript
+// src/cli.ts - Key changes
+
+// 1. Flip defaults
+let saveEvidence = true;         // was false
+let annotateScreenshots = true;  // was false
+
+// 2. Add opt-out flags
+} else if (arg === '--no-save-evidence') {
+  saveEvidence = false;
+} else if (arg === '--no-annotate-screenshots') {
+  annotateScreenshots = false;
+}
+
+// 3. Default evidence directory with timestamp
+if (saveEvidence && !evidenceDir) {
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  evidenceDir = `./evidence/${timestamp}`;
+}
+```
+
+### Backward Compatibility
+
+Old scripts using explicit flags will continue to work:
+```bash
+# These still work (just redundant now)
+npm run start -- --vision --save-evidence https://example.com
+npm run start -- --vision --annotate-screenshots https://example.com
+```
+
+### Tasks
+
+See [tasks/phase-21l.md](../tasks/phase-21l.md) for detailed task breakdown.
+
+| Task | Description |
+|------|-------------|
+| T391 | Change `saveEvidence` default to `true` |
+| T392 | Change `annotateScreenshots` default to `true` |
+| T393 | Add `--no-save-evidence` opt-out flag |
+| T394 | Add `--no-annotate-screenshots` opt-out flag |
+| T395 | Create default evidence directory with timestamp |
+| T396 | Update CLI help text |
+| T397 | Update examples in help |
+| T398 | Unit tests for new defaults |
+| T399 | Integration tests for evidence creation |

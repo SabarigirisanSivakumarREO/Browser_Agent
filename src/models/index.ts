@@ -4,13 +4,15 @@
  * Core data models for CRO Agent.
  */
 
-// DOM models
+// DOM models (Phase 25g: added NodeIndexEntry)
 export type {
   BoundingBox,
   CROType,
   CROClassification,
   DOMNode,
   DOMTree,
+  StructuredProductData,
+  NodeIndexEntry,
 } from './dom-tree.js';
 
 // Insight model

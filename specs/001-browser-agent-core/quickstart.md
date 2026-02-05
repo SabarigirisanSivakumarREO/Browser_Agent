@@ -1,7 +1,7 @@
 # Quickstart: Browser Agent Core
 
 **Feature**: `001-browser-agent-core`
-**Last Updated**: 2026-01-30
+**Last Updated**: 2026-02-04 (Phase 25 bug fixes documented)
 
 ---
 
@@ -15,36 +15,55 @@ Read specs/001-browser-agent-core/quickstart.md to get the complete project cont
 
 ## Session Bootstrap (READ THIS FIRST)
 
-**Status**: CR-001 Architecture Refactor ✅ | Phase 21h ✅ | Phase 21i ✅ | Phase 21j ⏳ IN PROGRESS (6/8)
-- Completed: 431 tasks (Phases 1-19, 12b, 12c, 21a-21j core, CR-001 complete)
+**Status**: CR-001 ✅ | Phase 21h ✅ | Phase 21i ✅ | Phase 21j ✅ | Phase 21l ✅ | Phase 23 ✅ | Phase 24 ✅ | Phase 25a-f ✅ | Phase 25-bugfix ✅ | Phase 25g 📋
+- Completed: 487 tasks (Phases 1-19, 12b, 12c, 21a-21l, CR-001, Phases 23-25f)
 - **CR-001 COMPLETE** (2026-01-30):
   - ✅ Merged Vision Agent into CRO Agent (single agent loop)
-  - ✅ Removed redundant vision modes (--vision, --full-page-vision, --full-page-screenshot)
-  - ✅ Only `--vision-agent` remains as the ONE vision mode
+  - ✅ Removed redundant vision modes (--full-page-vision, --full-page-screenshot)
+  - ✅ Only `--vision` remains as the ONE vision mode (simplified API)
   - ✅ Analysis happens AFTER data collection (category-based LLM calls)
+  - ✅ CR-001-D: Consolidated to single `vision: true` API flag
   - Phase 20 (60 tasks) deferred to backlog
-- **Phase 21h COMPLETE** (2026-01-30):
-  - ✅ Evidence capture: viewportIndex, timestamp, screenshotRef, domElementRefs, boundingBox
-  - ✅ Bounding box extraction via Playwright element.boundingBox()
-  - ✅ CLI: --save-evidence, --evidence-dir flags
-- **Phase 21j IN PROGRESS** (2026-02-02): CLI Vision Agent Fix
-  - ✅ T383: Refactored processVisionAgentMode() to use CROAgent unified mode
-  - ✅ T384: CROAgent now returns snapshots in result
-  - ✅ T385: Console shows DOM-Screenshot mapping proof
-  - ✅ T386: Evidence saving works with CROAgent result
-  - ✅ T387: Verbose logging for collection phase
-  - ✅ T388: Updated help text for --vision-agent
-  - 📋 T389-T390: Integration tests (pending)
+- **Phase 23 COMPLETE** (2026-02-03):
+  - ✅ T400-T408: LLM Input Capture for debugging/auditing
+  - ✅ Saves DOM, screenshots, prompts to `./llm-inputs/{timestamp}/`
+  - ✅ 18 new tests (13 unit + 5 integration)
+- **Phase 21j COMPLETE** (2026-02-03): CLI Vision Agent Fix
+  - ✅ T383-T388: Core implementation complete
+  - ✅ T389-T390: Integration tests (17 tests in cli-vision-agent.test.ts)
+- **Phase 21l COMPLETE** (2026-02-03): Default Evidence & Mapping
+  - ✅ T391-T397: Defaults changed, opt-out flags added
+  - ✅ T398-T399: Tests (27 tests - 15 unit + 12 integration)
 
 **Current Focus**:
-- Phase 21k: Deterministic Full-Page Collection (7 tasks) 📋 **NEXT** - Replace LLM-guided collection
-- Phase 21j: CLI Vision Agent Fix (6/8 tasks) ⏳ **IN PROGRESS** - Integration tests remaining
-- Phase 22: New Page Type Knowledge Bases (~38 tasks) 📋 **PLANNED**
+- Phase 24: Hybrid LLM Page Type Detection (23 tasks) ✅ **COMPLETE** - All 55 tests passing (39 unit + 9 integration + 7 E2E)
+- **Phase 25a-f: Enhanced Extraction Core (30 tasks) ✅ COMPLETE** - Dynamic steps, selectors, structured data, fold annotation, tiled screenshots, deterministic collection
+- **Phase 25 Bug Fixes ✅ COMPLETE** - Screenshot size, scroll position, fold line, viewport-prefixed refs
+- **Phase 25g-i: Evidence + Hybrid Collection (46 tasks) 📋 NEXT** - Evidence mapping, confidence, packaging, noise suppression, lazy-load, cheap validator
+- Phase 22: New Page Type Knowledge Bases (~38 tasks) 📋 Planned - PLP, Homepage, Cart, Checkout
 
-**Phase 21k Priority** (blocking issue):
-- Current collection is LLM-guided → only 2-3 viewports captured
-- Fix: Programmatic scrolling based on page height calculation
-- See: `plan/phase-21k.md` and `tasks/phase-21k.md`
+**Phase 25 Progress** (2026-02-04):
+- ✅ **25a** T473-T476: Dynamic collection steps (based on page height) - 14 unit tests
+- ✅ **25b** T477-T484: Enhanced DOM selectors (price, variant, stock, shipping, gallery) - 41 unit tests
+- ✅ **25c** T485-T488: Structured data extraction (JSON-LD Product schema) - 17 unit tests
+- ✅ **25d** T489-T492: Above-fold annotation (fold line on screenshots) - 22 unit tests
+- ✅ **25e** T493-T498: Tiled screenshot mode (alternative to viewport capture) - 9 integration tests
+- ✅ **25f** T499-T502: Deterministic collection (no LLM during collection) - 10 int + 11 E2E tests
+- ✅ **Bug Fixes**: Screenshot size (1280x720), scroll position (0px start), fold line, viewport-prefixed refs `[v0-0]`
+- 📋 **25g** T503-T520: Evidence mapping + confidence + packaging
+- 📋 **25h** T521-T534: Determinism + noise suppression + lazy-load + metrics
+- 📋 **25i** T535-T548: Hybrid collection (cheap validator + LLM QA)
+- See: `spec/requirements-phase25.md`, `plan/phase-25.md`, `tasks/phase-25.md`
+
+**Phase 21l COMPLETE** (user experience):
+- ✅ T391-T397: Defaults changed, opt-out flags added, help text updated
+- ✅ T398-T399: Unit + integration tests (27 tests)
+- See: `tasks/phase-21l.md`
+
+**Phase 23 Priority** (debugging/auditing):
+- Save all LLM inputs: DOM snapshots, screenshots, prompts
+- Output: `./llm-inputs/{timestamp}/` directory structure
+- See: `tasks/phase-23.md`
 
 **Deferred**:
 - Phase 20: Hybrid Extraction Pipeline (60 tasks) - moved to backlog
@@ -87,14 +106,14 @@ Read specs/001-browser-agent-core/quickstart.md to get the complete project cont
 | Module | Path | Files | Purpose |
 |--------|------|-------|---------|
 | agent | `src/agent/` | 8+ | CRO Agent core (state, messages, prompts) |
-| agent/vision | `src/agent/vision/` | 6+ | Vision Agent (@deprecated, merged) |
+| ~~agent/vision~~ | ~~`src/agent/vision/`~~ | ~~12~~ | ~~Vision Agent~~ (DELETED in CR-001-D) |
 | agent/tools | `src/agent/tools/` | 10+ | Agent tool implementations |
 | browser | `src/browser/` | 5+ | Playwright browser lifecycle |
 | browser/dom | `src/browser/dom/` | 4+ | DOM extraction and serialization |
 | detection | `src/detection/` | 2+ | Framework detection utilities |
-| heuristics | `src/heuristics/` | 8+ | Heuristic engine core |
+| heuristics | `src/heuristics/` | 6+ | Heuristic category definitions |
 | heuristics/knowledge | `src/heuristics/knowledge/` | 12+ | PDP knowledge base JSONs |
-| heuristics/rules | `src/heuristics/rules/` | 11+ | H001-H010 rule implementations |
+| ~~heuristics/rules~~ | ~~`src/heuristics/rules/`~~ | ~~11+~~ | ~~H001-H010 rules~~ (DELETED in CR-002) |
 | heuristics/vision | `src/heuristics/vision/` | 6+ | Vision analyzer components |
 | models | `src/models/` | 10+ | Zod schemas and types |
 | output | `src/output/` | 6+ | Report generation, JSON export |
@@ -239,18 +258,107 @@ For any feature/bug fix request:
 
 ### Recent Changes (keep last 3)
 
-**0. Phase 21j: CLI Vision Agent Fix** - ⏳ IN PROGRESS (2026-02-02)
-- **Purpose**: Fix CLI --vision-agent to use unified CROAgent instead of deprecated VisionAgent
-- **Bug Fixed**: CLI now uses CROAgent with unified mode:
-  - ✅ Enforces full-page coverage (scrolls entire page)
-  - ✅ Captures DOM + screenshots at each viewport
-  - ✅ Shows DOM-Screenshot mapping proof in console
-  - ✅ Evidence saving works correctly
-- **Key Changes**:
-  - `src/cli.ts` - processVisionAgentMode() now uses CROAgent
-  - `src/agent/cro-agent.ts` - Added snapshots to CROAnalysisResult
-  - `src/heuristics/vision/types.ts` - Added coveragePercent to summary
-- **Tasks**: T383-T388 complete (6/8), T389-T390 integration tests pending
+**0. Phase 25 Bug Fixes & Enhancements** - ✅ COMPLETE (2026-02-05)
+- **Screenshot Size**: Fixed from 384x216 → 1280x720 (added `fullResolutionBase64` field) ✅
+- **Scroll Position**: Fixed - now starts at 0px with verification retry logic ✅
+- **Fold Line**: Now correctly at 720px on first viewport ✅
+- **Element References**: New `[v0-0]`, `[v1-0]` format for viewport-prefixed refs ✅
+- **Screenshot Labels**: Evidence screenshots now use `[v0-0]` format matching LLM prompts ✅
+- **Reasoning Field**: Added to types, parsing, AND CLI display (T549 ✅)
+- **Parsing Utils**: `parseElementRef()`, `extractElementRefs()`, `toNumericIndex()` ✅
+- **Files**: `agent-state.ts`, `cro-agent.ts`, `cli.ts`, `coordinate-mapper.ts`, `category-analyzer.ts`, `screenshot-annotator.ts`, `types.ts`, `prompt-builder.ts`, `agent-progress-formatter.ts`
+
+**1. Phase 25: Enhanced Extraction & Screenshot Analysis** - ⏳ IN PROGRESS (2026-02-04)
+- **Purpose**: Fix Burberry price false positive, improve extraction accuracy, enable full evidence chain
+- **Root Cause**: Price not in DOM, LLM confused about "above the fold", no evidence linking
+- **Sub-phases**:
+  1. **25a**: Dynamic collection steps (page height based)
+  2. **25b**: Enhanced DOM selectors (price, variant, stock, shipping, gallery)
+  3. **25c**: Structured data extraction (JSON-LD Product schema)
+  4. **25d**: Above-fold annotation (fold line on screenshots)
+  5. **25e**: Tiled screenshot mode (alternative capture)
+  6. **25f**: Deterministic collection (skip LLM for scrolling)
+  7. **25g**: Evidence mapping + confidence + packaging (nodeId, boxes, EvidencePackage)
+  8. **25h**: Determinism + noise suppression + lazy-load + metrics
+  9. **25i**: Hybrid collection (cheap validator + conditional LLM QA)
+- **Pipeline**: DOM Freeze → Noise Suppression → DOM Extract → CRO Match → Structured Data → Deterministic Collection → Cheap Validator → (LLM QA if needed) → Recheck → Reconciliation → Evidence Package
+- **Default ON**: All features enabled by default (opt-out flags available)
+- **CLI Flags**: `--screenshot-mode`, `--no-layout-mapping`, `--no-noise-suppression`, `--no-media-readiness`, `--no-evidence-json`, `--skip-collection-qa`, `--llm-guided-collection`
+- **Tasks**: T473-T548 (76 tasks)
+- **Tests**: 75 (40 unit + 20 integration + 15 E2E)
+- **Sessions**: 10 recommended
+- **See**: `spec/requirements-phase25.md`, `plan/phase-25.md`, `tasks/phase-25.md`
+
+**1. Phase 24: Hybrid Page Type Detection** - ✅ COMPLETE (2026-02-03)
+- **Purpose**: Improve page type detection for edge cases (Burberry, luxury brands, non-standard URLs)
+- **Approach**: Three-tier hybrid detection:
+  1. **Tier 1 (PRIMARY)**: Playwright-based detection with rich DOM analysis
+     - JSON-LD Product schema parsing
+     - CTA detection ("Add to Cart", "Buy Now") with visibility checks
+     - Variant detection (size/color selectors)
+     - Anti-signals (PLP grid, cart, checkout patterns)
+  2. **Tier 2**: URL/selector heuristics (existing PageTypeDetector)
+  3. **Tier 3 (FALLBACK)**: LLM vision - only ~10% of cases
+- **Key Files Created** (Session 1):
+  - `src/heuristics/playwright-page-detector.ts` - detectPdp() with JSON-LD, CTA, variants, anti-signals
+  - `src/heuristics/domain-pattern-cache.ts` - In-memory cache by domain
+  - `src/heuristics/llm-page-type-detector.ts` - LLM fallback (gpt-4o-mini)
+  - `src/heuristics/hybrid-page-type-detector.ts` - 3-tier orchestrator
+- **CLI flags**: `--no-llm-page-detection`, `--force-llm-detection`, `--llm-detection-threshold <n>` ✅
+- **Tasks**: T450-T468, T470-T471 done ✅ | T469 (7 int tests), T472 (4 E2E tests) 📋 TODO
+- **Tests**: 39 unit tests done, 11 integration/E2E remaining
+- **See**: `spec/requirements-phase24.md`, `plan/phase-24.md`, `tasks/phase-24.md`
+
+**1. Phase 23: LLM Input Capture** - ✅ COMPLETE (2026-02-03)
+- **Purpose**: Save all LLM inputs for debugging/auditing
+- **Changes**:
+  - ✅ Created `LLMInputWriter` class in `src/output/llm-input-writer.ts`
+  - ✅ Added `CapturedCategoryInputs` type for capturing inputs per category
+  - ✅ `CategoryAnalyzer` captures systemPrompt, userPrompt, screenshots, DOM
+  - ✅ `AnalysisOrchestrator` aggregates inputs from all categories
+  - ✅ `CROAgent.analyze()` returns `llmInputs` in result
+  - ✅ CLI saves to `./llm-inputs/{timestamp}/` when evidence enabled
+- **Output Structure**:
+  - `DOM-snapshots/viewport-N.json` - Serialized DOM + metadata
+  - `Screenshots/viewport-N.png` - Raw screenshots
+  - `Prompts/system-prompt.txt` - System prompt (once)
+  - `Prompts/viewport-N-prompt.txt` - User prompts
+- **Tests**: 18 new tests (13 unit + 5 integration)
+
+**1. Phase 21l: Default Evidence & Mapping** - ⏳ 7/9 (2026-02-03)
+- **Purpose**: Make evidence saving + screenshot annotation default behavior
+- **Changes**:
+  - 📋 `saveEvidence` defaults to `true` (was `false`)
+  - 📋 `annotateScreenshots` defaults to `true` (was `false`)
+  - 📋 New opt-out flags: `--no-save-evidence`, `--no-annotate-screenshots`
+  - 📋 Default evidence directory: `./evidence/{timestamp}/`
+- **Backward Compatibility**: Old flags (`--save-evidence`, `--annotate-screenshots`) still accepted
+- **CLI after implementation**: `npm run start -- --vision https://example.com` saves evidence by default
+
+**1. CR-002: Heuristic Rules Removal** - ✅ COMPLETE (2026-02-03)
+- **Purpose**: Remove rule-based heuristic analysis (H001-H010) - vision analysis supersedes
+- **Changes**:
+  - ✅ Deleted `src/heuristics/rules/` directory (6 files)
+  - ✅ Deleted `src/heuristics/heuristic-engine.ts`
+  - ✅ Deleted `tests/unit/heuristic-rules.test.ts`, `tests/unit/heuristic-engine.test.ts`
+  - ✅ Removed `createHeuristicEngine` import and Phase 18b-c block from `cro-agent.ts`
+  - ✅ Removed `HeuristicRule` interface from types, kept `HeuristicCategory`
+  - ✅ Updated integration/E2E tests to not use heuristic engine
+- **Backward Compatibility**: `heuristicInsights` field kept as empty array in `CROAnalysisResult`
+- **Migration**: Use `--vision` flag for vision-based CRO analysis
+
+**1. CR-001-D: Vision Mode Consolidation** - ✅ COMPLETE (2026-02-03)
+- **Purpose**: Simplify vision API to single `--vision` flag and `vision: true` option
+- **Changes**:
+  - ✅ `--vision` is now the primary CLI flag (replaces `--vision-agent`)
+  - ✅ `vision: true` is the new API option (replaces `visionAgentMode`, `enableUnifiedMode`)
+  - ✅ Deleted 12 deprecated files in `src/agent/vision/` module
+  - ✅ Added `normalizeVisionOptions()` helper for backward compatibility
+- **Deprecated Aliases** (still work):
+  - `--vision-agent` → `--vision`
+  - `--vision-agent-max-steps` → `--vision-max-steps`
+  - `visionAgentMode: true` → `vision: true`
+  - `enableUnifiedMode: true` → `vision: true`
 
 **1. Phase 21h: Evidence Capture** - ✅ COMPLETE (2026-01-30)
 - **Purpose**: Capture and store evidence for each heuristic evaluation
@@ -280,9 +388,13 @@ For any feature/bug fix request:
 
 | Change | Phase | Tasks | CLI Milestone | Status |
 |--------|-------|-------|---------------|--------|
+| **Enhanced Extraction & Screenshots** | 25 | 76 | `--screenshot-mode`, `--no-evidence-json`, `--skip-collection-qa` | 📋 PLANNED |
+| **Hybrid LLM Page Detection** | 24 | 23 | `--no-llm-page-detection`, `--force-llm-detection`, `--llm-detection-threshold` | ✅ COMPLETE |
+| **LLM Input Capture** | 23 | 9 | Save DOM, screenshots, prompts | ✅ COMPLETE |
+| **Default Evidence & Mapping** | 21l | 9 | Evidence + annotation by default | ⏳ 7/9 |
 | **Architecture Simplification** | CR-001 | 23 | Merge agents, remove modes | ✅ COMPLETE |
 | **Page Type Knowledge Bases** | 22 | ~38 | PLP, Homepage, Cart, Checkout, Generic | 📋 PLANNED |
-| **DOM-Screenshot Mapping** | 21i | 17 | `--annotate-screenshots` | 📋 PLANNED |
+| **DOM-Screenshot Mapping** | 21i | 17 | `--annotate-screenshots` | ✅ COMPLETE |
 | **Evidence Capture** | 21h | 14 | `--save-evidence` | ✅ COMPLETE |
 | ~~Vision Agent Loop (standalone)~~ | ~~21g~~ | ~~18~~ | - | ✅ MERGED (CR-001) |
 | ~~Full-Page Screenshot Mode~~ | ~~21f~~ | ~~6~~ | ~~`--full-page-screenshot`~~ | ✅ REMOVED (CR-001) |
@@ -329,15 +441,37 @@ Phase 16-CLI: npm run start -- --analyze --max-steps 5 https://carwale.com  ✅
 Phase 18-CLI: npm run start -- https://carwale.com  (CRO analysis as default)  ✅
 Phase 19-CLI: npm run start -- --scan-mode=full_page https://carwale.com  ✅ (100% coverage)
 
-# SIMPLIFIED VISION CLI (after CR-001 implementation):
-Phase 21g-CLI: npm run start -- --vision-agent https://example.com/product  ✅ (THE ONE MODE)
-            npm run start -- --vision-agent --vision-model gpt-4o https://example.com  ✅
-Phase 21h-CLI: npm run start -- --vision-agent --save-evidence https://example.com  📋 (NOT YET IMPLEMENTED)
-            npm run start -- --vision-agent --evidence-dir ./reports https://example.com  📋 (NOT YET IMPLEMENTED)
-Phase 21i-CLI: npm run start -- --vision-agent --save-evidence --annotate-screenshots https://example.com  ✅
+# SIMPLIFIED VISION CLI (after CR-001-D consolidation):
+Phase 21g-CLI: npm run start -- --vision https://example.com/product  ✅ (THE ONE MODE)
+            npm run start -- --vision --vision-model gpt-4o https://example.com  ✅
+            npm run start -- --vision --vision-max-steps 25 https://example.com  ✅
+Phase 21h-CLI: npm run start -- --vision --save-evidence https://example.com  ✅
+            npm run start -- --vision --evidence-dir ./reports https://example.com  ✅
+Phase 21i-CLI: npm run start -- --vision --save-evidence --annotate-screenshots https://example.com  ✅
+Phase 21l-CLI: npm run start -- --vision https://example.com  ✅ (evidence + annotation by default)
+            npm run start -- --vision --no-save-evidence https://example.com  ✅ (opt-out)
+            npm run start -- --vision --no-annotate-screenshots https://example.com  ✅ (opt-out)
+Phase 23-CLI: npm run start -- --vision https://example.com  ✅ (also saves LLM inputs to ./llm-inputs/)
+Phase 24-CLI: npm run start -- --vision https://in.burberry.com/product-p12345  ✅ (Playwright detects PDP)
+            npm run start -- --vision --no-llm-page-detection https://example.com  ✅ (disable LLM fallback)
+            npm run start -- --vision --force-llm-detection https://example.com  ✅ (force LLM tier)
+            npm run start -- --vision --llm-detection-threshold 0.7 https://example.com  ✅ (custom threshold)
+
+# Phase 25 CLI (PLANNED - all features DEFAULT ON):
+Phase 25-CLI: npm run start -- --vision https://example.com  📋 (full quality pipeline with evidence)
+            npm run start -- --vision --no-evidence-json https://example.com  📋 (disable evidence.json)
+            npm run start -- --vision --no-noise-suppression https://example.com  📋 (show cookie banners)
+            npm run start -- --vision --no-media-readiness https://example.com  📋 (skip lazy-load waits)
+            npm run start -- --vision --skip-collection-qa https://example.com  📋 (skip LLM QA validation)
+            npm run start -- --vision --llm-guided-collection https://example.com  📋 (old LLM-guided mode)
+            npm run start -- --vision --screenshot-mode=tiled https://example.com  📋 (tiled screenshots)
+
+# DEPRECATED ALIASES (still work, mapped to new flags):
+# --vision-agent → --vision
+# --vision-agent-max-steps → --vision-max-steps
 
 # REMOVED FLAGS (after CR-001):
-# --vision, --vision-only, --full-page-vision, --full-page-screenshot
+# --vision-only, --full-page-vision, --full-page-screenshot
 # --vision-max-viewports, --no-parallel-vision
 ```
 

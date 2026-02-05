@@ -22,7 +22,7 @@ const logger = createLogger('ScreenshotAnnotator');
 export interface AnnotationOptions {
   /** Highlight elements with issues (red for failed, orange for partial) */
   highlightIssues: boolean;
-  /** Show element index labels [0], [1], etc. */
+  /** Show element index labels using viewport-prefixed format [v0-0], [v0-1], etc. */
   showElementIndexes: boolean;
   /** Show coordinate information */
   showCoordinates: boolean;
@@ -69,7 +69,32 @@ const COLORS = {
   passed: { stroke: '#16a34a', fill: 'rgba(22, 163, 74, 0.2)' },    // Green
   neutral: { stroke: '#6b7280', fill: 'rgba(107, 114, 128, 0.2)' }, // Gray
   label: { bg: '#1f2937', text: '#ffffff' },                         // Dark bg, white text
+  fold: { line: '#FF0000', bg: '#FF0000', text: '#FFFFFF' },        // Red fold line
 };
+
+/**
+ * Options for fold line annotation
+ */
+export interface FoldLineOptions {
+  /** Height of the viewport (fold line position) */
+  viewportHeight: number;
+  /** Whether to show the fold line label (default: true) */
+  showLabel?: boolean;
+  /** Custom label text (default: "▼ FOLD LINE ({height}px) - Below requires scrolling") */
+  labelText?: string;
+}
+
+/**
+ * Result from fold line annotation
+ */
+export interface FoldLineResult {
+  /** Whether annotation was successful */
+  success: boolean;
+  /** Annotated screenshot buffer */
+  annotatedBuffer?: Buffer;
+  /** Error message if failed */
+  error?: string;
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Helper Functions
@@ -150,7 +175,18 @@ function buildBoundingBoxSvg(
 }
 
 /**
+ * Extract viewport index from viewportId string (e.g., "V0-0" → 0)
+ * Returns 0 if viewportId is missing or invalid (backward compatibility)
+ */
+function extractViewportIndex(viewportId: string | undefined): number {
+  if (!viewportId) return 0;
+  const match = viewportId.match(/^V(\d+)/i);
+  return match && match[1] ? parseInt(match[1], 10) : 0;
+}
+
+/**
  * Build SVG label element for element index
+ * Uses viewport-prefixed format [v{viewport}-{index}] for consistency with LLM prompts
  */
 function buildIndexLabelSvg(
   element: ElementMapping,
@@ -159,7 +195,10 @@ function buildIndexLabelSvg(
   const { x, y, isVisible } = element.screenshotCoords;
   const fontSize = options.fontSize ?? 12;
   const padding = 4;
-  const labelText = `[${element.index}]`;
+
+  // Use viewport-prefixed format: [v0-5] for element 5 in viewport 0
+  const viewportIndex = extractViewportIndex(element.viewportId);
+  const labelText = `[v${viewportIndex}-${element.index}]`;
   const labelWidth = labelText.length * (fontSize * 0.7) + padding * 2;
   const labelHeight = fontSize + padding * 2;
 
@@ -251,6 +290,127 @@ function buildSvgOverlay(
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
     ${svgParts.join('\n')}
   </svg>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Fold Line Annotation (Phase 25d)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Build SVG for fold line annotation (T490)
+ *
+ * Creates a red dashed horizontal line with a label indicating the fold position.
+ * The fold line shows where "above the fold" content ends and scrolling is required.
+ */
+function buildFoldLineSvg(width: number, height: number, viewportHeight: number, labelText: string): string {
+  // Ensure viewportHeight doesn't exceed image height
+  const lineY = Math.min(viewportHeight, height);
+
+  // Label dimensions
+  const labelPadding = 8;
+  const labelFontSize = 12;
+  const labelHeight = labelFontSize + labelPadding * 2;
+  const labelWidth = labelText.length * (labelFontSize * 0.58) + labelPadding * 2;
+
+  // Position label just above the line
+  const labelY = Math.max(0, lineY - labelHeight - 4);
+  const labelX = 10;
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
+    <!-- Fold line: red dashed horizontal line -->
+    <line
+      x1="0" y1="${lineY}"
+      x2="${width}" y2="${lineY}"
+      stroke="${COLORS.fold.line}"
+      stroke-width="2"
+      stroke-dasharray="10,5"
+    />
+    <!-- Label background -->
+    <rect
+      x="${labelX}" y="${labelY}"
+      width="${labelWidth}" height="${labelHeight}"
+      fill="${COLORS.fold.bg}"
+      rx="3" ry="3"
+    />
+    <!-- Label text -->
+    <text
+      x="${labelX + labelPadding}" y="${labelY + labelHeight - labelPadding}"
+      fill="${COLORS.fold.text}"
+      font-family="Arial, sans-serif"
+      font-size="${labelFontSize}"
+      font-weight="bold"
+    >${escapeXml(labelText)}</text>
+  </svg>`;
+}
+
+/**
+ * Annotate a screenshot with a fold line (T489)
+ *
+ * Draws a red dashed horizontal line at the specified viewport height to indicate
+ * where the "above the fold" content ends. This helps visualize what users see
+ * without scrolling.
+ *
+ * @param screenshot - Screenshot buffer (PNG or JPEG)
+ * @param options - Fold line options including viewport height
+ * @returns Fold line result with annotated buffer
+ */
+export async function annotateFoldLine(
+  screenshot: Buffer,
+  options: FoldLineOptions
+): Promise<FoldLineResult> {
+  const { viewportHeight, showLabel = true } = options;
+
+  try {
+    // Get image metadata
+    const metadata = await sharp(screenshot).metadata();
+    const width = metadata.width ?? 1280;
+    const height = metadata.height ?? 720;
+
+    // Don't annotate if viewport height exceeds image height
+    if (viewportHeight >= height) {
+      logger.debug('Fold line skipped: viewport height >= image height', {
+        viewportHeight,
+        imageHeight: height,
+      });
+      return {
+        success: true,
+        annotatedBuffer: screenshot, // Return original
+      };
+    }
+
+    // Build label text
+    const labelText = showLabel
+      ? (options.labelText ?? `▼ FOLD LINE (${viewportHeight}px) - Below requires scrolling`)
+      : '';
+
+    // Build SVG overlay
+    const svgOverlay = buildFoldLineSvg(width, height, viewportHeight, labelText);
+    const svgBuffer = Buffer.from(svgOverlay);
+
+    // Composite SVG on top of screenshot
+    const annotatedBuffer = await sharp(screenshot)
+      .composite([{ input: svgBuffer, top: 0, left: 0 }])
+      .png()
+      .toBuffer();
+
+    logger.debug('Fold line annotated', {
+      viewportHeight,
+      imageSize: `${width}x${height}`,
+    });
+
+    return {
+      success: true,
+      annotatedBuffer,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Failed to annotate fold line', { error: message });
+
+    return {
+      success: false,
+      error: `Failed to annotate fold line: ${message}`,
+    };
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

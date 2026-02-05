@@ -161,3 +161,45 @@ export const DEFAULT_BROWSER_CONFIG: BrowserConfig = {
  */
 export type { ScanMode, CoverageConfig } from '../models/coverage.js';
 export { DEFAULT_COVERAGE_CONFIG } from '../models/coverage.js';
+
+// ============================================================================
+// Screenshot Mode Types (Phase 25e)
+// ============================================================================
+
+/**
+ * Screenshot capture modes for vision analysis (T495)
+ * - viewport: Capture viewport-by-viewport as agent scrolls (original mode)
+ * - tiled: Capture full page as overlapping tiles (consistent heights)
+ * - hybrid: Viewport for first 2 captures + tiled for the rest
+ */
+export type ScreenshotMode = 'viewport' | 'tiled' | 'hybrid';
+
+/**
+ * Configuration for Phase 25 enhanced extraction features (T495)
+ */
+export interface Phase25Config {
+  /** Screenshot capture mode (default: viewport) */
+  screenshotMode: ScreenshotMode;
+  /** Maximum height of each tile in pixels - tiled mode (default: 1800) */
+  maxTileHeight: number;
+  /** Overlap between tiles in pixels - tiled mode (default: 100) */
+  tileOverlapPx: number;
+  /** Maximum number of tiles to capture - tiled mode (default: 5) */
+  maxTiles: number;
+  /** Annotate screenshots with fold line (default: true) */
+  annotateFoldLine: boolean;
+  /** Viewport height for fold line annotation (default: 720) */
+  viewportHeight: number;
+}
+
+/**
+ * Default Phase 25 configuration
+ */
+export const DEFAULT_PHASE25_CONFIG: Phase25Config = {
+  screenshotMode: 'viewport',
+  maxTileHeight: 1800,
+  tileOverlapPx: 100,
+  maxTiles: 5,
+  annotateFoldLine: true,
+  viewportHeight: 720,
+};

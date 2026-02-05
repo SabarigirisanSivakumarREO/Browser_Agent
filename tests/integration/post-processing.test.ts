@@ -15,7 +15,6 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import type { CROInsight, PageState, DOMTree, ViewportInfo, BusinessType } from '../../src/models/index.js';
 import {
   BusinessTypeDetector,
-  createHeuristicEngine,
 } from '../../src/heuristics/index.js';
 import {
   InsightDeduplicator,
@@ -181,42 +180,8 @@ describe('Post-Processing Pipeline Integration Tests', () => {
     });
   });
 
-  describe('Heuristics Execution', () => {
-    it('should run all 10 heuristic rules and return results', () => {
-      const pageState = createMockPageState({
-        url: 'https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy',
-        elements: [
-          { tagName: 'button', text: 'Submit', croType: 'cta' },
-        ],
-      });
-
-      const engine = createHeuristicEngine();
-      const result = engine.run(pageState, 'other');
-
-      expect(result.rulesExecuted).toBeGreaterThanOrEqual(1);
-      expect(result.executionTimeMs).toBeGreaterThanOrEqual(0);
-      expect(Array.isArray(result.insights)).toBe(true);
-    });
-
-    it('should filter heuristics by business type', () => {
-      const pageState = createMockPageState({
-        url: 'https://shop.example.com/checkout',
-        elements: [],
-      });
-
-      const engine = createHeuristicEngine();
-
-      // Run for ecommerce - should apply ecommerce-specific rules
-      const ecommerceResult = engine.run(pageState, 'ecommerce');
-
-      // Run for media - fewer ecommerce-specific rules
-      const mediaResult = engine.run(pageState, 'media');
-
-      // Both should execute some rules
-      expect(ecommerceResult.rulesExecuted).toBeGreaterThanOrEqual(1);
-      expect(mediaResult.rulesExecuted).toBeGreaterThanOrEqual(1);
-    });
-  });
+  // NOTE: Heuristics Execution tests removed in CR-002 (rule-based heuristic removal)
+  // Vision-based analysis (Phase 21) supersedes rule-based heuristics
 
   describe('Insight Deduplication', () => {
     it('should deduplicate insights with same type and element', () => {
@@ -431,11 +396,7 @@ describe('Post-Processing Pipeline Integration Tests', () => {
       const businessTypeDetector = new BusinessTypeDetector();
       const businessType = businessTypeDetector.detect(pageState);
 
-      // 3. Run heuristics
-      const heuristicEngine = createHeuristicEngine();
-      const heuristicResult = heuristicEngine.run(pageState, businessType.type);
-
-      // 4. Simulate tool insights
+      // 3. Simulate tool insights (heuristic rules removed in CR-002)
       const toolInsights: CROInsight[] = [
         createMockInsight({
           type: 'no_trust_above_fold',
@@ -444,26 +405,24 @@ describe('Post-Processing Pipeline Integration Tests', () => {
         }),
       ];
 
-      // 5. Combine and deduplicate
-      const allInsights = [...toolInsights, ...heuristicResult.insights];
+      // 4. Deduplicate
       const deduplicator = new InsightDeduplicator();
-      const uniqueInsights = deduplicator.deduplicate(allInsights);
+      const uniqueInsights = deduplicator.deduplicate(toolInsights);
 
-      // 6. Prioritize
+      // 5. Prioritize
       const prioritizer = new InsightPrioritizer();
       const prioritizedInsights = prioritizer.prioritize(uniqueInsights, businessType.type);
 
-      // 7. Generate hypotheses
+      // 6. Generate hypotheses
       const hypothesisGenerator = new HypothesisGenerator({ minSeverity: 'high' });
       const hypotheses = hypothesisGenerator.generate(prioritizedInsights);
 
-      // 8. Calculate scores
+      // 7. Calculate scores
       const scoreCalculator = new ScoreCalculator();
       const scores = scoreCalculator.calculate(prioritizedInsights);
 
       // Verify pipeline output
       expect(businessType.type).toBeDefined();
-      expect(Array.isArray(heuristicResult.insights)).toBe(true);
       expect(Array.isArray(uniqueInsights)).toBe(true);
       expect(Array.isArray(prioritizedInsights)).toBe(true);
       expect(Array.isArray(hypotheses)).toBe(true);

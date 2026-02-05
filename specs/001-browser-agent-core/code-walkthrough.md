@@ -73,8 +73,9 @@ browser-agent/
 │   │   ├── page-loader.ts     # Navigates to URLs, waits for load
 │   │   └── dom/               # DOM extraction
 │   ├── heuristics/
-│   │   ├── heuristic-engine.ts # Rule-based CRO analysis
-│   │   └── rules/             # Individual heuristic rules
+│   │   ├── business-type-detector.ts # Business type detection
+│   │   ├── knowledge/         # PDP heuristics knowledge base (JSON)
+│   │   └── vision/            # Vision-based CRO analysis (CR-002: rules removed)
 │   ├── output/
 │   │   ├── agent-progress-formatter.ts # Formats results for console
 │   │   ├── markdown-reporter.ts # Markdown report generation
@@ -107,7 +108,7 @@ browser-agent/
 
 // cli.ts does:
 1. Parse URLs from arguments
-2. Parse options (--headless, --timeout, --verbose, --vision-agent)
+2. Parse options (--headless, --timeout, --verbose, --vision)
 3. Create CROAgent instance
 4. Call agent.analyze() for each URL
 5. Print formatted results
@@ -140,8 +141,8 @@ async analyze(url: string, options) {
   // Step 3: Extract CRO DOM elements
   const domTree = await this.domExtractor.extract(page);
 
-  // Step 4: Run heuristic analysis
-  const heuristicInsights = await this.heuristicEngine.analyze(domTree);
+  // Step 4: Run vision analysis (if --vision flag enabled)
+  // NOTE: Heuristic rules (H001-H010) removed in CR-002, use --vision
 
   // Step 5: LLM-guided tool execution loop
   while (step < maxSteps && !done) {

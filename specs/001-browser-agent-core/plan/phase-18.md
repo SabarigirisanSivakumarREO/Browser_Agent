@@ -1,11 +1,15 @@
 **Navigation**: [Index](./index.md) | [Previous](./phase-17.md) | [Next](./phase-19.md)
 ## Phase 18: Heuristics & Post-Processing Architecture
 
+> **CR-002 UPDATE (2026-02-03)**: Phase 18b-c (Heuristic Rule Engine, H001-H010 rules) has been **REMOVED**.
+> Vision-based analysis (Phase 21) supersedes rule-based heuristics with better accuracy through visual context.
+> Phase 18a (Business Type Detection), 18d (Output Generation), and 18e (Agent Integration) remain intact.
+
 ### Overview
 
 Phase 18 implements the post-processing pipeline that runs AFTER the agent loop completes:
 1. Business type detection
-2. Heuristic rule execution
+2. ~~Heuristic rule execution~~ **REMOVED (CR-002)** - use `--vision` for vision-based analysis
 3. Insight deduplication & prioritization
 4. Hypothesis generation
 5. Report generation

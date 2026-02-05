@@ -18,14 +18,16 @@ import {
   JSONExporter,
   ScreenshotWriter,
   ScreenshotAnnotator,
+  LLMInputWriter,
   type ToolExecutionResult,
+  type LLMInputData,
 } from './output/index.js';
 import { createCRORegistry, ToolExecutor } from './agent/tools/index.js';
 import { CROAgent, type CROAnalysisResult, type CROScores } from './agent/index.js';
-// Note: createVisionAgent deprecated in Phase 21j - CROAgent unified mode is used instead
+// NOTE: Vision Agent module removed in CR-001-D. Use CROAgent with vision: true
 import type { CROActionName, PageState, ScanMode, CoverageConfig } from './models/index.js';
 import { CROActionNames, DEFAULT_COVERAGE_CONFIG } from './models/index.js';
-import type { WaitUntilStrategy } from './types/index.js';
+import type { WaitUntilStrategy, ScreenshotMode } from './types/index.js';
 
 // Load environment variables from .env file
 config();
@@ -37,9 +39,12 @@ type OutputFormat = typeof VALID_OUTPUT_FORMATS[number];
 const VALID_SCAN_MODES: ScanMode[] = ['full_page', 'above_fold', 'llm_guided'];
 const VALID_VISION_MODELS = ['gpt-4o', 'gpt-4o-mini'] as const;
 type VisionModel = typeof VALID_VISION_MODELS[number];
+// Phase 25e: Screenshot modes for vision analysis
+const VALID_SCREENSHOT_MODES: ScreenshotMode[] = ['viewport', 'tiled', 'hybrid'];
 
 /**
  * Parses command-line arguments.
+ * CR-001-D: Simplified vision flags - `--vision` is now the primary flag
  */
 function parseArgs(): {
   urls: string[];
@@ -55,11 +60,19 @@ function parseArgs(): {
   scanMode: ScanMode;
   minCoverage: number;
   visionModel: VisionModel;
-  visionAgent: boolean;  // Phase 21g: Iterative vision agent mode (THE ONE MODE)
-  visionAgentMaxSteps: number;  // Phase 21g: Max steps for vision agent
-  saveEvidence: boolean;  // Phase 21h: Save screenshots as evidence
-  evidenceDir: string;  // Phase 21h: Directory for evidence files
-  annotateScreenshots: boolean;  // Phase 21i: Annotate screenshots with bounding boxes
+  vision: boolean;  // CR-001-D: Primary vision flag
+  visionMaxSteps: number;  // CR-001-D: Max steps for vision collection
+  saveEvidence: boolean;  // Save screenshots as evidence
+  evidenceDir: string;  // Directory for evidence files
+  annotateScreenshots: boolean;  // Annotate screenshots with bounding boxes
+  // Phase 24: Hybrid page type detection options
+  enableLLMPageDetection: boolean;  // Enable LLM fallback for page detection
+  forceLLMDetection: boolean;  // Force LLM detection (skip Playwright/heuristic)
+  llmDetectionThreshold: number;  // Confidence threshold to trigger LLM fallback
+  // Phase 25e: Screenshot mode for vision analysis
+  screenshotMode: ScreenshotMode;  // viewport | tiled | hybrid
+  // Phase 25f: Deterministic collection
+  llmGuidedCollection: boolean;  // Use LLM-guided collection (opt-in, default: false)
   verbose: boolean;
   help: boolean;
 } {
@@ -77,11 +90,19 @@ function parseArgs(): {
   let scanMode: ScanMode = 'full_page';
   let minCoverage = 100;
   let visionModel: VisionModel = 'gpt-4o-mini';  // Default vision model (cost-optimized)
-  let visionAgent = false;  // Vision agent mode (THE ONE MODE for vision analysis)
-  let visionAgentMaxSteps = 20;  // Max steps for vision agent
-  let saveEvidence = false;  // Phase 21h: Save screenshots as evidence
-  let evidenceDir = './evidence';  // Phase 21h: Evidence output directory
-  let annotateScreenshots = false;  // Phase 21i: Annotate screenshots with bounding boxes
+  let vision = false;  // CR-001-D: Primary vision flag
+  let visionMaxSteps = 20;  // Max steps for vision collection
+  let saveEvidence = true;  // Save screenshots as evidence (default: on)
+  let evidenceDir = '';  // Evidence output directory (empty = auto-generate with timestamp)
+  let annotateScreenshots = true;  // Annotate screenshots with bounding boxes (default: on)
+  // Phase 24: Hybrid page type detection
+  let enableLLMPageDetection = true;  // Enable LLM fallback for page detection (default: on)
+  let forceLLMDetection = false;  // Force LLM detection (skip Playwright/heuristic)
+  let llmDetectionThreshold = 0.5;  // Confidence threshold to trigger LLM fallback
+  // Phase 25e: Screenshot mode
+  let screenshotMode: ScreenshotMode = 'viewport';  // Default: viewport mode
+  // Phase 25f: Deterministic collection
+  let llmGuidedCollection = false;  // Default: deterministic (no LLM calls during collection)
   let verbose = false;
   let help = false;
 
@@ -195,30 +216,54 @@ function parseArgs(): {
         console.error(`Valid models: ${VALID_VISION_MODELS.join(', ')}`);
         process.exit(1);
       }
+    } else if (arg === '--vision') {
+      // CR-001-D: Primary vision flag
+      vision = true;
     } else if (arg === '--vision-agent') {
-      // Enable vision agent mode (THE ONE MODE for vision analysis)
-      visionAgent = true;
+      // Deprecated alias for --vision (kept for backward compatibility)
+      vision = true;
+    } else if (arg === '--vision-max-steps' && args[i + 1]) {
+      // CR-001-D: Set max steps for vision collection
+      visionMaxSteps = parseInt(args[i + 1] ?? '20', 10);
+      if (isNaN(visionMaxSteps) || visionMaxSteps < 1 || visionMaxSteps > 50) {
+        console.error('Invalid vision-max-steps value. Must be between 1 and 50.');
+        process.exit(1);
+      }
+      i++;
+    } else if (arg?.startsWith('--vision-max-steps=')) {
+      // CR-001-D: Set max steps (= syntax)
+      visionMaxSteps = parseInt(arg.split('=')[1] ?? '20', 10);
+      if (isNaN(visionMaxSteps) || visionMaxSteps < 1 || visionMaxSteps > 50) {
+        console.error('Invalid vision-max-steps value. Must be between 1 and 50.');
+        process.exit(1);
+      }
     } else if (arg === '--vision-agent-max-steps' && args[i + 1]) {
-      // Phase 21g: Set max steps for vision agent
-      visionAgentMaxSteps = parseInt(args[i + 1] ?? '20', 10);
-      if (isNaN(visionAgentMaxSteps) || visionAgentMaxSteps < 1 || visionAgentMaxSteps > 50) {
+      // Deprecated alias for --vision-max-steps
+      visionMaxSteps = parseInt(args[i + 1] ?? '20', 10);
+      if (isNaN(visionMaxSteps) || visionMaxSteps < 1 || visionMaxSteps > 50) {
         console.error('Invalid vision-agent-max-steps value. Must be between 1 and 50.');
         process.exit(1);
       }
       i++;
     } else if (arg?.startsWith('--vision-agent-max-steps=')) {
-      // Phase 21g: Set max steps (= syntax)
-      visionAgentMaxSteps = parseInt(arg.split('=')[1] ?? '20', 10);
-      if (isNaN(visionAgentMaxSteps) || visionAgentMaxSteps < 1 || visionAgentMaxSteps > 50) {
+      // Deprecated alias for --vision-max-steps (= syntax)
+      visionMaxSteps = parseInt(arg.split('=')[1] ?? '20', 10);
+      if (isNaN(visionMaxSteps) || visionMaxSteps < 1 || visionMaxSteps > 50) {
         console.error('Invalid vision-agent-max-steps value. Must be between 1 and 50.');
         process.exit(1);
       }
     } else if (arg === '--save-evidence') {
-      // Phase 21h: Enable evidence saving
+      // Phase 21h: Enable evidence saving (now default, kept for backward compatibility)
       saveEvidence = true;
+    } else if (arg === '--no-save-evidence') {
+      // Phase 21l: Opt-out of evidence saving
+      saveEvidence = false;
     } else if (arg === '--annotate-screenshots') {
-      // Phase 21i: Enable screenshot annotation
+      // Phase 21i: Enable screenshot annotation (now default, kept for backward compatibility)
       annotateScreenshots = true;
+    } else if (arg === '--no-annotate-screenshots') {
+      // Phase 21l: Opt-out of screenshot annotation
+      annotateScreenshots = false;
     } else if (arg === '--evidence-dir' && args[i + 1]) {
       // Phase 21h: Set evidence output directory
       evidenceDir = args[i + 1] ?? './evidence';
@@ -226,6 +271,51 @@ function parseArgs(): {
     } else if (arg?.startsWith('--evidence-dir=')) {
       // Phase 21h: Set evidence directory (= syntax)
       evidenceDir = arg.split('=')[1] ?? './evidence';
+    } else if (arg === '--no-llm-page-detection') {
+      // Phase 24: Disable LLM fallback for page type detection
+      enableLLMPageDetection = false;
+    } else if (arg === '--force-llm-detection') {
+      // Phase 24: Force LLM detection (skip Playwright/heuristic tiers)
+      forceLLMDetection = true;
+    } else if (arg === '--llm-detection-threshold' && args[i + 1]) {
+      // Phase 24: Set LLM fallback threshold
+      llmDetectionThreshold = parseFloat(args[i + 1] ?? '0.5');
+      if (isNaN(llmDetectionThreshold) || llmDetectionThreshold < 0 || llmDetectionThreshold > 1) {
+        console.error('Invalid llm-detection-threshold value. Must be between 0 and 1.');
+        process.exit(1);
+      }
+      i++;
+    } else if (arg?.startsWith('--llm-detection-threshold=')) {
+      // Phase 24: Set LLM fallback threshold (= syntax)
+      llmDetectionThreshold = parseFloat(arg.split('=')[1] ?? '0.5');
+      if (isNaN(llmDetectionThreshold) || llmDetectionThreshold < 0 || llmDetectionThreshold > 1) {
+        console.error('Invalid llm-detection-threshold value. Must be between 0 and 1.');
+        process.exit(1);
+      }
+    } else if (arg === '--screenshot-mode' && args[i + 1]) {
+      // Phase 25e: Screenshot capture mode
+      const mode = args[i + 1] as ScreenshotMode;
+      if (VALID_SCREENSHOT_MODES.includes(mode)) {
+        screenshotMode = mode;
+      } else {
+        console.error(`Invalid screenshot mode: ${mode}`);
+        console.error(`Valid modes: ${VALID_SCREENSHOT_MODES.join(', ')}`);
+        process.exit(1);
+      }
+      i++;
+    } else if (arg?.startsWith('--screenshot-mode=')) {
+      // Phase 25e: Screenshot capture mode (= syntax)
+      const mode = arg.split('=')[1] as ScreenshotMode;
+      if (VALID_SCREENSHOT_MODES.includes(mode)) {
+        screenshotMode = mode;
+      } else {
+        console.error(`Invalid screenshot mode: ${mode}`);
+        console.error(`Valid modes: ${VALID_SCREENSHOT_MODES.join(', ')}`);
+        process.exit(1);
+      }
+    } else if (arg === '--llm-guided-collection') {
+      // Phase 25f: Opt-in to LLM-guided collection (old behavior)
+      llmGuidedCollection = true;
     } else if (arg && !arg.startsWith('-')) {
       urls.push(arg);
     }
@@ -245,11 +335,19 @@ function parseArgs(): {
     scanMode,
     minCoverage,
     visionModel,
-    visionAgent,
-    visionAgentMaxSteps,
+    vision,
+    visionMaxSteps,
     saveEvidence,
     evidenceDir,
     annotateScreenshots,
+    // Phase 24: Hybrid page type detection
+    enableLLMPageDetection,
+    forceLLMDetection,
+    llmDetectionThreshold,
+    // Phase 25e: Screenshot mode
+    screenshotMode,
+    // Phase 25f: Deterministic collection
+    llmGuidedCollection,
     verbose,
     help,
   };
@@ -295,7 +393,7 @@ CRO ANALYSIS OPTIONS:
                           scroll_page, go_to_url, done
 
 VISION ANALYSIS OPTIONS:
-  --vision-agent          Enable unified CRO analysis with vision (Phase 21j)
+  --vision                Enable unified CRO analysis with vision
                           - Enforces full-page coverage (scrolls entire page)
                           - Captures DOM + screenshots at each viewport
                           - Maps DOM elements to screenshot coordinates
@@ -305,18 +403,48 @@ VISION ANALYSIS OPTIONS:
   --vision-model <model>  Vision model to use (default: gpt-4o-mini)
                           - gpt-4o-mini: Fast and cost-effective (default)
                           - gpt-4o: Higher quality, slower and more expensive
-  --vision-agent-max-steps <N>  Maximum agent loop iterations (default: 20, max: 50)
+  --vision-max-steps <N>  Maximum vision collection steps (default: 20, max: 50)
 
-EVIDENCE CAPTURE OPTIONS (Phase 21h-21i):
-  --save-evidence         Save viewport screenshots as evidence files
-                          Screenshots are saved to the evidence directory
-                          Useful for audit trails and manual review
-  --evidence-dir <path>   Directory for evidence files (default: ./evidence)
+  Deprecated aliases (kept for backward compatibility):
+  --vision-agent          Alias for --vision
+  --vision-agent-max-steps  Alias for --vision-max-steps
+
+EVIDENCE CAPTURE OPTIONS (enabled by default with --vision):
+  --no-save-evidence      Disable saving evidence and LLM inputs
+  --no-annotate-screenshots  Disable bounding box annotations on screenshots
+  --evidence-dir <path>   Directory for evidence files (default: ./evidence/{timestamp})
                           Created automatically if it doesn't exist
-  --annotate-screenshots  Annotate saved screenshots with bounding boxes
-                          Red boxes for failed heuristics, green for passed
-                          Element index labels shown near each element
-                          Requires --save-evidence to take effect
+
+PAGE TYPE DETECTION OPTIONS (Phase 24):
+  --no-llm-page-detection   Disable LLM fallback for page type detection
+                            Uses Playwright + URL heuristics only
+  --force-llm-detection     Force LLM page detection (skip Playwright/heuristic tiers)
+  --llm-detection-threshold <n>  Confidence threshold to trigger LLM fallback (default: 0.5)
+                            Lower values = more LLM calls, higher accuracy
+
+SCREENSHOT MODE OPTIONS (Phase 25e):
+  --screenshot-mode <mode>  Screenshot capture mode for vision analysis (default: viewport)
+                            - viewport: Capture viewport-by-viewport as agent scrolls
+                            - tiled: Capture full page as overlapping tiles (1800px each)
+                            - hybrid: Viewport for first 2 captures + tiled for rest
+
+COLLECTION MODE OPTIONS (Phase 25f):
+  --llm-guided-collection   Use LLM-guided collection instead of deterministic (opt-in)
+                            By default, collection uses a simple scroll + capture loop
+                            with NO LLM calls (faster and cheaper).
+                            When enabled, the agent uses LLM to decide scrolling (original behavior).
+
+  When evidence saving is enabled (default with --vision), the following are saved:
+  • Annotated screenshots    → ./evidence/{timestamp}/
+  • LLM inputs for debugging → ./llm-inputs/{timestamp}/
+    - DOM snapshots (JSON)   → ./llm-inputs/{timestamp}/DOM-snapshots/viewport-N.json
+    - Raw screenshots (PNG)  → ./llm-inputs/{timestamp}/Screenshots/viewport-N.png
+    - System prompt          → ./llm-inputs/{timestamp}/Prompts/system-prompt.txt
+    - User prompts           → ./llm-inputs/{timestamp}/Prompts/viewport-N-prompt.txt
+
+  Legacy flags (still accepted for backward compatibility):
+  --save-evidence         Explicitly enable evidence saving (now default)
+  --annotate-screenshots  Explicitly enable screenshot annotation (now default)
 
 MODES:
   --verbose, -v           Enable verbose logging
@@ -357,23 +485,27 @@ EXAMPLES:
   # Execute specific tool for debugging
   npm run start -- --tool analyze_ctas https://www.carwale.com
 
-  # Vision Agent mode - comprehensive CRO analysis with DOM + Vision
-  npm run start -- --vision-agent https://www.peregrineclothing.co.uk/products/lynton-polo-shirt
+  # Vision mode - comprehensive CRO analysis with DOM + Vision
+  npm run start -- --vision https://www.peregrineclothing.co.uk/products/lynton-polo-shirt
 
-  # Vision Agent with custom max steps
-  npm run start -- --vision-agent --vision-agent-max-steps 30 https://example.com/product
+  # Vision with custom max steps
+  npm run start -- --vision --vision-max-steps 30 https://example.com/product
 
-  # Vision Agent with gpt-4o for higher quality analysis
-  npm run start -- --vision-agent --vision-model gpt-4o https://example.com/product
+  # Vision with gpt-4o for higher quality analysis
+  npm run start -- --vision --vision-model gpt-4o https://example.com/product
 
-  # Save screenshots as evidence (Phase 21h)
-  npm run start -- --vision-agent --save-evidence https://example.com/product
+  # Vision mode saves evidence + annotates screenshots by default
+  npm run start -- --vision https://example.com/product
+  # Output: ./evidence/2026-02-03T10-30-00/ with annotated screenshots
 
-  # Save evidence to custom directory
-  npm run start -- --vision-agent --save-evidence --evidence-dir ./reports/evidence https://example.com/product
+  # Opt-out: No evidence saving
+  npm run start -- --vision --no-save-evidence https://example.com/product
 
-  # Save annotated screenshots (Phase 21i) - shows element boxes and labels
-  npm run start -- --vision-agent --save-evidence --annotate-screenshots https://example.com/product
+  # Opt-out: No annotations (plain screenshots)
+  npm run start -- --vision --no-annotate-screenshots https://example.com/product
+
+  # Custom evidence directory
+  npm run start -- --vision --evidence-dir ./reports/evidence https://example.com/product
 `);
 }
 
@@ -521,11 +653,11 @@ async function processToolExecution(
 }
 
 /**
- * Process URL with Vision Agent mode
- * Phase 21j: Uses CROAgent unified mode for full-page coverage
- * Iterative observe-reason-act loop with DOM + Vision context
+ * Process URL with Vision mode
+ * CR-001-D: Uses CROAgent unified mode for full-page coverage
+ * Unified collection + category-based analysis
  */
-async function processVisionAgentMode(
+async function processVisionMode(
   url: string,
   options: {
     headless: boolean;
@@ -538,6 +670,14 @@ async function processVisionAgentMode(
     saveEvidence: boolean;
     evidenceDir: string;
     annotateScreenshots: boolean;
+    // Phase 24: Hybrid page type detection
+    enableLLMPageDetection: boolean;
+    forceLLMDetection: boolean;
+    llmDetectionThreshold: number;
+    // Phase 25e: Screenshot mode
+    screenshotMode: ScreenshotMode;
+    // Phase 25f: Deterministic collection
+    llmGuidedCollection: boolean;
     verbose: boolean;
   }
 ): Promise<void> {
@@ -558,16 +698,17 @@ async function processVisionAgentMode(
   const RESET = useColors ? '\x1b[0m' : '';
 
   console.log('\n' + '═'.repeat(80));
-  console.log('  VISION AGENT ANALYSIS MODE (Phase 21j - Unified CROAgent)');
+  console.log('  VISION ANALYSIS MODE (Unified Collection + Analysis)');
   console.log('═'.repeat(80));
   console.log(`  URL: ${url}`);
   console.log(`  Model: ${options.visionModel}`);
   console.log(`  Max Steps: ${options.maxSteps}`);
   console.log(`  Scan Mode: full_page (enforced 100% coverage)`);
-  console.log(`  Features: DOM + Vision parallel context, category-based analysis`);
+  console.log(`  Screenshot Mode: ${options.screenshotMode}`);
+  console.log(`  Collection Mode: ${options.llmGuidedCollection ? 'LLM-guided (opt-in)' : 'deterministic (default, no LLM)'}`);
+  console.log(`  Features: DOM + Vision context, category-based analysis`);
   console.log('═'.repeat(80) + '\n');
 
-  // Phase 21j: Show collection phase progress
   if (options.verbose) {
     console.log(`  ${CYAN}Collection Phase:${RESET}`);
     console.log(`  • Scan mode: full_page`);
@@ -575,7 +716,7 @@ async function processVisionAgentMode(
   }
 
   try {
-    // Phase 21j: Use CROAgent with unified mode instead of deprecated VisionAgent
+    // CR-001-D: Use CROAgent with unified vision mode
     const croAgent = new CROAgent({
       maxSteps: options.maxSteps,
       actionWaitMs: 500,
@@ -593,17 +734,26 @@ async function processVisionAgentMode(
         browserType: 'chromium',
       },
       verbose: options.verbose,
-      // Phase 21j: Enable unified mode for full-page coverage
-      enableUnifiedMode: true,
-      visionAgentMode: true,
+      // CR-001-D: Use new simplified `vision` flag
+      vision: true,
+      visionMaxSteps: options.maxSteps,
       scanMode: 'full_page',
       coverageConfig: { minCoveragePercent: 100 },
       visionModel: options.visionModel,
-      // Skip heuristic rules - use vision-based analysis only
-      skipHeuristics: true,
+      // NOTE: skipHeuristics removed in CR-002 - heuristic rules superseded by vision analysis
+      // Phase 24: Hybrid page type detection options
+      hybridDetectionConfig: {
+        enableLLMFallback: options.enableLLMPageDetection,
+        forceLLMDetection: options.forceLLMDetection,
+        llmFallbackThreshold: options.llmDetectionThreshold,
+      },
+      // Phase 25e: Screenshot mode
+      screenshotMode: options.screenshotMode,
+      // Phase 25f: Deterministic collection (default) vs LLM-guided (opt-in)
+      llmGuidedCollection: options.llmGuidedCollection,
     });
 
-    // Phase 21j: Show collection complete summary
+    // Show collection complete summary
     const snapshotCount = result.snapshots?.length ?? 0;
     if (options.verbose) {
       console.log(`  ${GREEN}✓ Collected ${snapshotCount} viewports${RESET}\n`);
@@ -614,7 +764,7 @@ async function processVisionAgentMode(
 
     // Display results
     console.log('\n' + '═'.repeat(80));
-    console.log(`  VISION AGENT RESULTS (${result.pageType?.toUpperCase() ?? 'UNKNOWN'})`);
+    console.log(`  VISION ANALYSIS RESULTS (${result.pageType?.toUpperCase() ?? 'UNKNOWN'})`);
     console.log('═'.repeat(80));
 
     // Summary
@@ -644,7 +794,7 @@ async function processVisionAgentMode(
       console.log(`  Issues by severity: ${severityParts.join(', ')}`);
     }
 
-    // Phase 21j: DOM-Screenshot Mapping Summary (T385)
+    // DOM-Screenshot Mapping Summary
     if (result.snapshots && result.snapshots.length > 0) {
       console.log(`\n  ${CYAN}DOM-Screenshot Mapping:${RESET}`);
       for (const snapshot of result.snapshots) {
@@ -677,6 +827,9 @@ async function processVisionAgentMode(
         if (evaluation.recommendation) {
           console.log(`  ${RED}│${RESET}   ${GREEN}Recommendation:${RESET} ${evaluation.recommendation}`);
         }
+        if (evaluation.reasoning) {
+          console.log(`  ${RED}│${RESET}   ${DIM}Reasoning:${RESET} ${evaluation.reasoning}`);
+        }
       }
       console.log(`  ${RED}└${'─'.repeat(75)}${RESET}`);
     }
@@ -694,6 +847,9 @@ async function processVisionAgentMode(
         }
         if (evaluation.recommendation) {
           console.log(`  ${YELLOW}│${RESET}   ${GREEN}Recommendation:${RESET} ${evaluation.recommendation}`);
+        }
+        if (evaluation.reasoning) {
+          console.log(`  ${YELLOW}│${RESET}   ${DIM}Reasoning:${RESET} ${evaluation.reasoning}`);
         }
       }
       console.log(`  ${YELLOW}└${'─'.repeat(75)}${RESET}`);
@@ -717,20 +873,27 @@ async function processVisionAgentMode(
       }
     }
 
-    // Phase 21h/21i: Save evidence if requested (T386)
+    // Save evidence if requested
     if (options.saveEvidence && result.snapshots && result.snapshots.length > 0) {
+      // Phase 21l: Generate default evidence directory with timestamp if not specified
+      let outputDir = options.evidenceDir;
+      if (!outputDir) {
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+        outputDir = `./evidence/${timestamp}`;
+      }
+
       console.log(`\n  ${CYAN}Saving evidence screenshots...${RESET}`);
 
       const writer = new ScreenshotWriter({
-        outputDir: options.evidenceDir,
+        outputDir,
         prefix: 'viewport',
         format: 'png',
         includeTimestamp: true,
       });
 
-      // Phase 21i: Annotate screenshots if requested
+      // Phase 25-fix: Use full resolution screenshots for evidence (fallback to compressed)
       let screenshotData = result.snapshots.map((snapshot) => ({
-        base64: snapshot.screenshot.base64,
+        base64: snapshot.fullResolutionBase64 ?? snapshot.screenshot.base64,
         viewportIndex: snapshot.viewportIndex,
         scrollPosition: snapshot.scrollPosition,
       }));
@@ -743,7 +906,7 @@ async function processVisionAgentMode(
           showCoordinates: false,
         });
 
-        // Annotate each snapshot
+        // Annotate each snapshot (on full resolution images)
         for (let i = 0; i < screenshotData.length; i++) {
           const snapshot = result.snapshots[i];
           if (!snapshot) continue;
@@ -781,10 +944,61 @@ async function processVisionAgentMode(
       if (writeResult.failed > 0) {
         console.log(`  ${YELLOW}Warning: ${writeResult.failed} screenshots failed to save${RESET}`);
       }
+
+      // Phase 23 (T404): Save LLM inputs for debugging
+      if (result.llmInputs && result.llmInputs.length > 0) {
+        const llmInputTimestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+        const llmInputDir = `./llm-inputs/${llmInputTimestamp}`;
+
+        console.log(`\n  ${CYAN}Saving LLM inputs for debugging...${RESET}`);
+
+        // Convert CapturedCategoryInputs to LLMInputData format
+        // Since LLM is called per-category with all viewports, we flatten to per-viewport structure
+        const llmInputData: LLMInputData[] = [];
+        const systemPrompt = result.llmInputs[0]?.systemPrompt ?? '';
+        const viewportsProcessed = new Set<number>();
+
+        for (const categoryInput of result.llmInputs) {
+          for (let i = 0; i < categoryInput.screenshots.length; i++) {
+            const screenshot = categoryInput.screenshots[i];
+            const domSnapshot = categoryInput.domSnapshots[i];
+            if (!screenshot || !domSnapshot) continue;
+
+            // Only add unique viewports (avoid duplicates across categories)
+            if (viewportsProcessed.has(screenshot.viewportIndex)) continue;
+            viewportsProcessed.add(screenshot.viewportIndex);
+
+            llmInputData.push({
+              viewportIndex: screenshot.viewportIndex,
+              scrollPosition: screenshot.scrollPosition,
+              domSnapshot: {
+                serialized: domSnapshot.serialized,
+                elementCount: domSnapshot.elementCount,
+              },
+              screenshotBase64: screenshot.base64,
+              systemPrompt,
+              userPrompt: categoryInput.userPrompt, // Use category's user prompt
+              timestamp: categoryInput.timestamp,
+            });
+          }
+        }
+
+        const llmInputWriter = new LLMInputWriter({ outputDir: llmInputDir });
+        const llmWriteResult = await llmInputWriter.saveAll(llmInputData, '');
+
+        if (llmWriteResult.success) {
+          console.log(`  ${GREEN}Saved ${llmWriteResult.filesWritten} LLM input files to ${llmWriteResult.outputDir}${RESET}`);
+        } else {
+          console.log(`  ${YELLOW}Warning: Some LLM inputs failed to save${RESET}`);
+          for (const error of llmWriteResult.errors.slice(0, 3)) {
+            console.log(`    ${RED}• ${error}${RESET}`);
+          }
+        }
+      }
     }
 
     console.log('\n' + '═'.repeat(80));
-    console.log('  VISION AGENT ANALYSIS COMPLETE');
+    console.log('  VISION ANALYSIS COMPLETE');
     console.log('═'.repeat(80) + '\n');
 
   } catch (err) {
@@ -866,7 +1080,7 @@ async function processAnalysis(
         browserType: 'chromium',
       },
       verbose: options.verbose,
-      skipHeuristics: true,
+      // NOTE: skipHeuristics removed in CR-002 - heuristic rules superseded by vision analysis
       scanMode: options.scanMode,
       coverageConfig,
       // Vision analysis disabled in default mode - use --vision-agent instead
@@ -973,11 +1187,19 @@ async function main(): Promise<void> {
     scanMode,
     minCoverage,
     visionModel,
-    visionAgent,
-    visionAgentMaxSteps,
+    vision,
+    visionMaxSteps,
     saveEvidence,
     evidenceDir,
     annotateScreenshots,
+    // Phase 24: Hybrid page type detection
+    enableLLMPageDetection,
+    forceLLMDetection,
+    llmDetectionThreshold,
+    // Phase 25e: Screenshot mode
+    screenshotMode,
+    // Phase 25f: Deterministic collection
+    llmGuidedCollection,
     verbose,
     help,
   } = parseArgs();
@@ -990,20 +1212,28 @@ async function main(): Promise<void> {
 
   const useColors = process.stdout.isTTY ?? false;
 
-  // Vision Agent mode: iterative analysis with DOM + Vision (THE ONE MODE)
-  if (visionAgent) {
+  // Vision mode: unified collection + analysis (CR-001-D)
+  if (vision) {
     for (const url of urls) {
-      await processVisionAgentMode(url, {
+      await processVisionMode(url, {
         headless,
         timeout,
         waitUntil,
         postLoadWait,
         dismissCookieConsent,
         visionModel: visionModel === 'gpt-4o' ? visionModel : 'gpt-4o-mini',  // Default to gpt-4o-mini for cost
-        maxSteps: visionAgentMaxSteps,
+        maxSteps: visionMaxSteps,
         saveEvidence,
         evidenceDir,
         annotateScreenshots,
+        // Phase 24: Hybrid page type detection
+        enableLLMPageDetection,
+        forceLLMDetection,
+        llmDetectionThreshold,
+        // Phase 25e: Screenshot mode
+        screenshotMode,
+        // Phase 25f: Deterministic collection
+        llmGuidedCollection,
         verbose,
       });
     }

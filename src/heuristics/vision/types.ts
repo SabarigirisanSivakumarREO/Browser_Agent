@@ -94,6 +94,14 @@ export interface HeuristicEvaluation {
   recommendation?: string;
   /** Confidence score 0-1 */
   confidence: number;
+  /**
+   * How the LLM arrived at this conclusion based on the input data.
+   * References specific elements [v0-5], DOM content, or screenshot observations
+   * that led to this evaluation.
+   * Example: "Found price element [v0-12] showing '£65.00' in the DOM.
+   *          Confirmed visible in screenshot at coordinates (450, 280)."
+   */
+  reasoning?: string;
 
   // ═══════════════════════════════════════════════════════════════════════════════
   // Phase 21h: Evidence Capture Fields (T353)
@@ -131,6 +139,23 @@ export interface VisionAnalysisSummary {
   bySeverity: Record<Severity, number>;
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// PHASE 23: Captured LLM Inputs (T401)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Captured inputs sent to the LLM for a single analysis call
+ * Used for debugging, auditing, and reproducibility
+ */
+export interface CapturedLLMInputs {
+  /** System prompt text sent to LLM */
+  systemPrompt: string;
+  /** User prompt text sent to LLM */
+  userPrompt: string;
+  /** Raw screenshot base64 sent to LLM (before annotation) */
+  screenshotBase64: string;
+}
+
 /**
  * Complete vision analysis result
  */
@@ -149,6 +174,8 @@ export interface CROVisionAnalysisResult {
   insights: CROInsight[];
   /** Summary statistics */
   summary: VisionAnalysisSummary;
+  /** Phase 23: Captured LLM inputs for debugging */
+  capturedInputs?: CapturedLLMInputs;
 }
 
 /**
@@ -303,6 +330,27 @@ export interface MergedViewportResult {
 }
 
 /**
+ * Phase 23 (T402): LLM inputs captured for a single viewport
+ * Used for debugging and auditing what was sent to the LLM
+ */
+export interface ViewportLLMInputs {
+  /** Index of the viewport in the sequence */
+  viewportIndex: number;
+  /** Y scroll position when captured */
+  scrollPosition: number;
+  /** Serialized DOM snapshot sent to LLM */
+  domSnapshot: object;
+  /** Raw screenshot base64 sent to LLM */
+  screenshotBase64: string;
+  /** System prompt text */
+  systemPrompt: string;
+  /** User prompt text */
+  userPrompt: string;
+  /** Timestamp when captured */
+  timestamp: number;
+}
+
+/**
  * Complete result from multi-viewport vision analysis
  */
 export interface MultiViewportAnalysisResult extends CROVisionAnalysisResult {
@@ -316,6 +364,8 @@ export interface MultiViewportAnalysisResult extends CROVisionAnalysisResult {
   deduplicatedCount: number;
   /** Total analysis time across all viewports */
   totalAnalysisTimeMs: number;
+  /** Phase 23: Captured LLM inputs for each viewport */
+  llmInputs?: ViewportLLMInputs[];
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

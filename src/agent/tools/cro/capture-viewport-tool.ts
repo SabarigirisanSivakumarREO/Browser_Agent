@@ -14,6 +14,7 @@ import type { ViewportInfo } from '../../../models/page-state.js';
 import { DOMExtractor } from '../../../browser/dom/extractor.js';
 import { DOMSerializer } from '../../../browser/dom/serializer.js';
 import { mapElementsToScreenshot, filterVisibleElements } from '../../../browser/dom/coordinate-mapper.js';
+import { annotateFoldLine } from '../../../output/screenshot-annotator.js';
 
 /**
  * Token budget for DOM serialization
@@ -31,6 +32,50 @@ const COMPRESSED_IMAGE_WIDTH = 384;
  * JPEG quality for compressed screenshots (0-100)
  */
 const JPEG_QUALITY = 50;
+
+/**
+ * Configuration for viewport capture
+ * Phase 25d: Added annotateFoldLine for first viewport annotation
+ */
+export interface CaptureViewportConfig {
+  /** Annotate fold line on first viewport (default: true) */
+  annotateFoldLine: boolean;
+  /** DOM token budget (default: 2000) */
+  domTokenBudget: number;
+  /** Compressed image width (default: 384) */
+  compressedImageWidth: number;
+  /** JPEG quality 0-100 (default: 50) */
+  jpegQuality: number;
+}
+
+/**
+ * Default capture viewport configuration
+ */
+export const DEFAULT_CAPTURE_VIEWPORT_CONFIG: CaptureViewportConfig = {
+  annotateFoldLine: true,
+  domTokenBudget: DOM_TOKEN_BUDGET,
+  compressedImageWidth: COMPRESSED_IMAGE_WIDTH,
+  jpegQuality: JPEG_QUALITY,
+};
+
+/**
+ * Global capture viewport config (can be modified at runtime)
+ */
+let captureViewportConfig: CaptureViewportConfig = { ...DEFAULT_CAPTURE_VIEWPORT_CONFIG };
+
+/**
+ * Set capture viewport configuration
+ */
+export function setCaptureViewportConfig(config: Partial<CaptureViewportConfig>): void {
+  captureViewportConfig = { ...captureViewportConfig, ...config };
+}
+
+/**
+ * Get current capture viewport configuration
+ */
+export function getCaptureViewportConfig(): CaptureViewportConfig {
+  return { ...captureViewportConfig };
+}
 
 /**
  * Compress a screenshot buffer to reduce base64 size
@@ -113,13 +158,33 @@ export const captureViewportTool: Tool = {
         fullPage: false, // Just current viewport
       });
 
+      // Phase 25d: Annotate fold line on first viewport (scrollY === 0)
+      const isFirstViewport = scrollY === 0;
+      let screenshotBuffer = rawScreenshotBuffer;
+
+      if (isFirstViewport && captureViewportConfig.annotateFoldLine) {
+        logger.debug('Annotating fold line on first viewport', { viewportHeight });
+        const foldResult = await annotateFoldLine(rawScreenshotBuffer, {
+          viewportHeight,
+          showLabel: true,
+        });
+        if (foldResult.success && foldResult.annotatedBuffer) {
+          screenshotBuffer = foldResult.annotatedBuffer;
+          logger.debug('Fold line annotation applied');
+        } else {
+          logger.warn('Fold line annotation failed', { error: foldResult.error });
+          // Continue with original screenshot
+        }
+      }
+
       // Compress to JPEG to reduce size
-      const compressedBuffer = await compressScreenshot(rawScreenshotBuffer);
+      const compressedBuffer = await compressScreenshot(screenshotBuffer);
       const screenshotBase64 = compressedBuffer.toString('base64');
 
       logger.debug('Screenshot compressed', {
-        originalSize: `${(rawScreenshotBuffer.length / 1024).toFixed(1)}KB`,
+        originalSize: `${(screenshotBuffer.length / 1024).toFixed(1)}KB`,
         compressedSize: `${(compressedBuffer.length / 1024).toFixed(1)}KB`,
+        foldLineAnnotated: isFirstViewport && captureViewportConfig.annotateFoldLine,
       });
 
       // Extract and serialize DOM

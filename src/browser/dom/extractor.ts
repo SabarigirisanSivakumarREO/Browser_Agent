@@ -3,11 +3,19 @@
  */
 
 import type { Page } from 'playwright';
-import type { DOMTree, DOMNode } from '../../models/index.js';
+import type { DOMTree, DOMNode, NodeIndexEntry, CROType } from '../../models/index.js';
 import { DOM_TREE_SCRIPT, type RawDOMTree, type RawDOMNode } from './build-dom-tree.js';
+import { extractStructuredData } from './structured-data.js';
 import { createLogger } from '../../utils/index.js';
 
 const logger = createLogger('DOMExtractor');
+
+/**
+ * Generate stable nodeId in format "n_001", "n_002", etc. (Phase 25g - T503)
+ */
+export function generateNodeId(counter: number): string {
+  return `n_${String(counter).padStart(3, '0')}`;
+}
 
 /**
  * Options for DOM extraction
@@ -47,14 +55,18 @@ export class DOMExtractor {
         logger.warn('DOM extraction warnings', { errors: rawTree.errors });
       }
 
+      // Extract structured data (JSON-LD Product schema) - Phase 25c
+      const structuredData = await extractStructuredData(page);
+
       // Convert raw tree to typed DOMTree
-      const domTree = this.convertRawTree(rawTree);
+      const domTree = this.convertRawTree(rawTree, structuredData);
 
       logger.debug('DOM extraction complete', {
         totalNodes: rawTree.totalNodeCount,
         indexedElements: rawTree.indexedCount,
         interactiveElements: rawTree.interactiveCount,
         croElements: rawTree.croElementCount,
+        hasStructuredData: structuredData !== null,
         durationMs: Date.now() - startTime,
       });
 
@@ -68,7 +80,8 @@ export class DOMExtractor {
         logger.warn('DOM extraction failed, retrying...', { error: message });
         try {
           const rawTree = await page.evaluate(DOM_TREE_SCRIPT) as RawDOMTree;
-          return this.convertRawTree(rawTree);
+          const structuredData = await extractStructuredData(page);
+          return this.convertRawTree(rawTree, structuredData);
         } catch (retryError) {
           throw new Error(`DOM extraction failed after retry: ${message}`);
         }
@@ -80,29 +93,47 @@ export class DOMExtractor {
 
   /**
    * Convert raw tree to typed DOMTree
+   * Phase 25g: Also builds nodeIndex for quick lookups
    */
-  private convertRawTree(raw: RawDOMTree): DOMTree {
+  private convertRawTree(raw: RawDOMTree, structuredData?: DOMTree['structuredData']): DOMTree {
+    const nodeIndex: Record<string, NodeIndexEntry> = {};
+    const counter = { value: 1 };  // Mutable counter for node ID generation
+
+    const root = this.convertRawNode(raw.root, counter, nodeIndex);
+
     return {
-      root: this.convertRawNode(raw.root),
+      root,
       interactiveCount: raw.interactiveCount,
       croElementCount: raw.croElementCount,
       totalNodeCount: raw.totalNodeCount,
       extractedAt: raw.extractedAt,
+      structuredData,
+      nodeIndex,
     };
   }
 
   /**
    * Convert raw node to typed DOMNode
+   * Phase 25g: Assigns nodeId and populates nodeIndex
    */
-  private convertRawNode(raw: RawDOMNode): DOMNode {
+  private convertRawNode(
+    raw: RawDOMNode,
+    counter: { value: number },
+    nodeIndex: Record<string, NodeIndexEntry>
+  ): DOMNode {
+    // Generate nodeId for indexed/CRO elements (Phase 25g - T503)
+    const shouldAssignNodeId = raw.index !== undefined || raw.croType !== null;
+    const nodeId = shouldAssignNodeId ? generateNodeId(counter.value++) : undefined;
+
     const node: DOMNode = {
       tagName: raw.tagName,
       xpath: raw.xpath,
+      nodeId,
       text: raw.text,
       isInteractive: raw.isInteractive,
       isVisible: raw.isVisible,
       croType: raw.croType as DOMNode['croType'],
-      children: raw.children.map(child => this.convertRawNode(child)),
+      children: raw.children.map(child => this.convertRawNode(child, counter, nodeIndex)),
     };
 
     // Optional fields
@@ -121,6 +152,21 @@ export class DOMExtractor {
         confidence: raw.croConfidence,
         matchedSelector: '', // Could be enhanced to track this
       };
+    }
+
+    // Add to nodeIndex if nodeId was assigned (Phase 25g - T504)
+    if (nodeId) {
+      const entry: NodeIndexEntry = { tag: raw.tagName };
+      if (raw.croType) {
+        entry.croType = raw.croType as Exclude<CROType, null>;
+      }
+      if (raw.croConfidence !== undefined) {
+        entry.confidence = raw.croConfidence;
+      }
+      if (raw.index !== undefined) {
+        entry.index = raw.index;
+      }
+      nodeIndex[nodeId] = entry;
     }
 
     return node;

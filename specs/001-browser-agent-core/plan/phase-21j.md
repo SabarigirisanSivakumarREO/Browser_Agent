@@ -4,7 +4,9 @@
 
 ### Summary
 
-Fix the `--vision-agent` CLI mode to use the unified CROAgent instead of the deprecated VisionAgent. This resolves three bugs:
+Fix the `--vision` CLI mode (formerly `--vision-agent`) to use the unified CROAgent instead of the deprecated VisionAgent. This resolves three bugs:
+
+> **Note**: As of CR-001-D, `--vision-agent` is a deprecated alias for `--vision`. The `src/agent/vision/` module has been deleted.
 1. Only one viewport captured (LLM-guided vs enforced full-page)
 2. Evidence not saving (empty snapshots)
 3. No proof of DOM-Screenshot mapping
@@ -29,14 +31,13 @@ const result = await visionAgent.analyze(page, pageType);
 3. No enforced full-page coverage
 4. Relies on LLM calling `capture_viewport` tool multiple times
 
-**Solution**: Use unified CROAgent with `enableUnifiedMode: true`:
+**Solution**: Use unified CROAgent with `vision: true`:
 
 ```typescript
-// Fixed (CORRECT)
+// Fixed (CORRECT) - CR-001-D simplified API
 const croAgent = new CROAgent({...});
 const result = await croAgent.analyze(url, {
-  enableUnifiedMode: true,
-  visionAgentMode: true,
+  vision: true,  // New simplified flag (replaces enableUnifiedMode + visionAgentMode)
   scanMode: 'full_page'
 });
 ```
@@ -52,18 +53,18 @@ const result = await croAgent.analyze(url, {
 ### Architecture Change
 
 ```
-BEFORE (Deprecated VisionAgent):
+BEFORE (Deprecated VisionAgent - DELETED in CR-001-D):
 ┌─────────────────────────────────────────────────────────────────────────────────┐
 │  CLI --vision-agent                                                             │
-│  └── createVisionAgent() ← DEPRECATED                                           │
+│  └── createVisionAgent() ← DEPRECATED & DELETED                                 │
 │      └── LLM decides: capture? scroll? evaluate? done?                          │
 │          └── May capture 1 viewport, then stop                                  │
 └─────────────────────────────────────────────────────────────────────────────────┘
 
-AFTER (Unified CROAgent):
+AFTER (Unified CROAgent with simplified API - CR-001-D):
 ┌─────────────────────────────────────────────────────────────────────────────────┐
-│  CLI --vision-agent                                                             │
-│  └── CROAgent.analyze({ enableUnifiedMode: true, visionAgentMode: true })       │
+│  CLI --vision (primary) or --vision-agent (deprecated alias)                    │
+│  └── CROAgent.analyze({ vision: true })  ← NEW SIMPLIFIED API                   │
 │      ├── COLLECTION PHASE (enforced full-page)                                  │
 │      │   └── scroll_page + capture_viewport until 100% coverage                 │
 │      ├── ANALYSIS PHASE (category-based LLM calls)                              │
@@ -107,18 +108,19 @@ const visionAgent = createVisionAgent({
 const result = await visionAgent.analyze(page, pageTypeResult.type);
 ```
 
-**After**:
+**After** (CR-001-D simplified API):
 ```typescript
 const croAgent = new CROAgent({
   browser: { /* existing config */ },
   processing: { model: options.visionModel },
-  maxSteps: options.maxSteps,
+  maxSteps: options.visionMaxSteps,  // Renamed from maxSteps
   verbose: options.verbose,
 });
 
 const result = await croAgent.analyze(url, {
-  enableUnifiedMode: true,
-  visionAgentMode: true,
+  vision: true,  // New simplified flag
+  visionModel: options.visionModel,
+  visionMaxSteps: options.visionMaxSteps,
   scanMode: 'full_page',
   minCoverage: 100,
 });
@@ -186,5 +188,14 @@ if (options.saveEvidence && result.snapshots.length > 0) {
 ### Related Files
 
 - **Tasks**: [../tasks/phase-21j.md](../tasks/phase-21j.md)
-- **Deprecated**: `src/agent/vision/vision-agent.ts`
+- **DELETED**: `src/agent/vision/` (12 files removed in CR-001-D)
 - **Target**: `src/agent/cro-agent.ts`
+
+### CR-001-D API Changes
+
+| Old Flag | New Flag | Status |
+|----------|----------|--------|
+| `--vision-agent` | `--vision` | Deprecated alias |
+| `--vision-agent-max-steps` | `--vision-max-steps` | Deprecated alias |
+| `visionAgentMode: true` | `vision: true` | Normalized internally |
+| `enableUnifiedMode: true` | `vision: true` | Normalized internally |

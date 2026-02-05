@@ -28,8 +28,12 @@
 | ~~20~~ | ~~Unified Extraction Pipeline (DEFERRED)~~ | [phase-20.md](./phase-20.md) | **DEFERRED** |
 | 21 | PDP Heuristics (PageType + 35 rules) | [phase-21.md](./phase-21.md) | Partial |
 | **CR-001** | **Architecture Refactor (remove modes, merge agents)** | [cr-001-refactor.md](./cr-001-refactor.md) | ✅ Complete |
-| **21j** | **CLI Vision Agent Fix (use CROAgent unified mode)** | [phase-21j.md](./phase-21j.md) | 📋 NEXT (8 tasks) |
+| **21j** | **CLI Vision Agent Fix (use CROAgent unified mode)** | [phase-21j.md](./phase-21j.md) | ⏳ 6/8 complete |
+| **21l** | **Default Evidence & Mapping (flip defaults)** | [phase-21l.md](./phase-21l.md) | ⏳ 7/9 (T391-T397 done) |
 | **22** | **Page Type Knowledge Bases (PLP, Homepage, Cart, Checkout, Generic)** | [phase-22.md](./phase-22.md) | 📋 Pending (38 tasks) |
+| **23** | **LLM Input Capture (DOM, screenshots, prompts)** | [phase-23.md](./phase-23.md) | ✅ Complete (9 tasks) |
+| **24** | **Hybrid LLM Page Type Detection** | [phase-24.md](./phase-24.md) | ✅ Complete (23 tasks, 55 tests) |
+| **25** | **Enhanced Extraction & Screenshot Analysis** | [phase-25.md](./phase-25.md) | ⏳ In Progress (25a ✅, 25b ✅, 25c ✅, 25d ✅, 25e ✅, 25f ✅, 25g-25i 📋) |
 
 ---
 
@@ -91,16 +95,36 @@
 | **CR-001** | T500-T522 | 23 | Architecture Refactor | ✅ Complete | 51 unit |
 | **21h** | T353-T365 | 14 | Evidence Capture | ✅ Complete | 49 unit |
 | **21i** | T366-T382 | 17 | DOM-Screenshot Mapping | ✅ Complete | 88 unit |
-| **21j** | T383-T390 | 8 | CLI Vision Agent Fix | 📋 NEXT | 20 unit |
-| **22** | T400-T437 | ~38 | New Page Type Knowledge Bases | 📋 Pending | ~38 unit |
+| **21j** | T383-T390 | 8 | CLI Vision Agent Fix | ⏳ 6/8 | 20 unit |
+| **21l** | T391-T399 | 9 | Default Evidence & Mapping | ⏳ 7/9 | 9 unit |
+| **22** | T410-T447 | ~38 | New Page Type Knowledge Bases | 📋 Pending | ~38 unit |
+| **23** | T400-T408 | 9 | LLM Input Capture | ✅ Complete | 18 (13 unit + 5 int) |
+| **24** | T450-T472 | 23 | Hybrid LLM Page Type Detection | ✅ Complete | 55 (39 unit + 9 int + 7 E2E) |
+| **25a** | T473-T476 | 4 | Dynamic Collection Steps | ✅ Complete | 14 unit |
+| **25b** | T477-T484 | 8 | Enhanced DOM Selectors | ✅ Complete | 41 unit |
+| **25c** | T485-T488 | 4 | Structured Data Extraction | ✅ Complete | 17 unit |
+| **25d** | T489-T492 | 4 | Above-Fold Annotation | ✅ Complete | 22 unit |
+| **25e** | T493-T498 | 6 | Tiled Screenshot Mode | ✅ Complete | 9 int |
+| **25f** | T499-T502 | 4 | Deterministic Collection | ✅ Complete | 10 int + 11 E2E |
+| **25g-i** | T503-T548 | 46 | Evidence + Metrics + Hybrid Collection | 📋 NEXT | ~35 tests |
 
-**Total after Phase 21i**: 425 complete + ~46 pending (excluding deferred Phase 20)
+**Total after Phase 25f**: 487 complete + ~84 pending (excluding deferred Phase 20)
 - Phase 20: 60 tasks **DEFERRED** (moved to backlog)
 - CR-001: 23 tasks ✅ **COMPLETE** (remove modes, merge agents, refactor)
 - Phase 21h: 14 tasks ✅ **COMPLETE** (evidence capture)
 - Phase 21i: 17 tasks ✅ **COMPLETE** (DOM-screenshot mapping)
-- Phase 21j: 8 tasks 📋 **NEXT** (CLI fix - use CROAgent unified mode)
+- Phase 21j: 8 tasks ✅ **COMPLETE** (CLI vision agent fix)
+- Phase 21l: 9 tasks ✅ **COMPLETE** (default evidence & mapping)
 - Phase 22: ~38 tasks 📋 (PLP, Homepage, Cart, Checkout, Generic KBs)
+- Phase 23: 9 tasks ✅ **COMPLETE** (LLM input capture)
+- Phase 24: 23 tasks ✅ **COMPLETE** (Hybrid LLM page type detection)
+- Phase 25a: 4 tasks ✅ **COMPLETE** (Dynamic collection steps)
+- Phase 25b: 8 tasks ✅ **COMPLETE** (Enhanced DOM selectors)
+- Phase 25c: 4 tasks ✅ **COMPLETE** (Structured data extraction)
+- Phase 25d: 4 tasks ✅ **COMPLETE** (Above-fold annotation)
+- Phase 25e: 6 tasks ✅ **COMPLETE** (Tiled screenshot mode)
+- Phase 25f: 4 tasks ✅ **COMPLETE** (Deterministic collection - no LLM during collection)
+- Phase 25g-i: 46 tasks 📋 **NEXT** (Evidence mapping + metrics + hybrid collection)
 
 ---
 
@@ -151,8 +175,10 @@
 
 **CLI Milestones**:
 - Phases 1-19: All complete ✅
-- After CR-001: `npm run start -- --vision-agent <url>` → Unified CRO + Vision analysis
-- After Phase 21h: `npm run start -- --vision-agent --save-evidence <url>` → With evidence
-- After Phase 21i: `npm run start -- --vision-agent --annotate-screenshots <url>` → With annotations
+- After CR-001: `npm run start -- --vision <url>` → Unified CRO + Vision analysis
+- After Phase 21h: `npm run start -- --vision --save-evidence <url>` → With evidence
+- After Phase 21i: `npm run start -- --vision --annotate-screenshots <url>` → With annotations
+- After Phase 21l: `npm run start -- --vision <url>` → Evidence + annotations **by default**
+- After Phase 23: `npm run start -- --vision <url>` → Also saves LLM inputs to `./llm-inputs/`
 
 ---

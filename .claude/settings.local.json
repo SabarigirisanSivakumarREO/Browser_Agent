@@ -29,7 +29,11 @@
       "Bash(tasklist:*)",
       "Bash(findstr:*)",
       "Bash(dir:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(npm run test:*)",
+      "Bash(npx sharp-cli info:*)",
+      "Bash(npx identify:*)",
+      "Bash(file:*)"
     ],
     "deny": [],
     "ask": []
