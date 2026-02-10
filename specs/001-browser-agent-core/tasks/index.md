@@ -33,7 +33,8 @@
 | **22** | **Page Type Knowledge Bases (PLP, Homepage, Cart, Checkout, Generic)** | [phase-22.md](./phase-22.md) | 📋 Pending (38 tasks) |
 | **23** | **LLM Input Capture (DOM, screenshots, prompts)** | [phase-23.md](./phase-23.md) | ✅ Complete (9 tasks) |
 | **24** | **Hybrid LLM Page Type Detection** | [phase-24.md](./phase-24.md) | ✅ Complete (23 tasks, 55 tests) |
-| **25** | **Enhanced Extraction & Screenshot Analysis** | [phase-25.md](./phase-25.md) | ⏳ In Progress (25a ✅, 25b ✅, 25c ✅, 25d ✅, 25e ✅, 25f ✅, 25g-25i 📋) |
+| **25** | **Enhanced Extraction & Screenshot Analysis** | [phase-25.md](./phase-25.md) | ✅ Complete |
+| **26** | **LLM Analysis Optimization** | [phase-26.md](./phase-26.md) | 📋 Planned (28 tasks) |
 
 ---
 
@@ -106,9 +107,14 @@
 | **25d** | T489-T492 | 4 | Above-Fold Annotation | ✅ Complete | 22 unit |
 | **25e** | T493-T498 | 6 | Tiled Screenshot Mode | ✅ Complete | 9 int |
 | **25f** | T499-T502 | 4 | Deterministic Collection | ✅ Complete | 10 int + 11 E2E |
-| **25g-i** | T503-T548 | 46 | Evidence + Metrics + Hybrid Collection | 📋 NEXT | ~35 tests |
+| **25g-i** | T503-T548 | 46 | Evidence + Metrics + Hybrid Collection | ✅ Complete | ~35 tests |
+| **26a** | T550-T555 | 6 | Parallel Category Analysis | 📋 Planned | 6 unit |
+| **26b** | T556-T563 | 8 | Category Batching | 📋 Planned | 4+4 unit, 1 int |
+| **26c** | T564-T568 | 5 | Intelligent Viewport Filtering | 📋 Planned | 6 unit, 1 int |
+| **26e** | T569-T574 | 6 | Quality Validation (CI-only) | 📋 Planned | 1 int |
+| **26f** | T575-T577 | 3 | Cross-cutting E2E Tests | 📋 Planned | 4 E2E |
 
-**Total after Phase 25f**: 487 complete + ~84 pending (excluding deferred Phase 20)
+**Total after Phase 25i**: 533 complete + ~90 pending (excluding deferred Phase 20)
 - Phase 20: 60 tasks **DEFERRED** (moved to backlog)
 - CR-001: 23 tasks ✅ **COMPLETE** (remove modes, merge agents, refactor)
 - Phase 21h: 14 tasks ✅ **COMPLETE** (evidence capture)
@@ -124,7 +130,8 @@
 - Phase 25d: 4 tasks ✅ **COMPLETE** (Above-fold annotation)
 - Phase 25e: 6 tasks ✅ **COMPLETE** (Tiled screenshot mode)
 - Phase 25f: 4 tasks ✅ **COMPLETE** (Deterministic collection - no LLM during collection)
-- Phase 25g-i: 46 tasks 📋 **NEXT** (Evidence mapping + metrics + hybrid collection)
+- Phase 25g-i: 46 tasks ✅ **COMPLETE** (Evidence mapping + metrics + hybrid collection)
+- Phase 26: 28 tasks 📋 **NEXT** (LLM Analysis Optimization - parallel, batching, viewport filtering, CI-only quality validation)
 
 ---
 

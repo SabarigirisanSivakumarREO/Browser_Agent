@@ -1,6 +1,6 @@
 # Session Handoff - CRO Browser Agent
 
-**Last Updated**: 2026-02-04 (Phase 25 Bug Fixes - screenshot size, scroll position, fold line, viewport refs)
+**Last Updated**: 2026-02-10 (Phase 26 Revised Plan Complete - 28 tasks, 6 sessions)
 
 ---
 
@@ -20,10 +20,56 @@ Automatically analyze websites for CRO issues (CTAs, forms, trust signals, value
 
 ## Current State
 
-**Phase**: Phase 25 - Enhanced Extraction & Screenshot Analysis - ⏳ IN PROGRESS
-**Status**: CR-001 ✅, Phase 21h ✅, Phase 21i ✅, CR-001-D ✅, CR-002 ✅, Phase 21l ✅, Phase 23 ✅, Phase 24 ✅, Phase 25a-f ✅
-**Tests**: 622/624 passing (2 pre-existing URL validation failures)
+**Phase**: Phase 26 - LLM Analysis Optimization - 📋 REVISED PLAN COMPLETE
+**Status**: CR-001 ✅, Phases 21-25 ✅, Phase 26 PLANNED (revised 2026-02-10)
 **Build**: Compiles successfully ✅
+
+### Phase 26 Revised Plan (2026-02-10) - COMPLETE
+
+**Context**: Deep investigation of Phase 26 plan vs actual codebase revealed overscoping. Original 52 tasks reduced to 28 tasks across 6 sessions.
+
+#### Data-Backed Findings
+
+**Actual Token Math** (from saved LLM inputs `llm-inputs/2026-02-04T09-16-19/`):
+- 10 categories, 35 heuristics total (PDP page type)
+- Per category call: ~26,650 tokens (350 system + 20K user/DOM + 5.5K images + 800 response)
+- Full analysis: 10 × 26,650 = **~266K tokens** (original plan said 147K - understated)
+- **93% of per-call input is duplicated** DOM + screenshots (only 1.5K heuristics are unique)
+
+#### Revised Plan Summary
+
+| Sub-phase | Tasks | Focus |
+|-----------|-------|-------|
+| **26a** | T550-T555 (6) | Parallel analysis (p-limit, rate limiting, error isolation) |
+| **26b** | T556-T563 (8) | Category batching (batcher, prompt builder, parser) |
+| **26c** | T564-T568 (5) | Viewport filtering (selector, DOM filter) |
+| **26e** | T569-T574 (6) | Quality validation CI-only (comparator, classifier) |
+| **26f** | T575-T577 (3) | Cross-cutting E2E tests |
+| **Total** | **28 tasks** | **6 sessions, 28 tests** |
+
+**Dropped**:
+- ~~26d: Compact output~~ - 1.5% savings not worth added complexity
+- ~~Runtime auto-rollback~~ - Over-engineered; validation is CI-only
+- ~~test-suites.ts, baseline-runner.ts, optimization-metrics.ts~~ - Simplified out
+
+**Key Code Locations**:
+- Parallel: `src/heuristics/analysis-orchestrator.ts:122-128` (Promise.all exists, default=false)
+- Config gap: `src/agent/cro-agent.ts:861-865` (orchestrator created WITHOUT parallelAnalysis)
+- Category analyzer: `src/heuristics/category-analyzer.ts` (maxTokens=4096, model=gpt-4o-mini)
+- Categories: `src/heuristics/knowledge/pdp/` (10 JSON files, 35 heuristics)
+
+#### Session Allocation (6 sessions)
+
+| Session | Tasks | Focus |
+|---------|-------|-------|
+| 1 | T550-T555 | 26a: Parallel analysis |
+| 2 | T556-T559 | 26b part 1: Batcher + prompt builder + parser + orchestrator |
+| 3 | T560-T563 | 26b part 2: CLI flag + exports + tests |
+| 4 | T564-T568 | 26c: Viewport filtering |
+| 5 | T569-T574 | 26e: Quality validation CI-only |
+| 6 | T575-T577 | 26f: E2E tests |
+
+---
 
 ### Phase 25 Bug Fixes (2026-02-04) - ✅ COMPLETE
 

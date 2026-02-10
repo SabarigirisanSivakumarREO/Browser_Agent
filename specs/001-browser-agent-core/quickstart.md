@@ -1,7 +1,7 @@
 # Quickstart: Browser Agent Core
 
 **Feature**: `001-browser-agent-core`
-**Last Updated**: 2026-02-04 (Phase 25 bug fixes documented)
+**Last Updated**: 2026-02-05 (Phase 25i complete)
 
 ---
 
@@ -15,7 +15,7 @@ Read specs/001-browser-agent-core/quickstart.md to get the complete project cont
 
 ## Session Bootstrap (READ THIS FIRST)
 
-**Status**: CR-001 ✅ | Phase 21h ✅ | Phase 21i ✅ | Phase 21j ✅ | Phase 21l ✅ | Phase 23 ✅ | Phase 24 ✅ | Phase 25a-f ✅ | Phase 25-bugfix ✅ | Phase 25g 📋
+**Status**: CR-001 ✅ | Phase 21h ✅ | Phase 21i ✅ | Phase 21j ✅ | Phase 21l ✅ | Phase 23 ✅ | Phase 24 ✅ | Phase 25 ✅ | Phase 26 📋
 - Completed: 487 tasks (Phases 1-19, 12b, 12c, 21a-21l, CR-001, Phases 23-25f)
 - **CR-001 COMPLETE** (2026-01-30):
   - ✅ Merged Vision Agent into CRO Agent (single agent loop)
@@ -37,23 +37,34 @@ Read specs/001-browser-agent-core/quickstart.md to get the complete project cont
 
 **Current Focus**:
 - Phase 24: Hybrid LLM Page Type Detection (23 tasks) ✅ **COMPLETE** - All 55 tests passing (39 unit + 9 integration + 7 E2E)
-- **Phase 25a-f: Enhanced Extraction Core (30 tasks) ✅ COMPLETE** - Dynamic steps, selectors, structured data, fold annotation, tiled screenshots, deterministic collection
-- **Phase 25 Bug Fixes ✅ COMPLETE** - Screenshot size, scroll position, fold line, viewport-prefixed refs
-- **Phase 25g-i: Evidence + Hybrid Collection (46 tasks) 📋 NEXT** - Evidence mapping, confidence, packaging, noise suppression, lazy-load, cheap validator
+- **Phase 25: Enhanced Extraction (76 tasks) ✅ COMPLETE** - Dynamic steps, selectors, structured data, fold annotation, tiled screenshots, deterministic collection, evidence mapping, hybrid collection
+- **Phase 26: LLM Analysis Optimization (28 tasks) 📋 PLANNED** - Parallel analysis, category batching, viewport filtering, CI-only quality validation
 - Phase 22: New Page Type Knowledge Bases (~38 tasks) 📋 Planned - PLP, Homepage, Cart, Checkout
 
-**Phase 25 Progress** (2026-02-04):
+**Phase 25 Progress** (2026-02-04) ✅ **COMPLETE**:
 - ✅ **25a** T473-T476: Dynamic collection steps (based on page height) - 14 unit tests
 - ✅ **25b** T477-T484: Enhanced DOM selectors (price, variant, stock, shipping, gallery) - 41 unit tests
 - ✅ **25c** T485-T488: Structured data extraction (JSON-LD Product schema) - 17 unit tests
 - ✅ **25d** T489-T492: Above-fold annotation (fold line on screenshots) - 22 unit tests
 - ✅ **25e** T493-T498: Tiled screenshot mode (alternative to viewport capture) - 9 integration tests
 - ✅ **25f** T499-T502: Deterministic collection (no LLM during collection) - 10 int + 11 E2E tests
-- ✅ **Bug Fixes**: Screenshot size (1280x720), scroll position (0px start), fold line, viewport-prefixed refs `[v0-0]`
-- 📋 **25g** T503-T520: Evidence mapping + confidence + packaging
-- 📋 **25h** T521-T534: Determinism + noise suppression + lazy-load + metrics
-- 📋 **25i** T535-T548: Hybrid collection (cheap validator + LLM QA)
+- ✅ **25g** T503-T520: Evidence mapping + packaging (47 tests)
+- ✅ **25h** T521-T534: Determinism + noise suppression + lazy-load + metrics (40 tests)
+- ✅ **25i** T535-T548: Hybrid collection (cheap validator + LLM QA) - 34 unit tests
 - See: `spec/requirements-phase25.md`, `plan/phase-25.md`, `tasks/phase-25.md`
+
+**Phase 26 Progress** (2026-02-10) 📋 **PLANNED (Revised)**:
+- 📋 **26a** T550-T555: Parallel category analysis (p-limit, rate limiting, error isolation) - 6 unit tests
+- 📋 **26b** T556-T563: Batch multiple categories per call (56% token savings) - 4+4 unit + 1 int tests
+- 📋 **26c** T564-T568: Intelligent viewport filtering (15-30% additional savings) - 6 unit + 1 int tests
+- 📋 **26e** T569-T574: Quality validation CI-only (comparator, classifier, validator) - 1 int test
+- 📋 **26f** T575-T577: Cross-cutting E2E tests - 4 E2E tests
+- ~~26d: Response token optimization~~ - DROPPED (only 1.5% savings)
+- ~~Runtime auto-rollback~~ - DROPPED (over-engineered; CI-only validation instead)
+- **Target**: 10x faster (336s → 35s), 56% cheaper ($0.20 → $0.09 per page)
+- **Quality Guarantee**: ≥95% match rate vs baseline (CI validation)
+- **Backward Compatible**: All optimizations opt-out via CLI flags
+- See: `spec/requirements-phase26.md`, `plan/phase-26.md`, `tasks/phase-26.md`
 
 **Phase 21l COMPLETE** (user experience):
 - ✅ T391-T397: Defaults changed, opt-out flags added, help text updated
@@ -138,13 +149,13 @@ Read specs/001-browser-agent-core/quickstart.md to get the complete project cont
 - Always include handoff details before ending session
 
 **Session Chunking** (see SESSION-HANDOFF.md for full breakdown):
-- Session 1: T500-T504 (CR-001-A: Remove vision modes)
-- Session 2: T505-T509 (CR-001-B Part 1)
-- Session 3: T510-T514 (CR-001-B Part 2)
-- Session 4-5: T515-T522 (CR-001-C: Analysis refactor)
-- Session 6-7: T353-T365 (Phase 21h: Evidence)
-- Session 8-10: T366-T382 (Phase 21i: Mapping)
-- Session 11-14: T400-T437 (Phase 22: Knowledge bases)
+- Phase 26 Sessions (6 recommended):
+  - Session 1: T550-T555 (26a: Parallel analysis - config, p-limit, implementation, CLI, tests)
+  - Session 2: T556-T559 (26b part 1: Batcher + prompt builder + parser + orchestrator)
+  - Session 3: T560-T563 (26b part 2: CLI flag + exports + all batching tests)
+  - Session 4: T564-T568 (26c: Viewport filtering - selector, integration, CLI, tests)
+  - Session 5: T569-T574 (26e: Quality validation CI-only - comparator, classifier, validator, tests)
+  - Session 6: T575-T577 (26f: E2E tests for full optimization stack)
 
 **Excluded folders** (DO NOT analyze unless explicitly requested):
 - `browser-use/` - Reference codebase only (545 files), not part of this project
@@ -258,7 +269,23 @@ For any feature/bug fix request:
 
 ### Recent Changes (keep last 3)
 
-**0. Phase 25 Bug Fixes & Enhancements** - ✅ COMPLETE (2026-02-05)
+**0. Phase 26: LLM Analysis Optimization** - 📋 PLANNED (Revised 2026-02-10)
+- **Purpose**: Reduce analysis time from 336s to ~35s (10x faster), token usage from 266K to ~113K (56% cheaper)
+- **Sub-phases**:
+  1. **26a**: Parallel category analysis (p-limit, rate limiting, timeout, error isolation)
+  2. **26b**: Batch multiple categories per call (5 calls instead of 10, 56% token savings)
+  3. **26c**: Intelligent viewport filtering (send only relevant viewports per category)
+  4. **26e**: Quality validation CI-only (comparator, classifier, validator)
+  5. **26f**: Cross-cutting E2E tests
+- **Dropped**: ~~26d: Response token optimization~~ (1.5% savings), ~~runtime auto-rollback~~ (over-engineered)
+- **Quality Guarantee**: CI-only validation compares optimized vs baseline, requires ≥95% match rate
+- **Backward Compatible**: All optimizations enabled by default with opt-out flags
+- **CLI Flags**: `--sequential-analysis`, `--no-category-batching`, `--no-viewport-filtering`, `--validate-quality`
+- **Tasks**: T550-T577 (28 tasks)
+- **Tests**: 28 (20 unit + 4 integration + 4 E2E)
+- **See**: `spec/requirements-phase26.md`, `plan/phase-26.md`, `tasks/phase-26.md`
+
+**1. Phase 25 Bug Fixes & Enhancements** - ✅ COMPLETE (2026-02-05)
 - **Screenshot Size**: Fixed from 384x216 → 1280x720 (added `fullResolutionBase64` field) ✅
 - **Scroll Position**: Fixed - now starts at 0px with verification retry logic ✅
 - **Fold Line**: Now correctly at 720px on first viewport ✅
@@ -283,7 +310,7 @@ For any feature/bug fix request:
   9. **25i**: Hybrid collection (cheap validator + conditional LLM QA)
 - **Pipeline**: DOM Freeze → Noise Suppression → DOM Extract → CRO Match → Structured Data → Deterministic Collection → Cheap Validator → (LLM QA if needed) → Recheck → Reconciliation → Evidence Package
 - **Default ON**: All features enabled by default (opt-out flags available)
-- **CLI Flags**: `--screenshot-mode`, `--no-layout-mapping`, `--no-noise-suppression`, `--no-media-readiness`, `--no-evidence-json`, `--skip-collection-qa`, `--llm-guided-collection`
+- **CLI Flags**: `--screenshot-mode`, `--no-evidence-json`, `--skip-collection-qa`, `--llm-guided-collection`
 - **Tasks**: T473-T548 (76 tasks)
 - **Tests**: 75 (40 unit + 20 integration + 15 E2E)
 - **Sessions**: 10 recommended
@@ -388,7 +415,8 @@ For any feature/bug fix request:
 
 | Change | Phase | Tasks | CLI Milestone | Status |
 |--------|-------|-------|---------------|--------|
-| **Enhanced Extraction & Screenshots** | 25 | 76 | `--screenshot-mode`, `--no-evidence-json`, `--skip-collection-qa` | 📋 PLANNED |
+| **LLM Analysis Optimization** | 26 | 28 | `--sequential-analysis`, `--no-category-batching`, `--no-viewport-filtering`, `--validate-quality` | 📋 PLANNED |
+| **Enhanced Extraction & Screenshots** | 25 | 76 | `--screenshot-mode`, `--no-evidence-json`, `--skip-collection-qa` | ✅ COMPLETE |
 | **Hybrid LLM Page Detection** | 24 | 23 | `--no-llm-page-detection`, `--force-llm-detection`, `--llm-detection-threshold` | ✅ COMPLETE |
 | **LLM Input Capture** | 23 | 9 | Save DOM, screenshots, prompts | ✅ COMPLETE |
 | **Default Evidence & Mapping** | 21l | 9 | Evidence + annotation by default | ⏳ 7/9 |
@@ -457,14 +485,24 @@ Phase 24-CLI: npm run start -- --vision https://in.burberry.com/product-p12345  
             npm run start -- --vision --force-llm-detection https://example.com  ✅ (force LLM tier)
             npm run start -- --vision --llm-detection-threshold 0.7 https://example.com  ✅ (custom threshold)
 
-# Phase 25 CLI (PLANNED - all features DEFAULT ON):
-Phase 25-CLI: npm run start -- --vision https://example.com  📋 (full quality pipeline with evidence)
-            npm run start -- --vision --no-evidence-json https://example.com  📋 (disable evidence.json)
-            npm run start -- --vision --no-noise-suppression https://example.com  📋 (show cookie banners)
-            npm run start -- --vision --no-media-readiness https://example.com  📋 (skip lazy-load waits)
-            npm run start -- --vision --skip-collection-qa https://example.com  📋 (skip LLM QA validation)
-            npm run start -- --vision --llm-guided-collection https://example.com  📋 (old LLM-guided mode)
-            npm run start -- --vision --screenshot-mode=tiled https://example.com  📋 (tiled screenshots)
+# Phase 25 CLI (COMPLETE - all features DEFAULT ON):
+Phase 25-CLI: npm run start -- --vision https://example.com  ✅ (full quality pipeline with evidence)
+            npm run start -- --vision --no-evidence-json https://example.com  ✅ (disable evidence.json)
+            npm run start -- --vision --no-noise-suppression https://example.com  ✅ (show cookie banners)
+            npm run start -- --vision --no-media-readiness https://example.com  ✅ (skip lazy-load waits)
+            npm run start -- --vision --skip-collection-qa https://example.com  ✅ (skip LLM QA validation)
+            npm run start -- --vision --llm-guided-collection https://example.com  ✅ (old LLM-guided mode)
+            npm run start -- --vision --screenshot-mode=tiled https://example.com  ✅ (tiled screenshots)
+
+# Phase 26 CLI (PLANNED - optimization flags):
+Phase 26-CLI: npm run start -- --vision https://example.com  📋 (10x faster with parallel + batching)
+            npm run start -- --vision --sequential-analysis https://example.com  📋 (disable parallel)
+            npm run start -- --vision --no-category-batching https://example.com  📋 (one call per category)
+            npm run start -- --vision --no-viewport-filtering https://example.com  📋 (send all viewports)
+            npm run start -- --vision --max-concurrent-categories 3 https://example.com  📋 (rate limit)
+
+# Phase 26 CLI (PLANNED - quality validation, CI-only):
+Phase 26-QA:  npm run start -- --vision --validate-quality https://example.com  📋 (compare vs baseline, CI use)
 
 # DEPRECATED ALIASES (still work, mapped to new flags):
 # --vision-agent → --vision
