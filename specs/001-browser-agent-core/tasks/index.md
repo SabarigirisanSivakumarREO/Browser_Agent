@@ -30,11 +30,12 @@
 | **CR-001** | **Architecture Refactor (remove modes, merge agents)** | [cr-001-refactor.md](./cr-001-refactor.md) | ✅ Complete |
 | **21j** | **CLI Vision Agent Fix (use CROAgent unified mode)** | [phase-21j.md](./phase-21j.md) | ⏳ 6/8 complete |
 | **21l** | **Default Evidence & Mapping (flip defaults)** | [phase-21l.md](./phase-21l.md) | ⏳ 7/9 (T391-T397 done) |
-| **22** | **Page Type Knowledge Bases (PLP, Homepage, Cart, Checkout, Generic)** | [phase-22.md](./phase-22.md) | 📋 Pending (38 tasks) |
+| **22** | **Page Type Knowledge Bases (PLP, Homepage, Cart, Checkout, Generic)** | [phase-22.md](./phase-22.md) | ⏳ 22A ✅, 22B-E 📋 |
 | **23** | **LLM Input Capture (DOM, screenshots, prompts)** | [phase-23.md](./phase-23.md) | ✅ Complete (9 tasks) |
 | **24** | **Hybrid LLM Page Type Detection** | [phase-24.md](./phase-24.md) | ✅ Complete (23 tasks, 55 tests) |
 | **25** | **Enhanced Extraction & Screenshot Analysis** | [phase-25.md](./phase-25.md) | ✅ Complete |
-| **26** | **LLM Analysis Optimization** | [phase-26.md](./phase-26.md) | 📋 Planned (28 tasks) |
+| **26** | **LLM Analysis Optimization** | [phase-26.md](./phase-26.md) | ✅ Complete (28 tasks, 56 tests) |
+| **27** | **Analysis Quality & Annotation Fix** | [phase-27.md](./phase-27.md) | ✅ Complete (25 tasks, ~59 tests) |
 
 ---
 
@@ -98,7 +99,8 @@
 | **21i** | T366-T382 | 17 | DOM-Screenshot Mapping | ✅ Complete | 88 unit |
 | **21j** | T383-T390 | 8 | CLI Vision Agent Fix | ⏳ 6/8 | 20 unit |
 | **21l** | T391-T399 | 9 | Default Evidence & Mapping | ⏳ 7/9 | 9 unit |
-| **22** | T410-T447 | ~38 | New Page Type Knowledge Bases | 📋 Pending | ~38 unit |
+| **22A** | T578-T587 | 10 | PLP Knowledge Base | ✅ Complete | 15 unit |
+| **22B-E** | T588-T615 | 28 | Homepage, Cart, Checkout, Generic KBs | 📋 Pending | ~28 unit |
 | **23** | T400-T408 | 9 | LLM Input Capture | ✅ Complete | 18 (13 unit + 5 int) |
 | **24** | T450-T472 | 23 | Hybrid LLM Page Type Detection | ✅ Complete | 55 (39 unit + 9 int + 7 E2E) |
 | **25a** | T473-T476 | 4 | Dynamic Collection Steps | ✅ Complete | 14 unit |
@@ -108,30 +110,34 @@
 | **25e** | T493-T498 | 6 | Tiled Screenshot Mode | ✅ Complete | 9 int |
 | **25f** | T499-T502 | 4 | Deterministic Collection | ✅ Complete | 10 int + 11 E2E |
 | **25g-i** | T503-T548 | 46 | Evidence + Metrics + Hybrid Collection | ✅ Complete | ~35 tests |
-| **26a** | T550-T555 | 6 | Parallel Category Analysis | 📋 Planned | 6 unit |
-| **26b** | T556-T563 | 8 | Category Batching | 📋 Planned | 4+4 unit, 1 int |
-| **26c** | T564-T568 | 5 | Intelligent Viewport Filtering | 📋 Planned | 6 unit, 1 int |
-| **26e** | T569-T574 | 6 | Quality Validation (CI-only) | 📋 Planned | 1 int |
-| **26f** | T575-T577 | 3 | Cross-cutting E2E Tests | 📋 Planned | 4 E2E |
+| **26a** | T550-T555 | 6 | Parallel Category Analysis | ✅ Complete | 6 unit |
+| **26b** | T556-T563 | 8 | Category Batching | ✅ Complete | 7+8 unit, 2 int |
+| **26c** | T564-T568 | 5 | Intelligent Viewport Filtering | ✅ Complete | 13 unit, 2 int |
+| **26e** | T569-T574 | 6 | Quality Validation (CI-only) | ✅ Complete | 12 unit, 2 int |
+| **26f** | T575-T577 | 3 | Cross-cutting E2E Tests | ✅ Complete | 4 E2E |
+| **27A** | T616-T618 | 3 | Model Default & Centralization | ✅ Complete | 3 unit |
+| **27B** | T619-T622 | 4 | Structured Element Refs | ✅ Complete | 10 unit |
+| **27C** | T623-T624 | 2 | Prompt Strengthening | ✅ Complete | 5 unit |
+| **27D** | T625-T627 | 3 | Confidence Threshold Filtering | ✅ Complete | 7 unit |
+| **27E** | T628-T629 | 2 | Deduplication Fix | ✅ Complete | 4 unit |
+| **27F** | T630-T632 | 3 | Annotation Pipeline Fix | ✅ Complete | 7 unit |
+| **27G** | T633-T634 | 2 | DOM Cross-Validation | ✅ Complete | 5 unit |
+| **27H** | T635-T640 | 6 | Annotation Overlay Rendering Fix | ✅ Complete | 8 unit |
 
-**Total after Phase 25i**: 533 complete + ~90 pending (excluding deferred Phase 20)
+**Total after Phase 22A**: 525 complete + ~28 pending (excluding deferred Phase 20)
 - Phase 20: 60 tasks **DEFERRED** (moved to backlog)
 - CR-001: 23 tasks ✅ **COMPLETE** (remove modes, merge agents, refactor)
 - Phase 21h: 14 tasks ✅ **COMPLETE** (evidence capture)
 - Phase 21i: 17 tasks ✅ **COMPLETE** (DOM-screenshot mapping)
 - Phase 21j: 8 tasks ✅ **COMPLETE** (CLI vision agent fix)
 - Phase 21l: 9 tasks ✅ **COMPLETE** (default evidence & mapping)
-- Phase 22: ~38 tasks 📋 (PLP, Homepage, Cart, Checkout, Generic KBs)
+- Phase 22A: 10 tasks ✅ **COMPLETE** (PLP Knowledge Base — 25 heuristics, 15 tests)
+- Phase 22B-E: 28 tasks 📋 **NEXT** (Homepage, Cart, Checkout, Generic KBs)
 - Phase 23: 9 tasks ✅ **COMPLETE** (LLM input capture)
 - Phase 24: 23 tasks ✅ **COMPLETE** (Hybrid LLM page type detection)
-- Phase 25a: 4 tasks ✅ **COMPLETE** (Dynamic collection steps)
-- Phase 25b: 8 tasks ✅ **COMPLETE** (Enhanced DOM selectors)
-- Phase 25c: 4 tasks ✅ **COMPLETE** (Structured data extraction)
-- Phase 25d: 4 tasks ✅ **COMPLETE** (Above-fold annotation)
-- Phase 25e: 6 tasks ✅ **COMPLETE** (Tiled screenshot mode)
-- Phase 25f: 4 tasks ✅ **COMPLETE** (Deterministic collection - no LLM during collection)
-- Phase 25g-i: 46 tasks ✅ **COMPLETE** (Evidence mapping + metrics + hybrid collection)
-- Phase 26: 28 tasks 📋 **NEXT** (LLM Analysis Optimization - parallel, batching, viewport filtering, CI-only quality validation)
+- Phase 25: 76 tasks ✅ **COMPLETE** (Enhanced extraction & screenshot analysis)
+- Phase 26: 28 tasks ✅ **COMPLETE** (LLM Analysis Optimization - parallel, batching, viewport filtering, CI-only quality validation)
+- Phase 27: 25 tasks ✅ **COMPLETE** (Analysis Quality & Annotation Fix — model defaults, structured refs, prompts, confidence, dedup, annotation pipeline, cross-validation, overlay rendering)
 
 ---
 
@@ -172,10 +178,11 @@
 **Implementation details in plan.md** - tasks.md is task definitions only
 
 **Current Priority**:
-1. ~~CR-001: Architecture refactor (23 tasks)~~ ✅ **COMPLETE**
-2. Phase 21h: Evidence capture (14 tasks) 📋 **NEXT**
-3. Phase 21i: DOM-Screenshot mapping (17 tasks)
-4. Phase 22: Page type knowledge bases (38 tasks)
+1. Phase 27: Analysis Quality & Annotation Fix (19 tasks) ⏳ **IN PROGRESS**
+2. Phase 22B-E: Page type knowledge bases (28 tasks remaining) 📋 **NEXT**
+
+**Completed Quality Fixes** (not phase-tracked):
+- Element Mapping in LLM Prompts (2026-02-12): `<element_positions>` block + `populateElementRefs()` — 19 tests
 
 **Deferred**:
 - Phase 20: Unified extraction pipeline (60 tasks) - moved to backlog

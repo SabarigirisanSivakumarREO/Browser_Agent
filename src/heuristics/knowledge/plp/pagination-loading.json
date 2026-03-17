@@ -1,0 +1,54 @@
+{
+  "name": "Pagination & Loading",
+  "description": "How pagination and progressive loading should support browsing large catalogues without frustration or disorientation",
+  "heuristics": [
+    {
+      "id": "PLP-PAGE-001",
+      "principle": "The pagination method should be clearly communicated so users understand how to access more products",
+      "checkpoints": [
+        "Pagination controls are visible below the product grid",
+        "Current page position within total results is indicated",
+        "Next, previous, and direct page number navigation is available",
+        "Users can identify how many total products or pages exist"
+      ],
+      "severity": "high",
+      "category": "Pagination & Loading"
+    },
+    {
+      "id": "PLP-PAGE-002",
+      "principle": "Infinite scroll or load-more should preserve the user's position and provide a sense of progress",
+      "checkpoints": [
+        "Loading indicator appears when fetching more products",
+        "Scroll position is preserved without jumping",
+        "A count of loaded vs total products is shown",
+        "Users can still access the footer without being blocked by endless loading"
+      ],
+      "severity": "high",
+      "category": "Pagination & Loading"
+    },
+    {
+      "id": "PLP-PAGE-003",
+      "principle": "Returning from a PDP should restore the user's previous position in the listing",
+      "checkpoints": [
+        "Browser back button returns to the same scroll position",
+        "Previously loaded products are still visible without re-fetching",
+        "Applied filters and sort order are preserved",
+        "The product the user clicked on is identifiable in context"
+      ],
+      "severity": "high",
+      "category": "Pagination & Loading"
+    },
+    {
+      "id": "PLP-PAGE-004",
+      "principle": "Initial page load should show products quickly without excessive skeleton screens or loading delays",
+      "checkpoints": [
+        "First batch of product cards renders within 2-3 seconds",
+        "Skeleton loaders or placeholders indicate content is loading",
+        "Images load progressively without causing layout shifts",
+        "Above-fold products are prioritised for loading"
+      ],
+      "severity": "medium",
+      "category": "Pagination & Loading"
+    }
+  ]
+}

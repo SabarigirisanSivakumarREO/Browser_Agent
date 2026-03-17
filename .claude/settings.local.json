@@ -33,7 +33,11 @@
       "Bash(npm run test:*)",
       "Bash(npx sharp-cli info:*)",
       "Bash(npx identify:*)",
-      "Bash(file:*)"
+      "Bash(file:*)",
+      "Bash(ping:*)",
+      "Bash(powershell:*)",
+      "Bash(python3:*)",
+      "Bash(rm:*)"
     ],
     "deny": [],
     "ask": []

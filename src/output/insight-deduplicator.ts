@@ -75,9 +75,15 @@ export class InsightDeduplicator {
 
   /**
    * Create a unique key for deduplication
-   * Key format: type|element (normalized)
+   * Phase 27E (T628): Use heuristicId when available (vision analysis insights).
+   * Falls back to type|element for non-vision insights.
    */
   private createKey(insight: CROInsight): string {
+    // Vision analysis insights have heuristicId — use it for unique dedup
+    if (insight.heuristicId) {
+      return insight.heuristicId;
+    }
+    // Fallback for non-vision insights (legacy heuristic engine)
     const type = insight.type.toLowerCase().trim();
     const element = (insight.element || '').toLowerCase().trim();
     return `${type}|${element}`;

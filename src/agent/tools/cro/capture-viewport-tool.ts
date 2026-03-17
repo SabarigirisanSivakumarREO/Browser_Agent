@@ -13,8 +13,15 @@ import type { ToolResult, ViewportSnapshot } from '../../../models/index.js';
 import type { ViewportInfo } from '../../../models/page-state.js';
 import { DOMExtractor } from '../../../browser/dom/extractor.js';
 import { DOMSerializer } from '../../../browser/dom/serializer.js';
-import { mapElementsToScreenshot, filterVisibleElements } from '../../../browser/dom/coordinate-mapper.js';
+import {
+  mapElementsToScreenshot,
+  filterVisibleElements,
+  computeLayoutBoxes,
+  getElementIndicesByCROType,
+  type ElementBox,
+} from '../../../browser/dom/coordinate-mapper.js';
 import { annotateFoldLine } from '../../../output/screenshot-annotator.js';
+import type { CROType } from '../../../models/dom-tree.js';
 
 /**
  * Token budget for DOM serialization
@@ -36,6 +43,7 @@ const JPEG_QUALITY = 50;
 /**
  * Configuration for viewport capture
  * Phase 25d: Added annotateFoldLine for first viewport annotation
+ * Phase 25g: Added layout mapping configuration (T511)
  */
 export interface CaptureViewportConfig {
   /** Annotate fold line on first viewport (default: true) */
@@ -46,6 +54,12 @@ export interface CaptureViewportConfig {
   compressedImageWidth: number;
   /** JPEG quality 0-100 (default: 50) */
   jpegQuality: number;
+  /** Enable layout box mapping for evidence (default: true) */
+  enableLayoutMapping: boolean;
+  /** Maximum elements per CRO type for layout mapping (default: 20) */
+  layoutMappingLimit: number;
+  /** CRO types to map for layout boxes (default: cta, price, variant, shipping, stock) */
+  layoutMappingTypes: Array<Exclude<CROType, null>>;
 }
 
 /**
@@ -56,6 +70,9 @@ export const DEFAULT_CAPTURE_VIEWPORT_CONFIG: CaptureViewportConfig = {
   domTokenBudget: DOM_TOKEN_BUDGET,
   compressedImageWidth: COMPRESSED_IMAGE_WIDTH,
   jpegQuality: JPEG_QUALITY,
+  enableLayoutMapping: true,
+  layoutMappingLimit: 20,
+  layoutMappingTypes: ['cta', 'price', 'variant', 'shipping', 'stock', 'gallery'],
 };
 
 /**
@@ -202,6 +219,48 @@ export const captureViewportTool: Tool = {
         visibleElements: visibleElements.length,
       });
 
+      // Phase 25g: Compute layout boxes for CRO elements (T511)
+      let layoutBoxes: ElementBox[] | undefined;
+      if (captureViewportConfig.enableLayoutMapping && domTree.elementLookup) {
+        try {
+          // Get element indices grouped by CRO type
+          const elementIndicesByType = getElementIndicesByCROType(
+            domTree,
+            captureViewportConfig.layoutMappingTypes,
+            captureViewportConfig.layoutMappingLimit
+          );
+
+          // Flatten all element indices for box computation
+          const allElementIndices: number[] = [];
+          for (const indices of Object.values(elementIndicesByType)) {
+            allElementIndices.push(...indices);
+          }
+
+          // Compute boxes for all CRO elements
+          if (allElementIndices.length > 0) {
+            layoutBoxes = await computeLayoutBoxes(
+              page,
+              allElementIndices,
+              domTree,
+              scrollY,
+              0, // viewportIndex will be updated by state manager
+              viewportHeight
+            );
+
+            logger.debug('Layout boxes computed', {
+              totalBoxes: layoutBoxes.length,
+              byType: Object.fromEntries(
+                Object.entries(elementIndicesByType).map(([type, indices]) => [type, indices.length])
+              ),
+            });
+          }
+        } catch (error) {
+          const errMsg = error instanceof Error ? error.message : 'Unknown error';
+          logger.warn('Failed to compute layout boxes', { error: errMsg });
+          // Continue without layout boxes - don't break the capture flow
+        }
+      }
+
       // Create snapshot (viewportIndex will be set by caller)
       const snapshot: ViewportSnapshot = {
         scrollPosition: scrollY,
@@ -217,6 +276,8 @@ export const captureViewportTool: Tool = {
         // Phase 21i: DOM-Screenshot coordinate mappings
         elementMappings,
         visibleElements,
+        // Phase 25g: Layout boxes for evidence packaging
+        layoutBoxes,
       };
 
       logger.info('Viewport captured', {

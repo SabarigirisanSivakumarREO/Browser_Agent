@@ -70,4 +70,4 @@ export interface PageTypeHeuristics {
 /**
  * Supported page types for knowledge base
  */
-export const SUPPORTED_KNOWLEDGE_PAGE_TYPES: PageType[] = ['pdp'];
+export const SUPPORTED_KNOWLEDGE_PAGE_TYPES: PageType[] = ['pdp', 'plp'];

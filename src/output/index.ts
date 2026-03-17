@@ -91,3 +91,10 @@ export {
   type ScreenshotTile,
   type TiledScreenshotResult,
 } from './tiled-screenshot.js';
+
+// Phase 25g: Evidence Packager (T510)
+export {
+  buildEvidencePackage,
+  writeEvidenceJson,
+  type BuildEvidenceInput,
+} from './evidence-packager.js';

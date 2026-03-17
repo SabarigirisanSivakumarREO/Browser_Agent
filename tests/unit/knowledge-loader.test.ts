@@ -47,7 +47,6 @@ describe('Knowledge Loader', () => {
     });
 
     it('should throw error for unsupported page type', () => {
-      expect(() => loadHeuristics('plp')).toThrow('Unsupported page type');
       expect(() => loadHeuristics('homepage')).toThrow('Unsupported page type');
       expect(() => loadHeuristics('other')).toThrow('Unsupported page type');
     });
@@ -166,8 +165,11 @@ describe('Knowledge Loader', () => {
       expect(isPageTypeSupported('pdp')).toBe(true);
     });
 
+    it('should return true for plp', () => {
+      expect(isPageTypeSupported('plp')).toBe(true);
+    });
+
     it('should return false for unsupported page types', () => {
-      expect(isPageTypeSupported('plp')).toBe(false);
       expect(isPageTypeSupported('homepage')).toBe(false);
       expect(isPageTypeSupported('cart')).toBe(false);
       expect(isPageTypeSupported('checkout')).toBe(false);
@@ -257,8 +259,12 @@ describe('Knowledge Loader', () => {
       expect(SUPPORTED_KNOWLEDGE_PAGE_TYPES).toContain('pdp');
     });
 
-    it('should have only pdp currently', () => {
-      expect(SUPPORTED_KNOWLEDGE_PAGE_TYPES).toHaveLength(1);
+    it('should contain plp', () => {
+      expect(SUPPORTED_KNOWLEDGE_PAGE_TYPES).toContain('plp');
+    });
+
+    it('should have pdp and plp', () => {
+      expect(SUPPORTED_KNOWLEDGE_PAGE_TYPES).toHaveLength(2);
     });
   });
 

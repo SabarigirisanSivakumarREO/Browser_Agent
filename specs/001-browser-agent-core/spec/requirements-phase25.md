@@ -222,8 +222,8 @@ Rating: 4.5 (23 reviews)
 <dom_context>
 --- Viewport 0 (scroll: 0px) - ABOVE FOLD ---
 Elements: 44
-  [0] [price:0.92] [nodeId=abc123] <span class="price">₹47,000.00</span>
-  [1] [cta:0.88] [nodeId=def456] <button>Add to Bag</button>
+  [0] [price:0.92] <span class="price">₹47,000.00</span>
+  [1] [cta:0.88] <button>Add to Bag</button>
   ...
 </dom_context>
 ```
@@ -232,7 +232,7 @@ Elements: 44
 - AC-395.1: Structured data included when available
 - AC-395.2: "ABOVE FOLD" label on viewport 0
 - AC-395.3: CRO type + confidence shown in DOM (e.g., `[price:0.92]`)
-- AC-395.4: nodeId included for element tracking
+- AC-395.4: Element index included for element tracking (viewportRef `[v0-5]` for cross-viewport identity)
 
 ### FR-396: Deterministic Collection (DEFAULT ON)
 
@@ -258,23 +258,30 @@ Deterministic flow:
 - AC-396.3: 0 LLM calls during collection phase
 - AC-396.4: ~10x faster collection than LLM-guided
 
-### FR-397: Stable Node Identifiers
+### FR-397: Element Identity System
 
-The system SHALL assign stable nodeId to each DOM node:
+The system SHALL use element `index` (per-viewport) for within-viewport lookups and `viewportRef` (`[v{viewportIndex}-{elementIndex}]`) for cross-viewport identity:
 
 ```typescript
 interface DOMNode {
   // ... existing fields
-  nodeId: string;           // Stable within run (e.g., "n_001", "n_002")
+  index?: number;           // Per-viewport element index (only for visible CRO elements)
   confidence?: number;      // CRO match confidence 0-1
   matchedPatterns?: string[]; // Which patterns matched
 }
+
+interface DOMTree {
+  // ... existing fields
+  elementLookup?: Record<string, NodeIndexEntry>; // Keyed by String(element.index)
+}
 ```
 
+> **Note**: The previous `nodeId` system (`n_001`, `n_002`) was removed because the counter reset per viewport extraction, causing ID collisions across viewports. The `viewportRef` format is globally unique and already used by LLM prompts, response parsing, and screenshot annotator.
+
 **Acceptance Criteria**:
-- AC-397.1: Every extracted node has unique nodeId
-- AC-397.2: nodeId stable across serializer and downstream steps
-- AC-397.3: nodeId format is deterministic (sorted DOM order)
+- AC-397.1: Every indexed element has a unique `index` within its viewport
+- AC-397.2: `viewportRef` is globally unique across viewports (`[v0-5]`, `[v1-3]`)
+- AC-397.3: `elementLookup` keyed by `String(element.index)` for O(1) lookups
 
 ### FR-398: Layout Box Mapping
 
@@ -282,7 +289,7 @@ The system SHALL compute bounding boxes for CRO elements:
 
 ```typescript
 interface ElementBox {
-  nodeId: string;
+  elementIndex: number;    // Required — matches DOM tree index
   x: number;
   y: number;
   w: number;
@@ -291,11 +298,16 @@ interface ElementBox {
   viewportIndex: number;
   confidence: number;
   isVisible: boolean;
+  croType?: Exclude<CROType, null>;
 }
 
 async function computeLayoutBoxes(
   page: Page,
-  nodeIds: string[]
+  elementIndices: number[],
+  domTree: DOMTree,
+  scrollY: number,
+  viewportIndex: number,
+  viewportHeight?: number
 ): Promise<ElementBox[]>;
 ```
 
@@ -311,7 +323,7 @@ The system SHALL compute confidence scores for CRO matches:
 
 ```typescript
 interface CROMatchResult {
-  nodeId: string;
+  elementIndex: number;
   croType: CROType;
   confidence: number;        // 0-1, aggregated from patterns
   matchedPatterns: string[]; // Which patterns contributed
@@ -337,11 +349,15 @@ interface EvidencePackage {
   pageHeight?: number;
   structuredData?: StructuredProductData | null;
   elements: Array<{
-    nodeId: string;
-    croTypes: Array<{ type: string; confidence: number }>;
-    textSnippet?: string;
-    boxes?: ElementBox[];
-    screenshotRefs?: string[];
+    index: number;              // Element index in DOM tree
+    viewportRef: string;        // Primary cross-viewport ID: [v0-5]
+    croType: Exclude<CROType, null>;
+    confidence: number;
+    tagName: string;
+    text: string;
+    boundingBox: { x: number; y: number; width: number; height: number };
+    viewportIndices: number[];
+    screenshotRefs: string[];
   }>;
   screenshots: Array<{
     id: string;
@@ -693,7 +709,7 @@ And 0 LLM calls SHALL be made during collection (unless QA triggered)
 ### SC-166: Evidence Package Complete
 Given a PDP analysis run
 When evidence.json is written
-Then it SHALL contain nodeId for all CRO elements
+Then it SHALL contain viewportRef for all CRO elements
 And it SHALL contain bounding boxes for mapped elements
 And it SHALL contain confidence scores
 
@@ -840,3 +856,33 @@ And recheck SHALL load images successfully
 - **Backward Compatible**: Existing API preserved
 - **No Breaking Changes**: All additions are optional fields
 - **Performance**: Hybrid collection faster than pure LLM-guided
+
+---
+
+## Element Mapping Quality Fix
+
+**Status**: ✅ COMPLETE (2026-02-12)
+**Dependencies**: Phase 25g (evidence mapping), Phase 21i (coordinate mapper)
+
+### FR-430: Element Position Context in LLM Prompts
+- **SHALL** include `<element_positions>` block after serialized DOM in each viewport section
+- **SHALL** format as `[v{viewport}-{index}] {tagName} "{text}" → x:{x} y:{y} w:{width} h:{height}`
+- **SHALL** only include elements from `ViewportSnapshot.visibleElements`
+- **SHALL** truncate element text to 40 characters
+- **SHALL** round coordinates to integers
+
+### FR-431: Element Position Context in Batched Prompts
+- **SHALL** include same `<element_positions>` block in `batch-prompt-builder.ts` shared DOM context
+- **SHALL** use `buildElementPositionsBlock()` exported from `category-analyzer.ts`
+
+### FR-432: Auto-populate domElementRefs from LLM Text
+- **SHALL** parse `[v{viewport}-{index}]` patterns from evaluation text fields (observation, issue, recommendation, reasoning)
+- **SHALL** populate `domElementRefs` array on each `HeuristicEvaluation` with matched refs
+- **SHALL** look up element details (tagName, text, xpath) from viewport snapshot element mappings
+- **SHALL** set `viewportIndex` on evaluation from first referenced element (if not already set)
+- **SHALL** use `'unknown'` as elementType when element not found in snapshot lookup
+
+### FR-433: Integration with Evidence Annotation
+- **SHALL** call `populateElementRefs()` in `CategoryAnalyzer.analyzeCategory()` after LLM response parsing
+- **SHALL** call `populateElementRefs()` in `AnalysisOrchestrator.runBatchedAnalysis()` after batch response parsing
+- **SHALL** enable `ScreenshotAnnotator.getElementStatus()` to match elements via populated `domElementRefs`

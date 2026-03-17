@@ -1,0 +1,66 @@
+{
+  "name": "Layout & Grid",
+  "description": "How the product listing grid and overall page layout should support efficient product browsing and comparison",
+  "heuristics": [
+    {
+      "id": "PLP-GRID-001",
+      "principle": "The product grid should present items in a consistent, scannable layout that supports rapid visual comparison",
+      "checkpoints": [
+        "Product cards are uniformly sized and aligned in a clear grid",
+        "Grid spacing is consistent between rows and columns",
+        "Card layout does not shift or break across viewport sizes",
+        "Visual weight is balanced so no single card dominates unless intentionally promoted"
+      ],
+      "severity": "high",
+      "category": "Layout & Grid"
+    },
+    {
+      "id": "PLP-GRID-002",
+      "principle": "The page should provide a clear visual hierarchy distinguishing category context, filters and product results",
+      "checkpoints": [
+        "Category heading or breadcrumb is visible above the product grid",
+        "Filters and sorting controls are visually separated from product results",
+        "Product count or result summary is displayed near the top",
+        "Promotional banners do not push the first product row below the fold"
+      ],
+      "severity": "high",
+      "category": "Layout & Grid"
+    },
+    {
+      "id": "PLP-GRID-003",
+      "principle": "Users should be able to switch between grid and list view to match their browsing preference",
+      "checkpoints": [
+        "View toggle control is visible near the product grid",
+        "List view provides additional product details compared to grid",
+        "View preference persists across pagination or navigation",
+        "Both views maintain consistent information hierarchy"
+      ],
+      "severity": "low",
+      "category": "Layout & Grid"
+    },
+    {
+      "id": "PLP-GRID-004",
+      "principle": "The number of products per row should be appropriate for the viewport width without causing horizontal scrolling",
+      "checkpoints": [
+        "Desktop shows 3-5 products per row depending on card content",
+        "Tablet adapts to 2-3 products per row",
+        "Mobile shows 1-2 products per row with adequate detail",
+        "No horizontal scrolling is required to view the full grid"
+      ],
+      "severity": "medium",
+      "category": "Layout & Grid"
+    },
+    {
+      "id": "PLP-GRID-005",
+      "principle": "White space and visual breathing room should prevent the listing from feeling cluttered or overwhelming",
+      "checkpoints": [
+        "Adequate padding exists between product cards",
+        "Text within cards does not feel cramped or truncated",
+        "The page does not feel visually overwhelming with too many elements",
+        "Key information on each card is readable without effort"
+      ],
+      "severity": "medium",
+      "category": "Layout & Grid"
+    }
+  ]
+}

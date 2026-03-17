@@ -203,3 +203,101 @@ export const DEFAULT_PHASE25_CONFIG: Phase25Config = {
   annotateFoldLine: true,
   viewportHeight: 720,
 };
+
+// ============================================================================
+// Evidence Schema Types (Phase 25g - T509)
+// ============================================================================
+
+export {
+  type EvidencePackage,
+  type EvidenceElement,
+  type EvidenceScreenshot,
+  type ExtractionMetrics,
+  createEmptyMetrics,
+  generateRunId,
+  generateViewportRef,
+  generateScreenshotId,
+} from './evidence-schema.js';
+
+// ============================================================================
+// Viewport Validator Signals (Phase 25i - T535)
+// ============================================================================
+
+/**
+ * Signals collected during viewport capture for cheap validation.
+ * These signals enable 0-LLM-call validation to detect extraction issues.
+ *
+ * @example
+ * ```typescript
+ * const signals: ViewportValidatorSignals = {
+ *   viewportIndex: 0,
+ *   blankImageCount: 0,
+ *   placeholderImageCount: 1,
+ *   lazyPendingCount: 0,
+ *   spinnerDetected: false,
+ *   skeletonDetected: false,
+ *   textPlaceholders: [],
+ *   overlayStillVisible: false,
+ *   mediaReadinessTimedOut: false,
+ * };
+ * ```
+ */
+export interface ViewportValidatorSignals {
+  /** Viewport index (0-based) */
+  viewportIndex: number;
+
+  /** Count of images with blank/white src or data URI placeholders */
+  blankImageCount: number;
+
+  /** Count of images using placeholder patterns (e.g., loading.gif, placeholder.png) */
+  placeholderImageCount: number;
+
+  /** Count of lazy-load elements still pending (data-src not yet swapped to src) */
+  lazyPendingCount: number;
+
+  /** Whether a loading spinner was detected in viewport */
+  spinnerDetected: boolean;
+
+  /** Whether skeleton/shimmer loading UI was detected */
+  skeletonDetected: boolean;
+
+  /** Text content matching placeholder patterns (e.g., "Loading...", "---") */
+  textPlaceholders: string[];
+
+  /** Whether cookie/promo overlay is still visible after suppression */
+  overlayStillVisible: boolean;
+
+  /** Whether media readiness check timed out */
+  mediaReadinessTimedOut: boolean;
+
+  /** Total images in viewport */
+  totalImages: number;
+
+  /** Images that loaded successfully */
+  loadedImages: number;
+
+  /** Images that failed to load (broken) */
+  failedImages: number;
+
+  /** Scroll position was verified to match target */
+  scrollPositionVerified: boolean;
+}
+
+/**
+ * Default validator signals (clean state)
+ */
+export const createEmptyValidatorSignals = (viewportIndex: number): ViewportValidatorSignals => ({
+  viewportIndex,
+  blankImageCount: 0,
+  placeholderImageCount: 0,
+  lazyPendingCount: 0,
+  spinnerDetected: false,
+  skeletonDetected: false,
+  textPlaceholders: [],
+  overlayStillVisible: false,
+  mediaReadinessTimedOut: false,
+  totalImages: 0,
+  loadedImages: 0,
+  failedImages: 0,
+  scrollPositionVerified: true,
+});

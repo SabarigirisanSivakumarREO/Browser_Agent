@@ -1,0 +1,66 @@
+{
+  "name": "Filtering & Sorting",
+  "description": "How filtering and sorting controls should help users efficiently narrow and organise product results",
+  "heuristics": [
+    {
+      "id": "PLP-FILTER-001",
+      "principle": "Category-relevant filters should be immediately visible without requiring interaction to reveal them",
+      "checkpoints": [
+        "Filter panel or bar is visible on initial page load",
+        "Filters are not hidden behind a collapsed menu on desktop",
+        "Most relevant filters appear first (e.g. size, colour, price for apparel)",
+        "Filter options show available count per value where practical"
+      ],
+      "severity": "high",
+      "category": "Filtering & Sorting"
+    },
+    {
+      "id": "PLP-FILTER-002",
+      "principle": "Applied filters should be clearly indicated with an easy way to remove individual selections or clear all",
+      "checkpoints": [
+        "Active filters are displayed as removable tags or chips",
+        "Each filter can be individually deselected",
+        "A clear all filters option is available when filters are active",
+        "Product count updates to reflect current filter state"
+      ],
+      "severity": "high",
+      "category": "Filtering & Sorting"
+    },
+    {
+      "id": "PLP-FILTER-003",
+      "principle": "Sorting options should include the most useful criteria and clearly indicate the current sort order",
+      "checkpoints": [
+        "Sort dropdown or control is visible near the top of results",
+        "Options include relevance, price low-high, price high-low, and newest",
+        "Currently active sort order is clearly indicated",
+        "Changing sort order does not reset applied filters"
+      ],
+      "severity": "high",
+      "category": "Filtering & Sorting"
+    },
+    {
+      "id": "PLP-FILTER-004",
+      "principle": "Price filter should support range selection rather than only predefined brackets",
+      "checkpoints": [
+        "Price filter allows minimum and maximum value input",
+        "Slider or input fields are provided for price range",
+        "Price range reflects the actual range of available products",
+        "Results update to show only products within the selected range"
+      ],
+      "severity": "medium",
+      "category": "Filtering & Sorting"
+    },
+    {
+      "id": "PLP-FILTER-005",
+      "principle": "Filter interactions should not cause full page reloads or disorient the user",
+      "checkpoints": [
+        "Applying a filter updates results without full page reload",
+        "Scroll position is maintained or reset to the top of results",
+        "Loading indicator is shown during filter application",
+        "URL updates to reflect filter state for shareability"
+      ],
+      "severity": "medium",
+      "category": "Filtering & Sorting"
+    }
+  ]
+}

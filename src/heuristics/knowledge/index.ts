@@ -9,6 +9,7 @@ import type { PageType } from '../../models/index.js';
 import type { PageTypeHeuristics, HeuristicItem } from './types.js';
 import { SUPPORTED_KNOWLEDGE_PAGE_TYPES } from './types.js';
 import { getPDPHeuristics } from './pdp/index.js';
+import { getPLPHeuristics } from './plp/index.js';
 
 // Re-export types
 export type { PageTypeHeuristics, HeuristicItem, HeuristicCategory, HeuristicCategoryFile, HeuristicSeverity } from './types.js';
@@ -41,10 +42,9 @@ export function loadHeuristics(pageType: PageType): PageTypeHeuristics {
       heuristics = getPDPHeuristics();
       break;
 
-    // Future page types will be added here
-    // case 'plp':
-    //   heuristics = getPLPHeuristics();
-    //   break;
+    case 'plp':
+      heuristics = getPLPHeuristics();
+      break;
 
     default:
       throw new Error(

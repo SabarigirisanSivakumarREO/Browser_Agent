@@ -149,11 +149,11 @@ export class DOMSerializer {
 
   /**
    * Format a single node
-   * Output format (Phase 25g): [index] [type:confidence] [nodeId=n_001] <tag attrs>text</tag>
+   * Output format: [index] [type:confidence] <tag attrs>text</tag>
    *
    * Examples:
-   * - [0] [price:0.92] [nodeId=n_001] <span class="price">₹47,000.00</span>
-   * - [1] [cta:0.85|trust:0.60] [nodeId=n_002] <button>Add to Cart</button>
+   * - [0] [price:0.92] <span class="price">₹47,000.00</span>
+   * - [1] [cta:0.85] <button>Add to Cart</button>
    */
   private formatNode(node: DOMNode, indent: string): string {
     const parts: string[] = [];
@@ -161,15 +161,10 @@ export class DOMSerializer {
     // Index marker
     parts.push(`[${node.index}]`);
 
-    // CRO type annotation with confidence (Phase 25g - T508)
+    // CRO type annotation with confidence
     if (node.croType) {
       const confidence = node.croClassification?.confidence ?? 0;
       parts.push(`[${node.croType}:${confidence.toFixed(2)}]`);
-    }
-
-    // Node ID (Phase 25g - T503)
-    if (node.nodeId) {
-      parts.push(`[nodeId=${node.nodeId}]`);
     }
 
     // Tag with attributes

@@ -6,6 +6,10 @@
  * knowledge base, and vision analysis.
  */
 
+// Model Configuration (Phase 27A)
+export type { AnalysisModel } from './model-config.js';
+export { MODEL_DEFAULTS } from './model-config.js';
+
 // Types
 export type {
   HeuristicCategory,
@@ -100,6 +104,8 @@ export {
   parseElementRef,
   extractElementRefs,
   toNumericIndex,
+  buildElementPositionsBlock,
+  populateElementRefs,
 } from './category-analyzer.js';
 
 // Analysis Orchestrator (CR-001-C)
@@ -109,6 +115,39 @@ export {
   createAnalysisOrchestrator,
   DEFAULT_ORCHESTRATOR_CONFIG,
 } from './analysis-orchestrator.js';
+
+// Category Batcher (Phase 26b)
+export type { BatchStrategy } from './category-batcher.js';
+export {
+  groupCategoriesIntoBatches,
+  CATEGORY_BATCHES,
+} from './category-batcher.js';
+
+// Batch Prompt Builder (Phase 26b)
+export {
+  buildBatchedSystemPrompt,
+  buildBatchedUserMessage,
+} from './batch-prompt-builder.js';
+
+// Viewport Selector (Phase 26c)
+export type { ViewportMode, CategoryViewportConfig } from './viewport-selector.js';
+export {
+  selectViewportsForCategory,
+  filterDOMForViewports,
+  VIEWPORT_REQUIREMENTS,
+} from './viewport-selector.js';
+
+// Batch Response Parser (Phase 26b)
+export type { BatchedResponse } from './batch-response-parser.js';
+export {
+  parseBatchedResponse,
+  BatchParseError,
+  extractJSON,
+} from './batch-response-parser.js';
+
+// Cross-Validator (Phase 27G)
+export type { CrossValidationFlag, CrossValidationResult } from './cross-validator.js';
+export { crossValidateEvaluations } from './cross-validator.js';
 
 // Playwright Page Type Detector (Phase 24)
 export type {

@@ -27,6 +27,8 @@
 | **Phase 23** | **LLM Input Capture** | [phase-23.md](./phase-23.md) |
 | **Phase 24** | **Hybrid LLM Page Type Detection** | [phase-24.md](./phase-24.md) |
 | **Phase 25** | **Enhanced Extraction & Screenshot Analysis** | [phase-25.md](./phase-25.md) |
+| **Phase 26** | **LLM Analysis Optimization** | [phase-26.md](./phase-26.md) |
+| **Phase 27** | **Analysis Quality & Annotation Fix** | [phase-27.md](./phase-27.md) |
 
 ---
 
@@ -47,11 +49,15 @@
 | **CR-001** | **Architecture Refactor** | **Unified CRO Agent, category-based analysis** | ✅ Complete |
 | 21h | Evidence | 5 evidence fields, screenshot saving | ✅ Complete |
 | 21i | Mapping | Coordinate transformation, screenshot annotation | ✅ Complete |
-| **21j** | **CLI Fix** | **Fix --vision-agent to use CROAgent unified mode** | ⏳ 6/8 |
-| **21l** | **Default Evidence** | **Flip defaults: evidence + annotation ON by default** | ⏳ 7/9 |
+| **21j** | **CLI Fix** | **Fix --vision-agent to use CROAgent unified mode** | ✅ Complete |
+| **21l** | **Default Evidence** | **Flip defaults: evidence + annotation ON by default** | ✅ Complete |
 | **22** | **Page Types** | **PLP, Homepage, Cart, Checkout, Generic KBs** | 📋 Pending |
 | **23** | **LLM Input Capture** | **Save DOM, screenshots, prompts for debugging** | ✅ Complete |
-| **24** | **Hybrid Detection** | **LLM fallback for page type detection** | 📋 NEXT |
+| **24** | **Hybrid Detection** | **LLM fallback for page type detection** | ✅ Complete |
+| **25** | **Enhanced Extraction** | **Selectors, evidence, screenshots, hybrid collection** | ✅ Complete |
+| **26** | **LLM Optimization** | **Parallel, batching, viewport filtering, CI-only quality validation** | ✅ Complete |
+| **QF-1** | **Element Mapping** | **Element positions in prompts, auto-populate domElementRefs** | ✅ Complete |
+| **27** | **Quality & Annotation Fix** | **Model upgrade, dedup fix, prompt strengthening, annotation overlay rendering** | ✅ Complete |
 
 ## Related Files
 

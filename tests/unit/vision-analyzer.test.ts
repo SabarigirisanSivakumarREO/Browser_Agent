@@ -87,7 +87,7 @@ const mockLLMResponse = `{
 describe('Vision Analyzer - Types', () => {
   describe('DEFAULT_VISION_CONFIG', () => {
     it('should have correct default values', () => {
-      expect(DEFAULT_VISION_CONFIG.model).toBe('gpt-4o-mini');  // CR-001: Default is now gpt-4o-mini
+      expect(DEFAULT_VISION_CONFIG.model).toBe('gpt-4o');  // Phase 27A: Default upgraded to gpt-4o
       expect(DEFAULT_VISION_CONFIG.maxTokens).toBe(4096);
       expect(DEFAULT_VISION_CONFIG.temperature).toBe(0.1);
       expect(DEFAULT_VISION_CONFIG.includeObservations).toBe(true);

@@ -1,0 +1,42 @@
+{
+  "name": "Navigation & Breadcrumbs",
+  "description": "How category navigation and breadcrumbs should orient users within the catalogue hierarchy and support exploration",
+  "heuristics": [
+    {
+      "id": "PLP-NAV-001",
+      "principle": "Breadcrumbs should clearly show the user's position within the category hierarchy and allow easy navigation upward",
+      "checkpoints": [
+        "Breadcrumb trail is visible near the top of the page",
+        "Each breadcrumb level is a clickable link to its parent category",
+        "Current category is shown as the final non-clickable breadcrumb",
+        "Breadcrumbs do not wrap excessively or become truncated"
+      ],
+      "severity": "high",
+      "category": "Navigation & Breadcrumbs"
+    },
+    {
+      "id": "PLP-NAV-002",
+      "principle": "Subcategory navigation should be visible to help users refine their browsing without relying solely on filters",
+      "checkpoints": [
+        "Subcategories are displayed as links or visual navigation",
+        "Subcategory labels clearly describe the product subset",
+        "Current category is distinguished from sibling categories",
+        "Subcategory navigation does not duplicate filter functionality unnecessarily"
+      ],
+      "severity": "medium",
+      "category": "Navigation & Breadcrumbs"
+    },
+    {
+      "id": "PLP-NAV-003",
+      "principle": "The category page title and description should set clear expectations about the product range",
+      "checkpoints": [
+        "Category heading matches the navigation label that was clicked",
+        "Category description provides relevant context without excessive length",
+        "SEO text does not push product results below the fold",
+        "Product count is visible to set expectations about the range"
+      ],
+      "severity": "medium",
+      "category": "Navigation & Breadcrumbs"
+    }
+  ]
+}

@@ -32,6 +32,10 @@ export interface AnnotationOptions {
   fontSize?: number;
   /** Opacity for highlight boxes (0-1, default: 0.3) */
   fillOpacity?: number;
+  /** CSS viewport width for DPR scale calculation (default: 1280) */
+  cssViewportWidth?: number;
+  /** Show heuristic IDs (e.g., PDP-CTA-001) below highlighted elements (default: true) */
+  showHeuristicIds?: boolean;
 }
 
 /**
@@ -44,6 +48,7 @@ export const DEFAULT_ANNOTATION_OPTIONS: AnnotationOptions = {
   strokeWidth: 2,
   fontSize: 12,
   fillOpacity: 0.3,
+  showHeuristicIds: true,
 };
 
 /**
@@ -105,17 +110,44 @@ export interface FoldLineResult {
  */
 function getElementStatus(
   index: number,
+  viewportId: string | undefined,
   evaluations: HeuristicEvaluation[]
 ): EvaluationStatus | null {
-  // Find evaluations that reference this element
+  const currentVp = extractViewportIndex(viewportId);
   for (const evaluation of evaluations) {
     const refs = evaluation.domElementRefs ?? [];
-    const hasRef = refs.some((ref) => ref.index === index);
-    if (hasRef) {
-      return evaluation.status;
-    }
+    const hasRef = refs.some((ref) => {
+      if (ref.index !== index) return false;
+      if (!ref.viewportRef) return true;
+      const match = ref.viewportRef.match(/\[v(\d+)-/);
+      return match ? parseInt(match[1], 10) === currentVp : true;
+    });
+    if (hasRef) return evaluation.status;
   }
   return null;
+}
+
+/**
+ * Get all matching heuristic IDs for an element
+ */
+function getMatchingHeuristicIds(
+  index: number,
+  viewportId: string | undefined,
+  evaluations: HeuristicEvaluation[]
+): string[] {
+  const currentVp = extractViewportIndex(viewportId);
+  const ids: string[] = [];
+  for (const evaluation of evaluations) {
+    const refs = evaluation.domElementRefs ?? [];
+    const hasRef = refs.some((ref) => {
+      if (ref.index !== index) return false;
+      if (!ref.viewportRef) return true;
+      const match = ref.viewportRef.match(/\[v(\d+)-/);
+      return match ? parseInt(match[1], 10) === currentVp : true;
+    });
+    if (hasRef) ids.push(evaluation.heuristicId);
+  }
+  return ids;
 }
 
 /**
@@ -152,25 +184,27 @@ function escapeXml(text: string): string {
 function buildBoundingBoxSvg(
   element: ElementMapping,
   color: { stroke: string; fill: string },
-  options: AnnotationOptions
+  options: AnnotationOptions,
+  viewportWidth: number,
+  viewportHeight: number
 ): string {
   const { x, y, width, height } = element.screenshotCoords;
   const strokeWidth = options.strokeWidth ?? 2;
 
-  // Skip elements that are not visible or have invalid dimensions
   if (!element.screenshotCoords.isVisible || width <= 0 || height <= 0) {
     return '';
   }
 
-  // Clamp coordinates to visible area (don't draw outside viewport)
+  const clampedX = Math.max(0, x);
   const clampedY = Math.max(0, y);
-  const clampedHeight = Math.min(height, height + y - clampedY);
+  const clampedWidth = Math.max(0, Math.min(x + width, viewportWidth) - clampedX);
+  const clampedHeight = Math.max(0, Math.min(y + height, viewportHeight) - clampedY);
 
-  if (clampedHeight <= 0) {
+  if (clampedWidth <= 0 || clampedHeight <= 0) {
     return '';
   }
 
-  return `<rect x="${x}" y="${clampedY}" width="${width}" height="${clampedHeight}"
+  return `<rect x="${clampedX}" y="${clampedY}" width="${clampedWidth}" height="${clampedHeight}"
     fill="${color.fill}" stroke="${color.stroke}" stroke-width="${strokeWidth}" />`;
 }
 
@@ -190,13 +224,14 @@ function extractViewportIndex(viewportId: string | undefined): number {
  */
 function buildIndexLabelSvg(
   element: ElementMapping,
-  options: AnnotationOptions
+  options: AnnotationOptions,
+  viewportWidth: number,
+  viewportHeight: number
 ): string {
   const { x, y, isVisible } = element.screenshotCoords;
   const fontSize = options.fontSize ?? 12;
   const padding = 4;
 
-  // Use viewport-prefixed format: [v0-5] for element 5 in viewport 0
   const viewportIndex = extractViewportIndex(element.viewportId);
   const labelText = `[v${viewportIndex}-${element.index}]`;
   const labelWidth = labelText.length * (fontSize * 0.7) + padding * 2;
@@ -206,15 +241,49 @@ function buildIndexLabelSvg(
     return '';
   }
 
-  // Position label above the element, or inside if near top edge
-  const labelY = y > labelHeight + 5 ? y - labelHeight - 2 : y + 2;
-  const labelX = x;
+  const rawLabelY = y > labelHeight + 5 ? y - labelHeight - 2 : y + 2;
+  const labelY = Math.max(0, Math.min(rawLabelY, viewportHeight - labelHeight));
+  const labelX = Math.max(0, Math.min(x, viewportWidth - labelWidth));
 
   return `
     <rect x="${labelX}" y="${labelY}" width="${labelWidth}" height="${labelHeight}"
       fill="${COLORS.label.bg}" rx="3" ry="3" />
     <text x="${labelX + padding}" y="${labelY + labelHeight - padding - 2}"
       fill="${COLORS.label.text}" font-family="monospace" font-size="${fontSize}" font-weight="bold">
+      ${escapeXml(labelText)}
+    </text>`;
+}
+
+/**
+ * Build SVG label for heuristic IDs below the bounding box
+ */
+function buildHeuristicIdLabelSvg(
+  element: ElementMapping,
+  heuristicIds: string[],
+  options: AnnotationOptions,
+  viewportWidth: number,
+  viewportHeight: number
+): string {
+  if (heuristicIds.length === 0 || !element.screenshotCoords.isVisible) return '';
+
+  const { x, y, height } = element.screenshotCoords;
+  const fontSize = (options.fontSize ?? 12) - 2;
+  const padding = 3;
+  const lineHeight = fontSize + padding;
+  const labelText = heuristicIds.join(', ');
+  const labelWidth = labelText.length * (fontSize * 0.62) + padding * 2;
+  const labelHeight = lineHeight + padding;
+
+  // Position below the bounding box
+  const rawLabelY = y + height + 4;
+  const labelY = Math.min(rawLabelY, viewportHeight - labelHeight);
+  const labelX = Math.max(0, Math.min(x, viewportWidth - labelWidth));
+
+  return `
+    <rect x="${labelX}" y="${labelY}" width="${labelWidth}" height="${labelHeight}"
+      fill="${COLORS.label.bg}" rx="2" ry="2" opacity="0.85" />
+    <text x="${labelX + padding}" y="${labelY + labelHeight - padding - 1}"
+      fill="#fbbf24" font-family="monospace" font-size="${fontSize}" font-weight="bold">
       ${escapeXml(labelText)}
     </text>`;
 }
@@ -265,25 +334,33 @@ function buildSvgOverlay(
   });
 
   for (const element of sortedElements) {
-    const status = getElementStatus(element.index, evaluations);
+    const status = getElementStatus(element.index, element.viewportId, evaluations);
     const color = getColorForStatus(status);
 
-    // Draw bounding box if highlighting issues or if element has status
     if (options.highlightIssues && (status === 'fail' || status === 'partial')) {
-      svgParts.push(buildBoundingBoxSvg(element, color, options));
+      svgParts.push(buildBoundingBoxSvg(element, color, options, width, height));
     } else if (!options.highlightIssues) {
-      // Draw all boxes with neutral color when not highlighting issues
-      svgParts.push(buildBoundingBoxSvg(element, COLORS.neutral, options));
+      svgParts.push(buildBoundingBoxSvg(element, COLORS.neutral, options, width, height));
     }
 
-    // Draw index label
     if (options.showElementIndexes) {
-      svgParts.push(buildIndexLabelSvg(element, options));
+      svgParts.push(buildIndexLabelSvg(element, options, width, height));
     }
 
     // Draw coordinate label
     if (options.showCoordinates) {
       svgParts.push(buildCoordLabelSvg(element, options));
+    }
+
+    // Draw heuristic ID label (only when element has a bounding box)
+    const hasBox = options.highlightIssues
+      ? status === 'fail' || status === 'partial'
+      : true;
+    if (hasBox && options.showHeuristicIds !== false) {
+      const heuristicIds = getMatchingHeuristicIds(element.index, element.viewportId, evaluations);
+      if (heuristicIds.length > 0) {
+        svgParts.push(buildHeuristicIdLabelSvg(element, heuristicIds, options, width, height));
+      }
     }
   }
 
@@ -446,8 +523,24 @@ export async function annotateScreenshot(
     // Filter to only visible elements
     const visibleOnly = visibleElements.filter((e) => e.screenshotCoords.isVisible);
 
+    // DPR scale: element coords are CSS pixels, image may be higher resolution
+    const cssViewportWidth = opts.cssViewportWidth ?? 1280;
+    const scaleFactor = width / cssViewportWidth;
+    const scaledElements = scaleFactor !== 1
+      ? visibleOnly.map(e => ({
+          ...e,
+          screenshotCoords: {
+            ...e.screenshotCoords,
+            x: e.screenshotCoords.x * scaleFactor,
+            y: e.screenshotCoords.y * scaleFactor,
+            width: e.screenshotCoords.width * scaleFactor,
+            height: e.screenshotCoords.height * scaleFactor,
+          },
+        }))
+      : visibleOnly;
+
     // Build SVG overlay
-    const svgOverlay = buildSvgOverlay(width, height, visibleOnly, evaluations, opts);
+    const svgOverlay = buildSvgOverlay(width, height, scaledElements, evaluations, opts);
     const svgBuffer = Buffer.from(svgOverlay);
 
     // Composite SVG on top of screenshot

@@ -6,9 +6,9 @@
  * coordinates (viewport-relative).
  *
  * Phase 25g additions:
- * - ElementBox interface with nodeId and confidence
+ * - ElementBox interface with elementIndex and confidence
  * - computeLayoutBoxes() for batch bounding box computation
- * - getNodeIdsByCROType() for CRO-grouped lookups
+ * - getElementIndicesByCROType() for CRO-grouped lookups
  */
 
 import type { DOMTree, DOMNode, BoundingBox, CROType } from '../../models/dom-tree.js';
@@ -61,12 +61,12 @@ export interface ElementMapping {
 }
 
 /**
- * Element bounding box with nodeId and confidence (Phase 25g - T505)
+ * Element bounding box with elementIndex and confidence (Phase 25g - T505)
  * Used for evidence packaging and LLM context
  */
 export interface ElementBox {
-  /** Stable node identifier "n_001", "n_002" */
-  nodeId: string;
+  /** Element index (per-viewport, matches DOM tree index) */
+  elementIndex: number;
   /** X coordinate (absolute page position) */
   x: number;
   /** Y coordinate (absolute page position) */
@@ -85,8 +85,6 @@ export interface ElementBox {
   isVisible: boolean;
   /** CRO type if classified */
   croType?: Exclude<CROType, null>;
-  /** Element index if indexed */
-  elementIndex?: number;
 }
 
 /**
@@ -286,15 +284,14 @@ export function getElementsByIndices(
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Compute bounding boxes for elements by nodeId
- * Phase 25g - T505
+ * Compute bounding boxes for elements by element index
  *
  * Note: Uses pre-extracted bounding boxes from DOM tree, not live page queries.
  * The page parameter is reserved for future live coordinate queries if needed.
  *
  * @param _page - Playwright page instance (reserved for future use)
- * @param nodeIds - Array of nodeIds to compute boxes for
- * @param domTree - DOM tree with nodeIndex for lookups
+ * @param elementIndices - Array of element indices to compute boxes for
+ * @param domTree - DOM tree with elementLookup for lookups
  * @param scrollY - Current scroll position
  * @param viewportIndex - Current viewport index
  * @param viewportHeight - Viewport height for visibility check
@@ -302,25 +299,24 @@ export function getElementsByIndices(
  */
 export async function computeLayoutBoxes(
   _page: Page,
-  nodeIds: string[],
+  elementIndices: number[],
   domTree: DOMTree,
   scrollY: number,
   viewportIndex: number,
   viewportHeight: number = 720
 ): Promise<ElementBox[]> {
-  if (!domTree.nodeIndex || nodeIds.length === 0) {
+  if (!domTree.elementLookup || elementIndices.length === 0) {
     return [];
   }
 
   const boxes: ElementBox[] = [];
 
-  // Build lookup of nodeId -> node data from nodeIndex
-  for (const nodeId of nodeIds) {
-    const entry = domTree.nodeIndex[nodeId];
+  for (const idx of elementIndices) {
+    const entry = domTree.elementLookup[String(idx)];
     if (!entry) continue;
 
     // Find the actual node in the tree to get boundingBox
-    const node = findNodeByNodeId(domTree.root, nodeId);
+    const node = findNodeByIndex(domTree.root, idx);
     if (!node || !node.boundingBox) continue;
 
     const { x, y, width, height } = node.boundingBox;
@@ -330,7 +326,7 @@ export async function computeLayoutBoxes(
     const isVisible = screenshotY + height > 0 && screenshotY < viewportHeight;
 
     boxes.push({
-      nodeId,
+      elementIndex: idx,
       x,
       y,
       w: width,
@@ -340,7 +336,6 @@ export async function computeLayoutBoxes(
       confidence: entry.confidence ?? 0,
       isVisible,
       croType: entry.croType,
-      elementIndex: entry.index,
     });
   }
 
@@ -348,57 +343,56 @@ export async function computeLayoutBoxes(
 }
 
 /**
- * Find a node by nodeId in the DOM tree (recursive search)
+ * Find a node by element index in the DOM tree (recursive search)
  */
-function findNodeByNodeId(node: DOMNode, nodeId: string): DOMNode | null {
-  if (node.nodeId === nodeId) {
+function findNodeByIndex(node: DOMNode, targetIndex: number): DOMNode | null {
+  if (node.index === targetIndex) {
     return node;
   }
   for (const child of node.children) {
-    const found = findNodeByNodeId(child, nodeId);
+    const found = findNodeByIndex(child, targetIndex);
     if (found) return found;
   }
   return null;
 }
 
 /**
- * Get nodeIds grouped by CRO type (Phase 25g - T506)
+ * Get element indices grouped by CRO type
  *
- * @param domTree - DOM tree with nodeIndex
+ * @param domTree - DOM tree with elementLookup
  * @param croTypes - CRO types to filter for (if empty, returns all)
- * @param topN - Maximum nodes per type (default: 20)
- * @returns Record of CRO type -> array of nodeIds
+ * @param topN - Maximum elements per type (default: 20)
+ * @returns Record of CRO type -> array of element indices
  */
-export function getNodeIdsByCROType(
+export function getElementIndicesByCROType(
   domTree: DOMTree,
   croTypes: Array<Exclude<CROType, null>> = [],
   topN: number = 20
-): Record<string, string[]> {
-  const result: Record<string, string[]> = {};
+): Record<string, number[]> {
+  const result: Record<string, number[]> = {};
 
-  if (!domTree.nodeIndex) {
+  if (!domTree.elementLookup) {
     return result;
   }
 
-  // Initialize result with requested types (or collect all found types)
   const targetTypes = croTypes.length > 0 ? croTypes : null;
 
-  for (const [nodeId, entry] of Object.entries(domTree.nodeIndex)) {
+  for (const [, entry] of Object.entries(domTree.elementLookup)) {
     const croType = entry.croType;
     if (!croType) continue;
 
-    // Filter by requested types if specified
     if (targetTypes && !targetTypes.includes(croType)) {
       continue;
     }
+
+    if (entry.index === undefined) continue;
 
     if (!result[croType]) {
       result[croType] = [];
     }
 
-    // Respect topN limit per type
     if (result[croType]!.length < topN) {
-      result[croType]!.push(nodeId);
+      result[croType]!.push(entry.index);
     }
   }
 
@@ -406,11 +400,13 @@ export function getNodeIdsByCROType(
 }
 
 /**
- * Collect all nodeIds from a DOM tree
+ * Collect all element indices from a DOM tree
  */
-export function collectAllNodeIds(domTree: DOMTree): string[] {
-  if (!domTree.nodeIndex) {
+export function collectAllElementIndices(domTree: DOMTree): number[] {
+  if (!domTree.elementLookup) {
     return [];
   }
-  return Object.keys(domTree.nodeIndex);
+  return Object.values(domTree.elementLookup)
+    .filter(entry => entry.index !== undefined)
+    .map(entry => entry.index!);
 }

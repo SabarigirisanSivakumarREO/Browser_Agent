@@ -12,6 +12,15 @@ import type { Page } from 'playwright';
 import sharp from 'sharp';
 import { createLogger } from '../utils/index.js';
 import { annotateFoldLine, type FoldLineOptions } from './screenshot-annotator.js';
+import {
+  computeLayoutBoxes,
+  getElementIndicesByCROType,
+  type ElementBox,
+} from '../browser/dom/coordinate-mapper.js';
+import type { DOMTree } from '../models/dom-tree.js';
+import type { CROType } from '../models/dom-tree.js';
+// Phase 25h (T527): Media readiness checks
+import { waitForMediaReadiness } from '../browser/media/index.js';
 
 const logger = createLogger('TiledScreenshot');
 
@@ -21,6 +30,8 @@ const logger = createLogger('TiledScreenshot');
 
 /**
  * Configuration for tiled screenshot capture (T493)
+ * Phase 25g: Added layout mapping options (T512)
+ * Phase 25h: Added media readiness options (T527)
  */
 export interface TiledScreenshotConfig {
   /** Maximum height of each tile in pixels (default: 1800) */
@@ -33,6 +44,16 @@ export interface TiledScreenshotConfig {
   annotateFoldLine: boolean;
   /** Viewport height for fold line annotation (default: 720) */
   viewportHeight: number;
+  /** Enable layout box mapping for evidence (default: true) */
+  enableLayoutMapping: boolean;
+  /** Maximum elements per CRO type for layout mapping (default: 20) */
+  layoutMappingLimit: number;
+  /** CRO types to map for layout boxes */
+  layoutMappingTypes: Array<Exclude<CROType, null>>;
+  /** Enable media readiness checks before capture (default: true) */
+  waitForMediaReadiness: boolean;
+  /** Timeout for media readiness check in ms (default: 3000) */
+  mediaReadinessTimeoutMs: number;
 }
 
 /**
@@ -44,10 +65,16 @@ export const DEFAULT_TILED_CONFIG: TiledScreenshotConfig = {
   maxTiles: 5,
   annotateFoldLine: true,
   viewportHeight: 720,
+  enableLayoutMapping: true,
+  layoutMappingLimit: 20,
+  layoutMappingTypes: ['cta', 'price', 'variant', 'shipping', 'stock', 'gallery'],
+  waitForMediaReadiness: true,
+  mediaReadinessTimeoutMs: 3000,
 };
 
 /**
  * Represents a single screenshot tile (T493)
+ * Phase 25g: Added layoutBoxes (T512)
  */
 export interface ScreenshotTile {
   /** Zero-based index of this tile */
@@ -66,10 +93,13 @@ export interface ScreenshotTile {
   height: number;
   /** Base64 encoded screenshot */
   base64?: string;
+  /** Element bounding boxes visible in this tile (Phase 25g) */
+  layoutBoxes?: ElementBox[];
 }
 
 /**
  * Result from tiled screenshot capture
+ * Phase 25g: Added allLayoutBoxes for evidence packaging (T512)
  */
 export interface TiledScreenshotResult {
   /** Whether capture was successful */
@@ -82,6 +112,8 @@ export interface TiledScreenshotResult {
   error?: string;
   /** Time taken to capture all tiles */
   captureTimeMs: number;
+  /** All layout boxes across all tiles (Phase 25g) */
+  allLayoutBoxes?: ElementBox[];
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -131,14 +163,17 @@ function calculateTileBoundaries(
 
 /**
  * Capture full page as overlapping tiles (T494)
+ * Phase 25g: Added optional domTree parameter for layout mapping (T512)
  *
  * @param page - Playwright page instance
  * @param config - Tiled screenshot configuration
- * @returns Array of screenshot tiles
+ * @param domTree - Optional DOM tree for layout box computation
+ * @returns Array of screenshot tiles with optional layout boxes
  */
 export async function captureTiledScreenshots(
   page: Page,
-  config: Partial<TiledScreenshotConfig> = {}
+  config: Partial<TiledScreenshotConfig> = {},
+  domTree?: DOMTree
 ): Promise<TiledScreenshotResult> {
   const startTime = Date.now();
   const mergedConfig: TiledScreenshotConfig = { ...DEFAULT_TILED_CONFIG, ...config };
@@ -189,6 +224,26 @@ export async function captureTiledScreenshots(
     await page.evaluate('window.scrollTo(0, 0)');
     await new Promise((r) => setTimeout(r, 100));
 
+    // Phase 25h (T527): Wait for media readiness before capture
+    if (mergedConfig.waitForMediaReadiness) {
+      const readinessResult = await waitForMediaReadiness(page, {
+        timeoutMs: mergedConfig.mediaReadinessTimeoutMs,
+        minImageSize: 50,
+      });
+
+      if (readinessResult.timedOut && readinessResult.imagesPending > 0) {
+        logger.warn('Media readiness timed out for tiled capture', {
+          imagesPending: readinessResult.imagesPending,
+          waitTimeMs: readinessResult.waitTimeMs,
+        });
+      } else {
+        logger.debug('Media readiness complete for tiled capture', {
+          imagesLoaded: readinessResult.imagesLoaded,
+          waitTimeMs: readinessResult.waitTimeMs,
+        });
+      }
+    }
+
     // Take full-page screenshot once
     const fullScreenshot = await page.screenshot({
       type: 'png',
@@ -199,8 +254,28 @@ export async function captureTiledScreenshots(
     const fullWidth = fullMetadata.width || 1280;
     const fullHeight = fullMetadata.height || pageHeight;
 
+    // Phase 25g: Prepare for layout box computation (T512)
+    let allElementIndices: number[] = [];
+    if (mergedConfig.enableLayoutMapping && domTree?.elementLookup) {
+      try {
+        const elementIndicesByType = getElementIndicesByCROType(
+          domTree,
+          mergedConfig.layoutMappingTypes,
+          mergedConfig.layoutMappingLimit
+        );
+        for (const indices of Object.values(elementIndicesByType)) {
+          allElementIndices.push(...indices);
+        }
+        logger.debug('Layout mapping element indices collected', { count: allElementIndices.length });
+      } catch (error) {
+        const errMsg = error instanceof Error ? error.message : 'Unknown error';
+        logger.warn('Failed to collect element indices for layout mapping', { error: errMsg });
+      }
+    }
+
     // Capture each tile
     const tiles: ScreenshotTile[] = [];
+    const allLayoutBoxes: ElementBox[] = [];
 
     for (let i = 0; i < boundaries.length; i++) {
       const boundary = boundaries[i]!;
@@ -243,6 +318,37 @@ export async function captureTiledScreenshots(
         }
       }
 
+      // Phase 25g: Compute layout boxes for elements visible in this tile (T512)
+      let tileLayoutBoxes: ElementBox[] | undefined;
+      if (mergedConfig.enableLayoutMapping && domTree && allElementIndices.length > 0) {
+        try {
+          // Compute boxes relative to tile's scroll position
+          const boxes = await computeLayoutBoxes(
+            page,
+            allElementIndices,
+            domTree,
+            boundary.startY,
+            i, // viewportIndex = tile index
+            actualHeight
+          );
+
+          // Filter to only include boxes visible in this tile
+          tileLayoutBoxes = boxes.filter(box => box.isVisible);
+
+          if (tileLayoutBoxes.length > 0) {
+            allLayoutBoxes.push(...tileLayoutBoxes);
+            logger.debug('Layout boxes computed for tile', {
+              tileIndex: i,
+              boxCount: tileLayoutBoxes.length,
+            });
+          }
+        } catch (error) {
+          const errMsg = error instanceof Error ? error.message : 'Unknown error';
+          logger.warn('Failed to compute layout boxes for tile', { tileIndex: i, error: errMsg });
+          // Continue without layout boxes for this tile
+        }
+      }
+
       const tile: ScreenshotTile = {
         index: i,
         startY: boundary.startY,
@@ -252,6 +358,7 @@ export async function captureTiledScreenshots(
         width: fullWidth,
         height: actualHeight,
         base64: tileBuffer.toString('base64'),
+        layoutBoxes: tileLayoutBoxes,
       };
 
       tiles.push(tile);
@@ -261,6 +368,7 @@ export async function captureTiledScreenshots(
         startY: boundary.startY,
         endY: actualEndY,
         height: actualHeight,
+        layoutBoxCount: tileLayoutBoxes?.length ?? 0,
       });
     }
 
@@ -270,6 +378,7 @@ export async function captureTiledScreenshots(
       tilesCapture: tiles.length,
       pageHeight,
       captureTimeMs,
+      totalLayoutBoxes: allLayoutBoxes.length,
     });
 
     return {
@@ -277,6 +386,7 @@ export async function captureTiledScreenshots(
       tiles,
       pageHeight,
       captureTimeMs,
+      allLayoutBoxes: allLayoutBoxes.length > 0 ? allLayoutBoxes : undefined,
     };
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : 'Unknown error';

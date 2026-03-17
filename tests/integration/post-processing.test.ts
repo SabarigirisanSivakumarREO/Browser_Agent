@@ -49,14 +49,12 @@ function createMockPageState(options: {
 
   const domTree: DOMTree = {
     root: {
-      nodeId: 1,
       tagName: 'body',
       xpath: '/html/body',
       isVisible: true,
       isInteractive: false,
       boundingBox: { x: 0, y: 0, width: 1280, height: 2000 },
       children: (options.elements || []).map((el, index) => ({
-        nodeId: index + 2,
         tagName: el.tagName,
         xpath: `/html/body/${el.tagName.toLowerCase()}[${index + 1}]`,
         text: el.text,
@@ -184,26 +182,74 @@ describe('Post-Processing Pipeline Integration Tests', () => {
   // Vision-based analysis (Phase 21) supersedes rule-based heuristics
 
   describe('Insight Deduplication', () => {
-    it('should deduplicate insights with same type and element', () => {
-      const toolInsight = createMockInsight({
+    it('should deduplicate insights with same type and element (no heuristicId)', () => {
+      const toolInsight1 = createMockInsight({
         type: 'vague_cta_text',
         severity: 'medium',
         category: 'cta',
         element: '/html/body/button[1]',
       });
 
-      const heuristicInsight = createMockInsight({
+      const toolInsight2 = createMockInsight({
         type: 'vague_cta_text',
         severity: 'medium',
         category: 'cta',
         element: '/html/body/button[1]',
-        heuristicId: 'H001',
       });
 
       const deduplicator = new InsightDeduplicator();
-      const result = deduplicator.deduplicate([toolInsight, heuristicInsight]);
+      const result = deduplicator.deduplicate([toolInsight1, toolInsight2]);
 
+      // Phase 27E: Insights without heuristicId use type|element key
       expect(result.length).toBe(1);
+    });
+
+    it('should deduplicate insights with same heuristicId', () => {
+      const insight1 = createMockInsight({
+        type: 'heuristic_fail',
+        severity: 'medium',
+        category: 'cta',
+        element: 'N/A',
+        heuristicId: 'PDP-CTA-001',
+      });
+
+      const insight2 = createMockInsight({
+        type: 'heuristic_fail',
+        severity: 'medium',
+        category: 'cta',
+        element: 'N/A',
+        heuristicId: 'PDP-CTA-001',
+      });
+
+      const deduplicator = new InsightDeduplicator();
+      const result = deduplicator.deduplicate([insight1, insight2]);
+
+      // Phase 27E: Same heuristicId → deduplicates
+      expect(result.length).toBe(1);
+    });
+
+    it('should keep insights with different heuristicIds even if element is N/A', () => {
+      const insight1 = createMockInsight({
+        type: 'heuristic_fail',
+        severity: 'critical',
+        category: 'cta',
+        element: 'N/A',
+        heuristicId: 'PDP-CTA-001',
+      });
+
+      const insight2 = createMockInsight({
+        type: 'heuristic_fail',
+        severity: 'high',
+        category: 'pricing',
+        element: 'N/A',
+        heuristicId: 'PDP-PRICE-001',
+      });
+
+      const deduplicator = new InsightDeduplicator();
+      const result = deduplicator.deduplicate([insight1, insight2]);
+
+      // Phase 27E: Different heuristicIds → both kept
+      expect(result.length).toBe(2);
     });
 
     it('should keep insights with different types or elements', () => {

@@ -8,6 +8,7 @@
 import type { PageType } from '../../models/index.js';
 import type { CROInsight, Severity, InsightCategory } from '../../models/cro-insight.js';
 import type { ViewportInfo } from '../../models/page-state.js';
+import { MODEL_DEFAULTS } from '../model-config.js';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // PHASE 21h: Evidence Capture Types (T353)
@@ -27,6 +28,8 @@ export interface DOMElementRef {
   elementType: string;
   /** Text content of the element (truncated if long) */
   textContent?: string;
+  /** Viewport reference string (e.g., "[v0-5]") for cross-viewport matching */
+  viewportRef?: string;
 }
 
 /**
@@ -68,7 +71,7 @@ export interface CROVisionAnalyzerConfig {
  * Default configuration
  */
 export const DEFAULT_VISION_CONFIG: CROVisionAnalyzerConfig = {
-  model: 'gpt-4o-mini',
+  model: MODEL_DEFAULTS.analysis,
   maxTokens: 4096,
   temperature: 0.1,
   includeObservations: true,
@@ -285,7 +288,7 @@ export interface MultiViewportVisionConfig {
  * Default configuration for multi-viewport vision
  */
 export const DEFAULT_MULTI_VIEWPORT_CONFIG: MultiViewportVisionConfig = {
-  model: 'gpt-4o-mini',  // Cost-optimized default
+  model: MODEL_DEFAULTS.analysis,
   parallelAnalysis: true,
   dedupeThreshold: 0.8,
   maxViewports: 10,
@@ -392,7 +395,7 @@ export interface FullPageScreenshotConfig {
  * Default configuration for full-page screenshot
  */
 export const DEFAULT_FULL_PAGE_SCREENSHOT_CONFIG: FullPageScreenshotConfig = {
-  model: 'gpt-4o-mini',
+  model: MODEL_DEFAULTS.analysis,
   maxImageHeight: 16000,
   resizeQuality: 85,
   maxTokens: 4096,

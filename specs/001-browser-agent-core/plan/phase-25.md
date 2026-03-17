@@ -5,6 +5,14 @@
 **Tests**: 75 (40 unit + 20 integration + 15 E2E)
 **Dependencies**: Phase 24 (Hybrid Detection)
 
+> **REVISION (2026-02-18)**: The `nodeId` system (`n_001`, `n_002`, `generateNodeId()`) from Phase 25g was **removed** in a later refactor. The counter reset per viewport extraction, causing ID collisions. The codebase now uses:
+> - `element.index` (per-viewport) for within-viewport lookups
+> - `viewportRef` (`[v0-5]`) for cross-viewport identity (globally unique)
+> - `DOMTree.elementLookup` (keyed by `String(element.index)`) replaces `DOMTree.nodeIndex`
+> - `ElementBox.elementIndex` (required) replaces `ElementBox.nodeId`
+> - Functions renamed: `getNodeIdsByCROType` → `getElementIndicesByCROType`, `collectAllNodeIds` → `collectAllElementIndices`
+> - Evidence dedup uses absolute page coordinates instead of `nodeId`
+
 ---
 
 ## Overview
@@ -926,3 +934,40 @@ async function recheckViewports(
 --readiness-timeout <ms>     # Media readiness timeout (default: 3000)
 --extended-timeout <ms>      # Recheck timeout (default: 10000)
 ```
+
+---
+
+## QF-1: Element Mapping in LLM Prompts (2026-02-12)
+
+**Status**: ✅ COMPLETE | **Requirements**: FR-430 to FR-433
+
+### Problem
+LLM receives screenshots + DOM text separately with no coordinate link. Element refs like `[v0-5]` in observations are often inaccurate. `domElementRefs` on evaluations was never populated, so `ScreenshotAnnotator` drew no bounding boxes despite working infrastructure.
+
+### Architecture
+
+```
+ViewportSnapshot.visibleElements (already computed during collection)
+     ↓
+buildElementPositionsBlock() → <element_positions> block in LLM prompt
+     ↓
+LLM response with [v0-5] refs in observation/reasoning text
+     ↓
+populateElementRefs() → parses refs → populates domElementRefs
+     ↓
+ScreenshotAnnotator.getElementStatus() → matches element → draws bounding box
+```
+
+### Key Functions
+| Function | File | Purpose |
+|----------|------|---------|
+| `buildElementPositionsBlock()` | `category-analyzer.ts` | Format visible elements as position block |
+| `populateElementRefs()` | `category-analyzer.ts` | Parse [v0-5] refs → populate domElementRefs |
+
+### Call Sites
+1. `CategoryAnalyzer.analyzeCategory()` — positions in prompt + ref parsing after response
+2. `batch-prompt-builder.ts` `buildDOMContextSection()` — positions in batched prompt
+3. `AnalysisOrchestrator.runBatchedAnalysis()` — ref parsing after batch response
+
+### Tests
+- 19 unit tests in `tests/unit/element-mapping-prompt.test.ts`

@@ -26,10 +26,9 @@ export {
   type RawDOMTree,
 } from './build-dom-tree.js';
 
-// Extractor (Phase 25g: added generateNodeId)
+// Extractor
 export {
   DOMExtractor,
-  generateNodeId,
   type DOMExtractorOptions,
 } from './extractor.js';
 
@@ -53,8 +52,8 @@ export {
   getElementsByIndices,
   generateViewportId,
   computeLayoutBoxes,
-  getNodeIdsByCROType,
-  collectAllNodeIds,
+  getElementIndicesByCROType,
+  collectAllElementIndices,
   type ScreenshotCoords,
   type ElementMapping,
   type ElementBox,

@@ -9,16 +9,17 @@ import { ChatOpenAI } from '@langchain/openai';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import type { PageType, ViewportSnapshot } from '../models/index.js';
 import type { HeuristicCategory } from './knowledge/index.js';
-import type { HeuristicEvaluation, EvaluationStatus } from './vision/types.js';
+import type { HeuristicEvaluation, EvaluationStatus, DOMElementRef } from './vision/types.js';
 import type { Severity } from '../models/cro-insight.js';
 import { createLogger } from '../utils/index.js';
+import { MODEL_DEFAULTS, type AnalysisModel } from './model-config.js';
 
 /**
  * Configuration for category analyzer
  */
 export interface CategoryAnalyzerConfig {
   /** Vision model to use */
-  model: 'gpt-4o' | 'gpt-4o-mini';
+  model: AnalysisModel;
   /** Max tokens for response */
   maxTokens: number;
   /** Temperature for response (0.0-1.0) */
@@ -31,7 +32,7 @@ export interface CategoryAnalyzerConfig {
  * Default configuration
  */
 export const DEFAULT_CATEGORY_ANALYZER_CONFIG: CategoryAnalyzerConfig = {
-  model: 'gpt-4o-mini',
+  model: MODEL_DEFAULTS.analysis,
   maxTokens: 4096,
   temperature: 0.1,
   timeoutMs: 60000,
@@ -50,6 +51,8 @@ interface RawCategoryEvaluation {
   evidence?: string;
   /** How the LLM found this - references elements, classes, screenshot observations */
   reasoning?: string;
+  /** Structured element refs in [v0-5] format — populated by LLM in JSON response */
+  elementRefs?: string[];
 }
 
 /**
@@ -96,11 +99,13 @@ export interface CategoryAnalysisResult {
   /** Per-heuristic evaluations */
   evaluations: HeuristicEvaluation[];
   /** Summary from LLM */
-  summary: string;
+  summary?: string;
   /** Time taken for analysis in milliseconds */
   analysisTimeMs: number;
   /** Phase 23: Captured LLM inputs for debugging */
   capturedInputs?: CapturedCategoryInputs;
+  /** Phase 26: Error message if analysis failed (parallel mode) */
+  error?: string;
 }
 
 /**
@@ -179,6 +184,9 @@ export class CategoryAnalyzer {
       // Parse response
       const parsed = this.parseResponse(content, category);
 
+      // Populate domElementRefs by parsing [v0-5] refs from LLM text
+      populateElementRefs(parsed.evaluations, snapshots);
+
       const analysisTimeMs = Date.now() - startTime;
       this.logger.info(`Category analysis complete: ${category.name}`, {
         evaluationCount: parsed.evaluations.length,
@@ -234,6 +242,9 @@ For each heuristic, provide:
   - Mention what you searched for (classes, text, attributes)
   - Cite screenshot observations (position, visibility, coordinates)
   - Note if structured data (JSON-LD) was used
+- elementRefs: REQUIRED for non-N/A evaluations — array of element references in [v0-N] format
+  (e.g. ["[v0-5]", "[v0-12]"]) for every DOM element you referenced in your analysis.
+  Set to empty array [] only if no specific elements are relevant (e.g. not_applicable).
 </evaluation_format>
 
 <output_format>
@@ -247,12 +258,58 @@ Respond with valid JSON only:
       "observation": "What you observed",
       "issue": "Problem identified (if any)",
       "recommendation": "Suggested fix (if any)",
-      "reasoning": "Found gallery element [v0-3] with class='product-gallery'. Screenshot shows 5 thumbnail images at coordinates (50-300, 400-600). DOM contains img tags with srcset for multiple resolutions."
+      "reasoning": "Found gallery element [v0-3] with class='product-gallery'. Screenshot shows 5 thumbnail images at coordinates (50-300, 400-600). DOM contains img tags with srcset for multiple resolutions.",
+      "elementRefs": ["[v0-3]", "[v0-7]"]
     }
   ],
   "summary": "Brief overall assessment of this category"
 }
-</output_format>`;
+</output_format>
+
+<examples>
+Example 1 — FAIL with element refs:
+{
+  "heuristicId": "PDP-CTA-001",
+  "status": "fail",
+  "confidence": 0.9,
+  "observation": "Primary CTA button [v0-15] uses low-contrast gray text (#999) on white background",
+  "issue": "Add to Cart button fails WCAG AA contrast ratio (2.1:1 vs required 4.5:1) and blends with surrounding elements",
+  "recommendation": "Use high-contrast color (e.g. brand primary) with minimum 4.5:1 contrast ratio for the CTA",
+  "reasoning": "Found button [v0-15] with class='btn-add-cart' containing text 'Add to Cart'. Screenshot shows it at coordinates (520, 380) with gray styling. Checked computed styles in DOM — color:#999 on background:#fff gives 2.1:1 ratio.",
+  "elementRefs": ["[v0-15]"]
+}
+
+Example 2 — PASS with evidence:
+{
+  "heuristicId": "PDP-TRUST-003",
+  "status": "pass",
+  "confidence": 0.85,
+  "observation": "Security badges [v0-22] and [v0-23] are visible below the Add to Cart button",
+  "issue": "",
+  "recommendation": "",
+  "reasoning": "Found div [v0-22] with class='trust-badges' containing img elements for SSL and payment icons. Screenshot confirms badges visible at (400, 520). Also found [v0-23] with text 'Secure Checkout' adjacent.",
+  "elementRefs": ["[v0-22]", "[v0-23]"]
+}
+
+Example 3 — NOT APPLICABLE:
+{
+  "heuristicId": "PDP-VARIANT-002",
+  "status": "not_applicable",
+  "confidence": 0.95,
+  "observation": "Product has no size or color variants — single SKU product",
+  "issue": "",
+  "recommendation": "",
+  "reasoning": "Searched DOM for select, radio, and swatch elements related to variants. No variant selectors found. JSON-LD Product schema confirms single offer with no variants.",
+  "elementRefs": []
+}
+</examples>
+
+<enforcement>
+- ONLY report issues you can directly observe in the DOM or screenshots — do not speculate
+- Set status to not_applicable if you cannot find evidence for or against the heuristic
+- MUST include elementRefs for every non-N/A evaluation — omitting refs is not acceptable
+- Do not default to pass — verify each heuristic against actual page evidence before marking pass
+</enforcement>`;
   }
 
   /**
@@ -311,6 +368,13 @@ Respond with valid JSON only.`;
         viewportIndex
       );
       parts.push(transformedDom);
+
+      // Add element positions for spatial context (links DOM refs to screenshot coordinates)
+      const positionsBlock = buildElementPositionsBlock(snapshot);
+      if (positionsBlock) {
+        parts.push(positionsBlock);
+      }
+
       parts.push('');
     }
 
@@ -441,17 +505,26 @@ Respond with valid JSON only.`;
       }
 
       // Transform raw evaluations to typed evaluations
-      const evaluations: HeuristicEvaluation[] = parsed.evaluations.map((raw) => ({
-        heuristicId: raw.heuristicId,
-        principle: principleMap.get(raw.heuristicId) ?? '',
-        status: this.normalizeStatus(raw.status),
-        severity: severityMap.get(raw.heuristicId) ?? 'medium',
-        observation: raw.observation,
-        issue: raw.issue,
-        recommendation: raw.recommendation,
-        confidence: Math.min(1, Math.max(0, raw.confidence)),
-        reasoning: raw.reasoning,
-      }));
+      const evaluations: HeuristicEvaluation[] = parsed.evaluations.map((raw) => {
+        const eval_: HeuristicEvaluation = {
+          heuristicId: raw.heuristicId,
+          principle: principleMap.get(raw.heuristicId) ?? '',
+          status: this.normalizeStatus(raw.status),
+          severity: severityMap.get(raw.heuristicId) ?? 'medium',
+          observation: raw.observation,
+          issue: raw.issue,
+          recommendation: raw.recommendation,
+          confidence: Math.min(1, Math.max(0, raw.confidence)),
+          reasoning: raw.reasoning,
+        };
+
+        // Phase 27B: Carry structured elementRefs from LLM JSON response
+        if (raw.elementRefs && Array.isArray(raw.elementRefs) && raw.elementRefs.length > 0) {
+          (eval_ as HeuristicEvaluation & { _structuredElementRefs: string[] })._structuredElementRefs = raw.elementRefs;
+        }
+
+        return eval_;
+      });
 
       return {
         evaluations,
@@ -498,6 +571,124 @@ export function createCategoryAnalyzer(
   config?: Partial<CategoryAnalyzerConfig>
 ): CategoryAnalyzer {
   return new CategoryAnalyzer(config);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Element Position Block Builder
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Build an <element_positions> block for a viewport snapshot.
+ * Maps each visible element to its screenshot coordinates so the LLM can
+ * correlate DOM refs like [v0-12] with exact positions in the screenshot.
+ *
+ * @param snapshot - Viewport snapshot with visibleElements
+ * @returns Formatted element positions block, or null if no visible elements
+ */
+export function buildElementPositionsBlock(snapshot: ViewportSnapshot): string | null {
+  const elements = snapshot.visibleElements;
+  if (!elements || elements.length === 0) {
+    return null;
+  }
+
+  const vi = snapshot.viewportIndex;
+  const lines: string[] = ['<element_positions>'];
+
+  for (const el of elements) {
+    const { x, y, width, height } = el.screenshotCoords;
+    const textSnippet = el.text ? ` "${el.text.slice(0, 40)}"` : '';
+    const label = `${el.tagName}${textSnippet}`;
+    lines.push(
+      `[v${vi}-${el.index}] ${label} → x:${Math.round(x)} y:${Math.round(y)} w:${Math.round(width)} h:${Math.round(height)}`
+    );
+  }
+
+  lines.push('</element_positions>');
+  return lines.join('\n');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Element Reference Population (domElementRefs)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Populate domElementRefs on evaluations by parsing element references from LLM text.
+ * Extracts [v0-5] patterns from observation, issue, recommendation, reasoning fields
+ * and auto-populates `domElementRefs` on each HeuristicEvaluation.
+ *
+ * This enables ScreenshotAnnotator to draw bounding boxes on evidence screenshots
+ * for the elements the LLM referenced in its analysis.
+ *
+ * @param evaluations - Evaluations to populate (mutated in place)
+ * @param snapshots - Viewport snapshots with visibleElements for lookup
+ */
+export function populateElementRefs(
+  evaluations: HeuristicEvaluation[],
+  snapshots: ViewportSnapshot[]
+): void {
+  // Build lookup: "viewportIndex-elementIndex" → ElementMapping
+  const elementLookup = new Map<string, import('../browser/dom/coordinate-mapper.js').ElementMapping>();
+  for (const snapshot of snapshots) {
+    const elements = snapshot.visibleElements ?? snapshot.elementMappings ?? [];
+    for (const el of elements) {
+      const key = `${snapshot.viewportIndex}-${el.index}`;
+      elementLookup.set(key, el);
+    }
+  }
+
+  for (const eval_ of evaluations) {
+    // Phase 27B: Prefer structured elementRefs from LLM JSON over text scan
+    const structuredRefs = (eval_ as HeuristicEvaluation & { _structuredElementRefs?: string[] })._structuredElementRefs;
+    let refs: ParsedElementRef[];
+
+    if (structuredRefs && structuredRefs.length > 0) {
+      // Use structured refs from JSON response
+      refs = structuredRefs
+        .map(ref => parseElementRef(ref))
+        .filter((r): r is ParsedElementRef => r !== null);
+    } else {
+      // Fallback: scan text fields for [v0-N] patterns
+      const textFields = [
+        eval_.observation,
+        eval_.issue,
+        eval_.recommendation,
+        eval_.reasoning,
+      ].filter(Boolean).join(' ');
+      refs = extractElementRefs(textFields);
+    }
+
+    // Clean up temporary field
+    delete (eval_ as HeuristicEvaluation & { _structuredElementRefs?: string[] })._structuredElementRefs;
+
+    if (refs.length === 0) continue;
+
+    const domRefs: DOMElementRef[] = [];
+    let primaryViewportIndex: number | undefined;
+
+    for (const ref of refs) {
+      const key = `${ref.viewportIndex}-${ref.elementIndex}`;
+      const mapping = elementLookup.get(key);
+
+      domRefs.push({
+        index: ref.elementIndex,
+        elementType: mapping?.tagName ?? 'unknown',
+        textContent: mapping?.text,
+        xpath: mapping?.xpath,
+        viewportRef: ref.original,
+      });
+
+      if (primaryViewportIndex === undefined) {
+        primaryViewportIndex = ref.viewportIndex;
+      }
+    }
+
+    if (domRefs.length > 0) {
+      eval_.domElementRefs = domRefs;
+      if (primaryViewportIndex !== undefined && eval_.viewportIndex === undefined) {
+        eval_.viewportIndex = primaryViewportIndex;
+      }
+    }
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

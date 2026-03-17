@@ -45,6 +45,7 @@ export interface SnapshotDOM {
  * CR-001-B: Unified viewport snapshot for collection phase
  * Phase 21i: Added elementMappings and visibleElements for coordinate mapping
  * Phase 25-fix: Added fullResolutionBase64 for evidence screenshots
+ * Phase 25g: Added layoutBoxes for evidence packaging (T511)
  */
 export interface ViewportSnapshot {
   /** Y scroll position when captured */
@@ -65,6 +66,10 @@ export interface ViewportSnapshot {
   // Phase 25-fix: Full resolution screenshot for evidence
   /** Full resolution PNG screenshot (base64) for evidence files */
   fullResolutionBase64?: string;
+
+  // Phase 25g: Layout boxes for evidence packaging (T511)
+  /** Element bounding boxes for CRO elements (price, cta, variant, etc.) */
+  layoutBoxes?: import('../browser/dom/coordinate-mapper.js').ElementBox[];
 }
 
 /**

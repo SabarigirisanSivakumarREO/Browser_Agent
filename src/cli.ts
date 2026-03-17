@@ -19,15 +19,20 @@ import {
   ScreenshotWriter,
   ScreenshotAnnotator,
   LLMInputWriter,
+  buildEvidencePackage,
+  writeEvidenceJson as writeEvidenceJsonFile,
   type ToolExecutionResult,
   type LLMInputData,
 } from './output/index.js';
 import { createCRORegistry, ToolExecutor } from './agent/tools/index.js';
 import { CROAgent, type CROAnalysisResult, type CROScores } from './agent/index.js';
+import { QualityValidator } from './validation/index.js';
 // NOTE: Vision Agent module removed in CR-001-D. Use CROAgent with vision: true
 import type { CROActionName, PageState, ScanMode, CoverageConfig } from './models/index.js';
 import { CROActionNames, DEFAULT_COVERAGE_CONFIG } from './models/index.js';
 import type { WaitUntilStrategy, ScreenshotMode } from './types/index.js';
+import { MODEL_DEFAULTS } from './heuristics/model-config.js';
+import { parseElementRef } from './heuristics/category-analyzer.js';
 
 // Load environment variables from .env file
 config();
@@ -73,6 +78,21 @@ function parseArgs(): {
   screenshotMode: ScreenshotMode;  // viewport | tiled | hybrid
   // Phase 25f: Deterministic collection
   llmGuidedCollection: boolean;  // Use LLM-guided collection (opt-in, default: false)
+  // Phase 25g: Evidence JSON output (T513)
+  writeEvidenceJson: boolean;  // Write evidence.json file (default: true)
+  // Phase 25i: Collection QA (T543)
+  skipCollectionQA: boolean;  // Skip LLM QA validation (default: false)
+  // Phase 26: Parallel analysis options
+  sequentialAnalysis: boolean;  // Disable parallel analysis (default: false)
+  maxConcurrentCategories: number;  // Max concurrent category analyses (default: 5)
+  // Phase 26b: Category batching (opt-in)
+  categoryBatching: boolean;  // Enable category batching (default: false)
+  // Phase 26c: Viewport filtering (opt-in)
+  viewportFiltering: boolean;  // Enable viewport filtering (default: false)
+  // Phase 26e: Quality validation (CI-only)
+  validateQuality: boolean;  // Run quality validation comparing optimized vs baseline
+  // Phase 27D: Confidence filtering
+  minConfidence: number;  // Minimum confidence threshold for display (default: 0.7)
   verbose: boolean;
   help: boolean;
 } {
@@ -89,7 +109,7 @@ function parseArgs(): {
   let toolName: CROActionName | null = null;
   let scanMode: ScanMode = 'full_page';
   let minCoverage = 100;
-  let visionModel: VisionModel = 'gpt-4o-mini';  // Default vision model (cost-optimized)
+  let visionModel: VisionModel = MODEL_DEFAULTS.analysis;  // Phase 27A: Default to gpt-4o for quality
   let vision = false;  // CR-001-D: Primary vision flag
   let visionMaxSteps = 20;  // Max steps for vision collection
   let saveEvidence = true;  // Save screenshots as evidence (default: on)
@@ -103,6 +123,21 @@ function parseArgs(): {
   let screenshotMode: ScreenshotMode = 'viewport';  // Default: viewport mode
   // Phase 25f: Deterministic collection
   let llmGuidedCollection = false;  // Default: deterministic (no LLM calls during collection)
+  // Phase 25g: Evidence JSON output (T513)
+  let writeEvidenceJson = true;  // Default: write evidence.json (opt-out with --no-evidence-json)
+  // Phase 25i: Collection QA (T543)
+  let skipCollectionQA = false;  // Default: run cheap validator + LLM QA if needed
+  // Phase 26: Parallel analysis options
+  let sequentialAnalysis = false;  // Default: parallel analysis enabled
+  let maxConcurrentCategories = 5;  // Default: 5 concurrent categories
+  // Phase 26b: Category batching (opt-in)
+  let categoryBatching = false;  // Default: batching disabled (opt-in via --category-batching)
+  // Phase 26c: Viewport filtering (opt-in)
+  let viewportFiltering = false;  // Default: viewport filtering disabled (opt-in via --viewport-filtering)
+  // Phase 26e: Quality validation (CI-only)
+  let validateQuality = false;  // Default: no quality validation
+  // Phase 27D: Confidence filtering
+  let minConfidence = 0.7;  // Default: hide evaluations below 70% confidence
   let verbose = false;
   let help = false;
 
@@ -316,6 +351,51 @@ function parseArgs(): {
     } else if (arg === '--llm-guided-collection') {
       // Phase 25f: Opt-in to LLM-guided collection (old behavior)
       llmGuidedCollection = true;
+    } else if (arg === '--skip-collection-qa') {
+      // Phase 25i: Skip LLM QA even if cheap validator flags issues (T543)
+      skipCollectionQA = true;
+    } else if (arg === '--no-evidence-json') {
+      // Phase 25g: Opt-out of evidence.json output (T513)
+      writeEvidenceJson = false;
+    } else if (arg === '--sequential-analysis') {
+      // Phase 26: Disable parallel analysis, run categories sequentially
+      sequentialAnalysis = true;
+    } else if (arg === '--max-concurrent-categories' && args[i + 1]) {
+      // Phase 26: Max concurrent category analyses
+      maxConcurrentCategories = parseInt(args[i + 1] ?? '5', 10);
+      if (isNaN(maxConcurrentCategories) || maxConcurrentCategories < 1 || maxConcurrentCategories > 20) {
+        console.error('Invalid max-concurrent-categories value. Must be between 1 and 20.');
+        process.exit(1);
+      }
+      i++;
+    } else if (arg?.startsWith('--max-concurrent-categories=')) {
+      // Phase 26: Max concurrent category analyses (= syntax)
+      maxConcurrentCategories = parseInt(arg.split('=')[1] ?? '5', 10);
+      if (isNaN(maxConcurrentCategories) || maxConcurrentCategories < 1 || maxConcurrentCategories > 20) {
+        console.error('Invalid max-concurrent-categories value. Must be between 1 and 20.');
+        process.exit(1);
+      }
+    } else if (arg === '--category-batching') {
+      // Phase 26b: Opt-in to category batching (multiple categories per LLM call)
+      categoryBatching = true;
+    } else if (arg === '--viewport-filtering') {
+      // Phase 26c: Opt-in to viewport filtering (send only relevant viewports per category)
+      viewportFiltering = true;
+    } else if (arg === '--fast-analysis') {
+      // Phase 27A: Use cheaper model (gpt-4o-mini) for cost-sensitive runs
+      visionModel = MODEL_DEFAULTS.fast;
+    } else if (arg === '--min-confidence' && args[i + 1]) {
+      const value = parseFloat(args[i + 1]!);
+      if (!isNaN(value) && value >= 0 && value <= 1) {
+        minConfidence = value;
+        i++;
+      } else {
+        console.error('Invalid --min-confidence value. Must be between 0 and 1.');
+        process.exit(1);
+      }
+    } else if (arg === '--validate-quality') {
+      // Phase 26e: Run quality validation comparing optimized vs baseline (CI use)
+      validateQuality = true;
     } else if (arg && !arg.startsWith('-')) {
       urls.push(arg);
     }
@@ -348,6 +428,21 @@ function parseArgs(): {
     screenshotMode,
     // Phase 25f: Deterministic collection
     llmGuidedCollection,
+    // Phase 25g: Evidence JSON output
+    writeEvidenceJson,
+    // Phase 25i: Collection QA
+    skipCollectionQA,
+    // Phase 26: Parallel analysis
+    sequentialAnalysis,
+    maxConcurrentCategories,
+    // Phase 26b: Category batching (opt-in)
+    categoryBatching,
+    // Phase 26c: Viewport filtering (opt-in)
+    viewportFiltering,
+    // Phase 26e: Quality validation
+    validateQuality,
+    // Phase 27D: Confidence filtering
+    minConfidence,
     verbose,
     help,
   };
@@ -399,10 +494,11 @@ VISION ANALYSIS OPTIONS:
                           - Maps DOM elements to screenshot coordinates
                           - Evaluates ALL heuristics systematically
                           - Uses category-based analysis for thoroughness
-                          - Uses gpt-4o-mini by default (~$0.01-0.02/page)
-  --vision-model <model>  Vision model to use (default: gpt-4o-mini)
-                          - gpt-4o-mini: Fast and cost-effective (default)
-                          - gpt-4o: Higher quality, slower and more expensive
+                          - Uses gpt-4o by default (~$0.30-0.50/page)
+  --vision-model <model>  Vision model to use (default: gpt-4o)
+                          - gpt-4o: High quality analysis (default)
+                          - gpt-4o-mini: Fast and cost-effective
+  --fast-analysis         Use gpt-4o-mini for analysis (cheaper, lower quality)
   --vision-max-steps <N>  Maximum vision collection steps (default: 20, max: 50)
 
   Deprecated aliases (kept for backward compatibility):
@@ -412,6 +508,7 @@ VISION ANALYSIS OPTIONS:
 EVIDENCE CAPTURE OPTIONS (enabled by default with --vision):
   --no-save-evidence      Disable saving evidence and LLM inputs
   --no-annotate-screenshots  Disable bounding box annotations on screenshots
+  --no-evidence-json      Disable evidence.json output file (Phase 25g)
   --evidence-dir <path>   Directory for evidence files (default: ./evidence/{timestamp})
                           Created automatically if it doesn't exist
 
@@ -428,11 +525,31 @@ SCREENSHOT MODE OPTIONS (Phase 25e):
                             - tiled: Capture full page as overlapping tiles (1800px each)
                             - hybrid: Viewport for first 2 captures + tiled for rest
 
-COLLECTION MODE OPTIONS (Phase 25f):
+COLLECTION MODE OPTIONS (Phase 25f-25i):
   --llm-guided-collection   Use LLM-guided collection instead of deterministic (opt-in)
                             By default, collection uses a simple scroll + capture loop
                             with NO LLM calls (faster and cheaper).
                             When enabled, the agent uses LLM to decide scrolling (original behavior).
+
+  --skip-collection-qa      Skip LLM QA validation even if cheap validator flags issues
+                            By default, collection runs a cheap validator (0 LLM calls) and
+                            escalates to LLM QA only if quality issues are detected.
+                            When enabled, skips LLM QA entirely (faster, but may miss issues).
+
+ANALYSIS OPTIMIZATION OPTIONS (Phase 26):
+  --sequential-analysis     Disable parallel analysis, run categories sequentially
+                            By default, categories are analyzed in parallel (3-4x faster).
+  --max-concurrent-categories <n>  Max concurrent category analyses (default: 5, max: 20)
+  --category-batching       Enable category batching, multiple categories per LLM call (opt-in)
+                            Saves ~56% tokens but may reduce quality. Off by default.
+  --viewport-filtering      Enable viewport filtering, send only relevant viewports per category (opt-in)
+                            Saves ~15-30% tokens but may miss context. Off by default.
+  --min-confidence <0-1>    Filter evaluations below confidence threshold (default: 0.7)
+                            Low-confidence fail/partial evaluations hidden from display
+                            but preserved in evidence output for review.
+  --validate-quality        Run quality validation comparing optimized vs baseline (CI use)
+                            Runs analysis twice (baseline + optimized), compares results,
+                            fails if match rate < 80% or any critical discrepancy found.
 
   When evidence saving is enabled (default with --vision), the following are saved:
   • Annotated screenshots    → ./evidence/{timestamp}/
@@ -678,6 +795,21 @@ async function processVisionMode(
     screenshotMode: ScreenshotMode;
     // Phase 25f: Deterministic collection
     llmGuidedCollection: boolean;
+    // Phase 25g: Evidence JSON output (T513)
+    writeEvidenceJson: boolean;
+    // Phase 25i: Collection QA
+    skipCollectionQA: boolean;
+    // Phase 26: Parallel analysis
+    sequentialAnalysis?: boolean;
+    maxConcurrentCategories?: number;
+    // Phase 26b: Category batching (opt-in)
+    categoryBatching?: boolean;
+    // Phase 26c: Viewport filtering (opt-in)
+    viewportFiltering?: boolean;
+    // Phase 26e: Quality validation
+    validateQuality?: boolean;
+    // Phase 27D: Confidence filtering
+    minConfidence: number;
     verbose: boolean;
   }
 ): Promise<void> {
@@ -751,6 +883,15 @@ async function processVisionMode(
       screenshotMode: options.screenshotMode,
       // Phase 25f: Deterministic collection (default) vs LLM-guided (opt-in)
       llmGuidedCollection: options.llmGuidedCollection,
+      // Phase 25i: Skip collection QA if requested
+      skipCollectionQA: options.skipCollectionQA,
+      // Phase 26: Parallel analysis options
+      parallelAnalysis: !options.sequentialAnalysis,
+      maxConcurrentCategories: options.maxConcurrentCategories,
+      // Phase 26b: Category batching (opt-in)
+      categoryBatching: options.categoryBatching ?? false,
+      // Phase 26c: Viewport filtering (opt-in)
+      enableViewportFiltering: options.viewportFiltering ?? false,
     });
 
     // Show collection complete summary
@@ -808,8 +949,8 @@ async function processVisionMode(
     }
 
     // Detailed evaluations
-    const failed = evaluations.filter(e => e.status === 'fail');
-    const partial = evaluations.filter(e => e.status === 'partial');
+    const failed = evaluations.filter(e => e.status === 'fail' && e.confidence >= options.minConfidence);
+    const partial = evaluations.filter(e => e.status === 'partial' && e.confidence >= options.minConfidence);
     const passed = evaluations.filter(e => e.status === 'pass');
 
     // Failed heuristics (full details)
@@ -865,6 +1006,13 @@ async function processVisionMode(
       console.log(`  ${GREEN}└${'─'.repeat(75)}${RESET}`);
     }
 
+    // Phase 27D: Confidence filtering summary
+    const totalFailPartial = evaluations.filter(e => e.status === 'fail' || e.status === 'partial').length;
+    const filteredCount = totalFailPartial - failed.length - partial.length;
+    if (filteredCount > 0) {
+      console.log(`\n  ${DIM}Filtered ${filteredCount}/${totalFailPartial} evaluations below ${(options.minConfidence * 100).toFixed(0)}% confidence (preserved in evidence)${RESET}`);
+    }
+
     // Error messages if any
     if (result.errors.length > 0) {
       console.log(`\n  ${RED}Errors encountered:${RESET}`);
@@ -902,21 +1050,32 @@ async function processVisionMode(
         console.log(`  ${CYAN}Annotating screenshots with element highlights...${RESET}`);
         const annotator = new ScreenshotAnnotator({
           highlightIssues: true,
-          showElementIndexes: true,
+          showElementIndexes: false,
           showCoordinates: false,
         });
 
         // Annotate each snapshot (on full resolution images)
+        const matchedEvalIds = new Set<string>();
+        let viewportsWithAnnotations = 0;
+
         for (let i = 0; i < screenshotData.length; i++) {
           const snapshot = result.snapshots[i];
           if (!snapshot) continue;
 
           const visibleElements = snapshot.visibleElements ?? [];
 
-          // Get evaluations for this viewport
+          // Get evaluations for this viewport (match by viewportIndex or domElementRefs)
           const viewportEvaluations = evaluations.filter(
-            (e) => e.viewportIndex === snapshot.viewportIndex
+            (e) => e.viewportIndex === snapshot.viewportIndex ||
+              e.domElementRefs?.some(ref => {
+                const parsed = parseElementRef(ref.viewportRef ?? '');
+                return parsed && parsed.viewportIndex === snapshot.viewportIndex;
+              })
           );
+
+          for (const e of viewportEvaluations) {
+            matchedEvalIds.add(e.heuristicId);
+          }
 
           const currentScreenshot = screenshotData[i];
           if (visibleElements.length > 0 && currentScreenshot) {
@@ -928,10 +1087,13 @@ async function processVisionMode(
 
             if (annotationResult.success && annotationResult.annotatedBase64) {
               currentScreenshot.base64 = annotationResult.annotatedBase64;
+              viewportsWithAnnotations++;
             }
           }
         }
-        console.log(`  ${GREEN}Annotated ${screenshotData.length} screenshots${RESET}`);
+
+        const withElementRefs = evaluations.filter(e => e.domElementRefs && e.domElementRefs.length > 0).length;
+        console.log(`  ${GREEN}Annotated ${matchedEvalIds.size}/${evaluations.length} evaluations across ${viewportsWithAnnotations} viewports (${withElementRefs} with element refs)${RESET}`);
       }
 
       const sessionId = Date.now().toString(36);
@@ -995,6 +1157,96 @@ async function processVisionMode(
           }
         }
       }
+
+      // Phase 25g (T513): Write evidence.json package
+      if (options.writeEvidenceJson) {
+        console.log(`\n  ${CYAN}Building evidence package...${RESET}`);
+
+        // Collect all layout boxes from snapshots
+        const allLayoutBoxes = result.snapshots.flatMap(
+          (s) => s.layoutBoxes ?? []
+        );
+
+        // Calculate page height from the highest scroll position + viewport height
+        const lastSnapshot = result.snapshots[result.snapshots.length - 1];
+        const estimatedPageHeight = lastSnapshot
+          ? lastSnapshot.scrollPosition + 720
+          : null;
+
+        const evidencePackage = buildEvidencePackage({
+          url,
+          mode: options.screenshotMode,
+          viewportWidth: 1280,
+          viewportHeight: 720,
+          pageHeight: estimatedPageHeight,
+          snapshots: result.snapshots,
+          structuredData: null, // TODO: Add structuredData to CROAnalysisResult
+          elementBoxes: allLayoutBoxes,
+        });
+
+        const evidenceJsonPath = `${outputDir}/evidence.json`;
+        await writeEvidenceJsonFile(evidencePackage, evidenceJsonPath);
+        console.log(`  ${GREEN}Evidence package saved to ${evidenceJsonPath}${RESET}`);
+
+        // Log warnings if any
+        if (evidencePackage.warnings.length > 0) {
+          console.log(`  ${YELLOW}Warnings:${RESET}`);
+          for (const warning of evidencePackage.warnings.slice(0, 5)) {
+            console.log(`    ${YELLOW}• ${warning}${RESET}`);
+          }
+        }
+      }
+    }
+
+    // Phase 26e: Quality validation (CI-only, --validate-quality)
+    if (options.validateQuality && result.snapshots && result.pageType) {
+      console.log('\n' + '─'.repeat(80));
+      console.log(`  ${CYAN}QUALITY VALIDATION (comparing optimized vs baseline)${RESET}`);
+      console.log('─'.repeat(80));
+
+      const validator = new QualityValidator({ verbose: options.verbose });
+      const validationResult = await validator.validate(
+        result.snapshots,
+        result.pageType,
+        {
+          analyzerConfig: { model: options.visionModel },
+        }
+      );
+
+      console.log(`\n  Effective Match Rate: ${(validationResult.effectiveMatchRate * 100).toFixed(1)}% (only critical+major count as mismatches)`);
+      console.log(`  Raw Match Rate: ${(validationResult.matchRate * 100).toFixed(1)}% (${validationResult.matchingResults}/${validationResult.totalHeuristics})`);
+      console.log(`  Result: ${validationResult.passed ? `${GREEN}PASS${RESET}` : `${RED}FAIL${RESET}`}`);
+
+      if (validationResult.discrepancies.length > 0) {
+        const criticals = validationResult.discrepancies.filter(d => d.severity === 'critical');
+        const majors = validationResult.discrepancies.filter(d => d.severity === 'major');
+        const minors = validationResult.discrepancies.filter(d => d.severity === 'minor');
+
+        console.log(`  Discrepancies: ${RED}${criticals.length} critical${RESET}, ${YELLOW}${majors.length} major${RESET}, ${DIM}${minors.length} minor${RESET}`);
+
+        for (const d of criticals) {
+          console.log(`    ${RED}✗ CRITICAL: ${d.heuristicId} — ${d.baselineStatus} → ${d.optimizedStatus} (${d.likelyCause})${RESET}`);
+        }
+        for (const d of majors) {
+          console.log(`    ${YELLOW}! MAJOR: ${d.heuristicId} — ${d.baselineStatus} → ${d.optimizedStatus} (${d.likelyCause})${RESET}`);
+        }
+      }
+
+      if (validationResult.failureReasons.length > 0) {
+        console.log(`\n  ${RED}Failure Reasons:${RESET}`);
+        for (const reason of validationResult.failureReasons) {
+          console.log(`    ${RED}• ${reason}${RESET}`);
+        }
+      }
+
+      console.log(`\n  Recommendations:`);
+      for (const rec of validationResult.recommendations) {
+        console.log(`    • ${rec}`);
+      }
+
+      if (!validationResult.passed) {
+        console.log(`\n  ${RED}Quality validation FAILED — optimizations may degrade analysis quality${RESET}`);
+      }
     }
 
     console.log('\n' + '═'.repeat(80));
@@ -1040,6 +1292,7 @@ async function processAnalysis(
     };
     return {
       url,
+      runId: 'error-no-api-key',
       success: false,
       insights: [],
       heuristicInsights: [],
@@ -1100,6 +1353,7 @@ async function processAnalysis(
     };
     return {
       url,
+      runId: `error-${Date.now()}`,
       success: false,
       insights: [],
       heuristicInsights: [],
@@ -1200,6 +1454,21 @@ async function main(): Promise<void> {
     screenshotMode,
     // Phase 25f: Deterministic collection
     llmGuidedCollection,
+    // Phase 25g: Evidence JSON output
+    writeEvidenceJson,
+    // Phase 25i: Collection QA
+    skipCollectionQA,
+    // Phase 26: Parallel analysis
+    sequentialAnalysis,
+    maxConcurrentCategories,
+    // Phase 26b: Category batching (opt-in)
+    categoryBatching,
+    // Phase 26c: Viewport filtering (opt-in)
+    viewportFiltering,
+    // Phase 26e: Quality validation
+    validateQuality,
+    // Phase 27D: Confidence filtering
+    minConfidence,
     verbose,
     help,
   } = parseArgs();
@@ -1221,7 +1490,7 @@ async function main(): Promise<void> {
         waitUntil,
         postLoadWait,
         dismissCookieConsent,
-        visionModel: visionModel === 'gpt-4o' ? visionModel : 'gpt-4o-mini',  // Default to gpt-4o-mini for cost
+        visionModel,  // Phase 27A: Uses MODEL_DEFAULTS.analysis (gpt-4o) by default
         maxSteps: visionMaxSteps,
         saveEvidence,
         evidenceDir,
@@ -1234,6 +1503,21 @@ async function main(): Promise<void> {
         screenshotMode,
         // Phase 25f: Deterministic collection
         llmGuidedCollection,
+        // Phase 25g: Evidence JSON output (T513)
+        writeEvidenceJson,
+        // Phase 25i: Collection QA
+        skipCollectionQA,
+        // Phase 26: Parallel analysis
+        sequentialAnalysis,
+        maxConcurrentCategories,
+        // Phase 26b: Category batching (opt-in)
+        categoryBatching,
+        // Phase 26c: Viewport filtering (opt-in)
+        viewportFiltering,
+        // Phase 26e: Quality validation
+        validateQuality,
+        // Phase 27D: Confidence filtering
+        minConfidence,
         verbose,
       });
     }

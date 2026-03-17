@@ -45,7 +45,6 @@ export interface CROClassification {
 export interface DOMNode {
   tagName: string;
   xpath: string;
-  nodeId?: string;                       // Stable identifier "n_001", "n_002" (Phase 25g)
   index?: number;                        // Only for visible CRO elements
   text: string;                          // Truncated to 100 chars (CR-015)
   isInteractive: boolean;
@@ -80,6 +79,7 @@ export interface NodeIndexEntry {
   croType?: Exclude<CROType, null>;
   confidence?: number;
   index?: number;  // Element index if indexed
+  matchedPatterns?: string[];  // Phase 25g: Patterns that matched for CRO classification
 }
 
 /**
@@ -92,5 +92,5 @@ export interface DOMTree {
   totalNodeCount: number;    // For debugging
   extractedAt: number;       // Timestamp
   structuredData?: StructuredProductData | null;  // JSON-LD Product schema (Phase 25c)
-  nodeIndex?: Record<string, NodeIndexEntry>;     // Quick lookup by nodeId (Phase 25g)
+  elementLookup?: Record<string, NodeIndexEntry>;  // Quick lookup by String(element.index)
 }

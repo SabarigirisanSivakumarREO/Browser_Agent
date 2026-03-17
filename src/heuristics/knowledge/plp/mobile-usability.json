@@ -1,0 +1,42 @@
+{
+  "name": "Mobile Usability",
+  "description": "How the product listing should adapt to mobile devices to support efficient thumb-driven browsing and filtering",
+  "heuristics": [
+    {
+      "id": "PLP-MOBILE-001",
+      "principle": "Filter access on mobile should use a full-screen drawer or modal rather than cramping filters into the main view",
+      "checkpoints": [
+        "A clearly labelled filter button triggers a full-screen or slide-out panel",
+        "Filter drawer shows all filter options in a scrollable layout",
+        "Apply and clear buttons are visible within the filter drawer",
+        "Product count updates live within the filter drawer before applying"
+      ],
+      "severity": "high",
+      "category": "Mobile Usability"
+    },
+    {
+      "id": "PLP-MOBILE-002",
+      "principle": "Touch targets for product cards, filters, and pagination should meet minimum size requirements for comfortable interaction",
+      "checkpoints": [
+        "Product cards are large enough to tap without mis-taps",
+        "Filter checkboxes and toggles meet 44x44px minimum touch area",
+        "Pagination buttons or load-more are easily tappable",
+        "Swatches and small interactive elements have adequate spacing"
+      ],
+      "severity": "high",
+      "category": "Mobile Usability"
+    },
+    {
+      "id": "PLP-MOBILE-003",
+      "principle": "The mobile product grid should prioritise product images and key info without excessive scrolling per product",
+      "checkpoints": [
+        "Product cards show image, name, and price without scrolling within the card",
+        "Two-column grid provides a good balance of detail and density",
+        "Card content does not overflow or get clipped on narrow screens",
+        "Sticky header or sort/filter bar does not consume excessive screen space"
+      ],
+      "severity": "high",
+      "category": "Mobile Usability"
+    }
+  ]
+}

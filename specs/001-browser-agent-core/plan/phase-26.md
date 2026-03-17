@@ -1,8 +1,8 @@
 # Phase 26: LLM Analysis Optimization
 
-**Status**: Planned (Revised 2026-02-10)
-**Tasks**: T550-T577 (28 tasks)
-**Tests**: 20 unit + 4 integration + 4 E2E = 28 total
+**Status**: ✅ COMPLETE (26a ✅, 26b ✅, 26c ✅, 26e ✅, 26f ✅)
+**Tasks**: T550-T577 (28 tasks, 28 complete)
+**Tests**: 46 unit + 6 integration + 4 E2E = 56 total — ALL PASSING
 **Dependencies**: Phase 25 (Enhanced Extraction)
 
 ---
@@ -678,12 +678,12 @@ export function classifyDiscrepancy(
 
 | Session | Tasks | Focus | Tests |
 |---------|-------|-------|-------|
-| 1 | T550-T555 | 26a: Parallel analysis (config, p-limit, implementation, CLI, tests) | 6 unit |
-| 2 | T556-T559 | 26b part 1: Batcher + prompt builder + parser + orchestrator integration | — |
-| 3 | T560-T563 | 26b part 2: CLI flag + exports + all batching tests | 4+4 unit, 1 int |
-| 4 | T564-T568 | 26c: Viewport filtering (selector, integration, CLI, tests) | 6 unit, 1 int |
-| 5 | T569-T574 | 26e: Quality validation CI-only (comparator, classifier, validator, tests) | — unit, 1 int |
-| 6 | T575-T577 | 26f: E2E tests for full optimization stack | 4 E2E |
+| 1 ✅ | T550-T555 | 26a: Parallel analysis (config, p-limit, implementation, CLI, tests) | 6 unit |
+| 2 ✅ | T556-T559 | 26b part 1: Batcher + prompt builder + parser + orchestrator integration | — |
+| 3 ✅ | T560-T563 | 26b part 2: CLI flag + exports + all batching tests | 7+8 unit, 2 int |
+| 4 ✅ | T564-T568 | 26c: Viewport filtering (selector, integration, CLI, tests) | 13 unit, 2 int |
+| 5 ✅ | T569-T574 | 26e: Quality validation CI-only (comparator, classifier, validator, tests) | 12 unit, 2 int |
+| 6 ✅ | T575-T577 | 26f: E2E tests for full optimization stack | 4 E2E |
 
 **Recommended**: 6 sessions
 
@@ -698,15 +698,20 @@ export function classifyDiscrepancy(
 --sequential-analysis              # Disable parallel mode
 --max-concurrent-categories <n>    # Limit concurrent calls (default: 5)
 
-# Category batching (default: enabled)
---no-category-batching             # One call per category
+# Category batching (default: disabled — opt-in for token savings)
+--category-batching                # Enable batching (multiple categories per LLM call)
 
-# Viewport filtering (default: enabled)
---no-viewport-filtering            # Send all viewports to all categories
+# Viewport filtering (default: disabled — opt-in for token savings)
+--viewport-filtering               # Enable filtering (send only relevant viewports per category)
 
 # Quality validation (CI-only)
 --validate-quality                 # Compare optimized vs baseline
 ```
+
+> **Hotfix 6 (2026-02-11)**: Changed defaults from batching+filtering ON to OFF.
+> Live testing on Peregrine Clothing PDP showed quality degradation with batching + viewport filtering.
+> Parallelism alone gives 3-4x speedup (360s → ~85s). Batching/filtering save tokens but hurt quality.
+> Batching and viewport filtering are now opt-in via `--category-batching` and `--viewport-filtering`.
 
 ---
 

@@ -2,7 +2,7 @@
 
 **Feature Branch**: `001-browser-agent-core`
 **Created**: 2025-01-23
-**Status**: Architecture Refactor (CR-001 Approved) | Phase 24 ✅ | Phase 25 📋 | Phase 22 Pending
+**Status**: Element Mapping ✅ | Phase 26 ✅ | Phase 25 ✅ | Phase 24 ✅ | Phase 22 📋 Pending
 **Input**: User description: "Build a browser agent that can navigate websites and extract data using LangChain for intelligent processing"
 
 > **Change Request 001 (2026-01-30)**: Architecture simplification ✅ **COMPLETE**
@@ -28,6 +28,9 @@
 | Phase 23 Requirements | FR-360 to FR-372, LLM Input Capture | [requirements-phase23.md](./requirements-phase23.md) |
 | Phase 24 Requirements | FR-380 to FR-389, Hybrid LLM Page Type Detection | [requirements-phase24.md](./requirements-phase24.md) |
 | Phase 25 Requirements | FR-390 to FR-396, Enhanced Extraction & Screenshot Analysis | [requirements-phase25.md](./requirements-phase25.md) |
+| Phase 26 Requirements | FR-420 to FR-429, LLM Analysis Optimization | [requirements-phase26.md](./requirements-phase26.md) |
+| Element Mapping | FR-430 to FR-433, Element positions in prompts + ref parsing | [requirements-phase25.md](./requirements-phase25.md#element-mapping-quality-fix) |
+| Phase 27 Requirements | FR-440 to FR-455, Analysis Quality & Annotation Fix | [requirements-phase27.md](./requirements-phase27.md) |
 
 ---
 
@@ -63,3 +66,6 @@
 | **22** | **Page Type KBs** | FR-356 to FR-359 | 📋 Pending |
 | **23** | **LLM Input Capture** | FR-360 to FR-372 | ✅ Complete |
 | **24** | **Hybrid LLM Page Detection** | FR-380 to FR-389 | ✅ Complete |
+| **25** | **Enhanced Extraction** | FR-390 to FR-411 | ✅ Complete |
+| **26** | **LLM Analysis Optimization** | FR-420 to FR-429 | ✅ Complete |
+| **27** | **Analysis Quality & Annotation Fix** | FR-440 to FR-462 | ✅ Complete |

@@ -1,0 +1,66 @@
+{
+  "name": "Product Cards",
+  "description": "How individual product cards should present key information to support confident browsing and comparison decisions",
+  "heuristics": [
+    {
+      "id": "PLP-CARD-001",
+      "principle": "Each product card should display the minimum information needed for a purchase-relevant decision: image, name, and price",
+      "checkpoints": [
+        "Product image is clearly visible and appropriately sized",
+        "Product name or title is readable without truncation of key details",
+        "Price is prominently displayed on every card",
+        "Sale or discounted prices show both original and reduced price"
+      ],
+      "severity": "critical",
+      "category": "Product Cards"
+    },
+    {
+      "id": "PLP-CARD-002",
+      "principle": "Product images should be high quality and consistently sized to allow visual comparison across the grid",
+      "checkpoints": [
+        "Images are sharp and not pixelated or stretched",
+        "All product images use a consistent aspect ratio",
+        "Product is clearly visible against the background",
+        "Hover or secondary image shows the product from another angle where available"
+      ],
+      "severity": "high",
+      "category": "Product Cards"
+    },
+    {
+      "id": "PLP-CARD-003",
+      "principle": "Available colour or variant swatches should be shown on the card to reduce unnecessary PDP visits",
+      "checkpoints": [
+        "Colour swatches or variant indicators are visible on the card",
+        "Hovering on a swatch updates the product image",
+        "Number of additional variants is indicated if space is limited",
+        "Swatch interaction does not navigate away from the listing page"
+      ],
+      "severity": "medium",
+      "category": "Product Cards"
+    },
+    {
+      "id": "PLP-CARD-004",
+      "principle": "Review ratings and availability status should be visible on cards to aid decision-making before clicking through",
+      "checkpoints": [
+        "Star rating or review count is displayed where reviews exist",
+        "Out of stock products are clearly marked",
+        "Bestseller or trending badges provide social proof",
+        "Low stock indicators create appropriate urgency without being misleading"
+      ],
+      "severity": "medium",
+      "category": "Product Cards"
+    },
+    {
+      "id": "PLP-CARD-005",
+      "principle": "Quick-add or quick-view functionality should reduce friction for users who know what they want",
+      "checkpoints": [
+        "Quick add to cart is available for simple products without variants",
+        "Quick view modal shows key details without full PDP navigation",
+        "Quick actions do not obscure essential card information",
+        "Quick add confirms success with clear feedback"
+      ],
+      "severity": "low",
+      "category": "Product Cards"
+    }
+  ]
+}

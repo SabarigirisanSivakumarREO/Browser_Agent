@@ -1,7 +1,7 @@
 # Quickstart: Browser Agent Core
 
 **Feature**: `001-browser-agent-core`
-**Last Updated**: 2026-02-05 (Phase 25i complete)
+**Last Updated**: 2026-03-04 (Phase 28 REVERTED, model default changed to gpt-4o-mini)
 
 ---
 
@@ -15,8 +15,8 @@ Read specs/001-browser-agent-core/quickstart.md to get the complete project cont
 
 ## Session Bootstrap (READ THIS FIRST)
 
-**Status**: CR-001 ✅ | Phase 21h ✅ | Phase 21i ✅ | Phase 21j ✅ | Phase 21l ✅ | Phase 23 ✅ | Phase 24 ✅ | Phase 25 ✅ | Phase 26 📋
-- Completed: 487 tasks (Phases 1-19, 12b, 12c, 21a-21l, CR-001, Phases 23-25f)
+**Status**: CR-001 ✅ | Phase 21h ✅ | Phase 21i ✅ | Phase 21j ✅ | Phase 21l ✅ | Phase 23 ✅ | Phase 24 ✅ | Phase 25 ✅ | Phase 26 ✅ | Phase 22A ✅ | Element Mapping ✅
+- Completed: 525 tasks (Phases 1-19, 12b, 12c, 21a-21l, CR-001, Phases 23-26, 22A) + Element Mapping quality fix
 - **CR-001 COMPLETE** (2026-01-30):
   - ✅ Merged Vision Agent into CRO Agent (single agent loop)
   - ✅ Removed redundant vision modes (--full-page-vision, --full-page-screenshot)
@@ -38,8 +38,9 @@ Read specs/001-browser-agent-core/quickstart.md to get the complete project cont
 **Current Focus**:
 - Phase 24: Hybrid LLM Page Type Detection (23 tasks) ✅ **COMPLETE** - All 55 tests passing (39 unit + 9 integration + 7 E2E)
 - **Phase 25: Enhanced Extraction (76 tasks) ✅ COMPLETE** - Dynamic steps, selectors, structured data, fold annotation, tiled screenshots, deterministic collection, evidence mapping, hybrid collection
-- **Phase 26: LLM Analysis Optimization (28 tasks) 📋 PLANNED** - Parallel analysis, category batching, viewport filtering, CI-only quality validation
-- Phase 22: New Page Type Knowledge Bases (~38 tasks) 📋 Planned - PLP, Homepage, Cart, Checkout
+- **Phase 26: LLM Analysis Optimization (28 tasks) ✅ COMPLETE** - Parallel analysis, category batching, viewport filtering, CI-only quality validation, E2E tests
+- **Phase 22: Page Type Knowledge Bases (38 tasks) ⏳ IN PROGRESS** — 22A PLP ✅ (25 heuristics, 15 tests), 22B-E 📋 (Homepage, Cart, Checkout, Generic)
+- **Phase 27: Analysis Quality & Annotation Fix (19 tasks) ✅ COMPLETE** — 27A ✅ (model default: gpt-4o-mini), 27B ✅ (structured element refs), 27C ✅ (prompt strengthening), 27D ✅ (confidence filtering), 27E ✅ (dedup fix), 27F ✅ (annotation fix), 27G ✅ (DOM cross-validation)
 
 **Phase 25 Progress** (2026-02-04) ✅ **COMPLETE**:
 - ✅ **25a** T473-T476: Dynamic collection steps (based on page height) - 14 unit tests
@@ -53,17 +54,18 @@ Read specs/001-browser-agent-core/quickstart.md to get the complete project cont
 - ✅ **25i** T535-T548: Hybrid collection (cheap validator + LLM QA) - 34 unit tests
 - See: `spec/requirements-phase25.md`, `plan/phase-25.md`, `tasks/phase-25.md`
 
-**Phase 26 Progress** (2026-02-10) 📋 **PLANNED (Revised)**:
-- 📋 **26a** T550-T555: Parallel category analysis (p-limit, rate limiting, error isolation) - 6 unit tests
-- 📋 **26b** T556-T563: Batch multiple categories per call (56% token savings) - 4+4 unit + 1 int tests
-- 📋 **26c** T564-T568: Intelligent viewport filtering (15-30% additional savings) - 6 unit + 1 int tests
-- 📋 **26e** T569-T574: Quality validation CI-only (comparator, classifier, validator) - 1 int test
-- 📋 **26f** T575-T577: Cross-cutting E2E tests - 4 E2E tests
+**Phase 26 Progress** (2026-02-10) ✅ **COMPLETE**:
+- ✅ **26a** T550-T555: Parallel category analysis (p-limit, rate limiting, timeout, error isolation) - 6 unit tests passing
+- ✅ **26b** T556-T563: Batch multiple categories per call (56% token savings) — All 8 tasks done, 17 tests (7+8 unit, 2 integration)
+- ✅ **26c** T564-T568: Intelligent viewport filtering (15-30% additional savings) — All 5 tasks done, 15 tests (13 unit, 2 integration)
+- ✅ **26e** T569-T574: Quality validation CI-only (comparator, classifier, validator) — All 6 tasks done, 14 tests (12 unit, 2 integration)
+- ✅ **26f** T575-T577: Cross-cutting E2E tests — All 3 tasks done, 4 E2E tests (1 parallel+batch, 1 viewport, 2 full+quality)
 - ~~26d: Response token optimization~~ - DROPPED (only 1.5% savings)
 - ~~Runtime auto-rollback~~ - DROPPED (over-engineered; CI-only validation instead)
-- **Target**: 10x faster (336s → 35s), 56% cheaper ($0.20 → $0.09 per page)
-- **Quality Guarantee**: ≥95% match rate vs baseline (CI validation)
-- **Backward Compatible**: All optimizations opt-out via CLI flags
+- **Target**: 3-4x faster (360s → ~85s) with parallel-only defaults
+- **Quality Guarantee**: ≥80% effective match rate vs baseline (CI validation, only critical+major count)
+- **Defaults**: Parallel analysis ON, batching OFF, viewport filtering OFF (batching/filtering opt-in via CLI)
+- **Hotfix 6** (2026-02-11): Changed defaults to parallel-only. Live testing showed batching + viewport filtering degrade quality. Batching/filtering now opt-in via `--category-batching` and `--viewport-filtering`.
 - See: `spec/requirements-phase26.md`, `plan/phase-26.md`, `tasks/phase-26.md`
 
 **Phase 21l COMPLETE** (user experience):
@@ -136,7 +138,7 @@ Read specs/001-browser-agent-core/quickstart.md to get the complete project cont
 
 **Key insight**: The unified CRO Agent (CR-001) uses a three-phase approach: (1) Data Collection captures DOM + screenshots across the full page, (2) Analysis runs category-based LLM calls against heuristics knowledge base, (3) Output generates insights, hypotheses, and A/B test ideas. Vision analysis provides UX-level insights. Phase 21i's DOM-Screenshot mapping will enable verification of LLM observations against actual element positions.
 
-**Current milestone**: CR-001 ✅ Complete | Phase 21h 📋 Next - Evidence Capture | Phase 21i 📋 Planned - DOM-Screenshot Mapping
+**Current milestone**: Element Mapping ✅ | Phase 26 ✅ | Phase 22 ⏳ IN PROGRESS (22A PLP ✅) - Page Type Knowledge Bases
 
 **Instructions**: Keep it concise. Compromise on grammar. Clear, to the point. No fluff.
 
@@ -150,12 +152,12 @@ Read specs/001-browser-agent-core/quickstart.md to get the complete project cont
 
 **Session Chunking** (see SESSION-HANDOFF.md for full breakdown):
 - Phase 26 Sessions (6 recommended):
-  - Session 1: T550-T555 (26a: Parallel analysis - config, p-limit, implementation, CLI, tests)
-  - Session 2: T556-T559 (26b part 1: Batcher + prompt builder + parser + orchestrator)
-  - Session 3: T560-T563 (26b part 2: CLI flag + exports + all batching tests)
-  - Session 4: T564-T568 (26c: Viewport filtering - selector, integration, CLI, tests)
-  - Session 5: T569-T574 (26e: Quality validation CI-only - comparator, classifier, validator, tests)
-  - Session 6: T575-T577 (26f: E2E tests for full optimization stack)
+  - Session 1: T550-T555 (26a: Parallel analysis - config, p-limit, implementation, CLI, tests) ✅
+  - Session 2: T556-T559 (26b part 1: Batcher + prompt builder + parser + orchestrator) ✅
+  - Session 3: T560-T563 (26b part 2: CLI flag + exports + all batching tests) ✅
+  - Session 4: T564-T568 (26c: Viewport filtering - selector, integration, CLI, tests) ✅
+  - Session 5: T569-T574 (26e: Quality validation CI-only - comparator, classifier, validator, tests) ✅
+  - Session 6: T575-T577 (26f: E2E tests for full optimization stack) ✅
 
 **Excluded folders** (DO NOT analyze unless explicitly requested):
 - `browser-use/` - Reference codebase only (545 files), not part of this project
@@ -269,20 +271,76 @@ For any feature/bug fix request:
 
 ### Recent Changes (keep last 3)
 
-**0. Phase 26: LLM Analysis Optimization** - 📋 PLANNED (Revised 2026-02-10)
+**0. Element Mapping in LLM Prompts** - ✅ COMPLETE (2026-02-12)
+- **Purpose**: Give LLM coordinate context so element refs match screenshot positions; fix broken evidence annotation
+- **Changes**:
+  - ✅ `<element_positions>` block in `category-analyzer.ts` → `buildDOMContextSection()` (per viewport, after DOM)
+  - ✅ `<element_positions>` block in `batch-prompt-builder.ts` → `buildDOMContextSection()` (shared in batch)
+  - ✅ `populateElementRefs()` in `category-analyzer.ts` — parses `[v0-5]` from LLM text → populates `domElementRefs`
+  - ✅ Called in `CategoryAnalyzer.analyzeCategory()` and `AnalysisOrchestrator.runBatchedAnalysis()`
+  - ✅ `ScreenshotAnnotator` now works — `getElementStatus()` matches via populated `domElementRefs`
+- **Tests**: 19 new unit tests in `tests/unit/element-mapping-prompt.test.ts`
+- **Impact**: ~5-10% token increase, significant quality improvement for spatial heuristics + working evidence annotation
+
+**1. Phase 26: LLM Analysis Optimization** - ✅ COMPLETE (26a ✅, 26b ✅, 26c ✅, 26e ✅, 26f ✅)
 - **Purpose**: Reduce analysis time from 336s to ~35s (10x faster), token usage from 266K to ~113K (56% cheaper)
 - **Sub-phases**:
-  1. **26a**: Parallel category analysis (p-limit, rate limiting, timeout, error isolation)
-  2. **26b**: Batch multiple categories per call (5 calls instead of 10, 56% token savings)
-  3. **26c**: Intelligent viewport filtering (send only relevant viewports per category)
-  4. **26e**: Quality validation CI-only (comparator, classifier, validator)
-  5. **26f**: Cross-cutting E2E tests
+  1. **26a**: Parallel category analysis (p-limit, rate limiting, timeout, error isolation) ✅ DONE
+  2. **26b**: Batch multiple categories per call (5 calls instead of 10, 56% token savings) ✅ DONE
+  3. **26c**: Intelligent viewport filtering (send only relevant viewports per category) ✅ DONE
+  4. **26e**: Quality validation CI-only (comparator, classifier, validator) ✅ DONE
+  5. **26f**: Cross-cutting E2E tests ✅ DONE
+- **26a Changes** (2026-02-10):
+  - ✅ Installed `p-limit@4` for concurrency control
+  - ✅ `parallelAnalysis` default changed to `true`, added `maxConcurrentCategories` (5) and `parallelTimeoutMs` (120s)
+  - ✅ `runParallelAnalysis()` with rate limiting, per-category timeout, error isolation
+  - ✅ `CategoryAnalysisResult` extended with optional `error` field
+  - ✅ `AnalyzeOptions` extended with `parallelAnalysis`, `maxConcurrentCategories`
+  - ✅ CLI flags: `--sequential-analysis`, `--max-concurrent-categories <n>`
+  - ✅ 6 unit tests passing in `tests/unit/parallel-analysis.test.ts`
+- **26b Changes** (2026-02-10, Session 2 — T556-T559):
+  - ✅ Created `src/heuristics/category-batcher.ts` — CATEGORY_BATCHES (5 pairs), `groupCategoriesIntoBatches()` with 'related'/'size'/'custom' strategy
+  - ✅ Created `src/heuristics/batch-prompt-builder.ts` — `buildBatchedSystemPrompt()`, `buildBatchedUserMessage()` with shared DOM/screenshot context, per-category heuristic sections, category-keyed JSON output format
+  - ✅ Created `src/heuristics/batch-response-parser.ts` — `parseBatchedResponse()`, `BatchParseError`, `extractJSON()` helper, graceful handling of missing categories
+  - ✅ Integrated `runBatchedAnalysis()` into `analysis-orchestrator.ts` — `categoryBatching: false` default (opt-in), batch strategy config, parallel batch execution with p-limit, fallback to single-category on `BatchParseError`
+  - ✅ Config additions: `categoryBatching`, `batchStrategy`, `customBatches` fields in `AnalysisOrchestratorConfig`
+  - ✅ Existing 6 parallel-analysis tests updated for batching compatibility, all passing
+- **26b Session 3 Changes** (2026-02-10 — T560-T563):
+  - ✅ Added `--category-batching` CLI flag in `src/cli.ts` (opt-in), `categoryBatching` option in `AnalyzeOptions`
+  - ✅ Exported all batching modules from `src/heuristics/index.ts` (BatchStrategy, CATEGORY_BATCHES, build/parse functions, BatchParseError)
+  - ✅ Created `tests/unit/category-batching.test.ts` — 7 tests (batcher grouping, custom batches, unmatched categories, prompt builder shared context, empty snapshots)
+  - ✅ Created `tests/unit/batch-response-parser.test.ts` — 8 tests (extractJSON, parseBatchedResponse valid/missing/invalid/normalization/clamping)
+  - ✅ Created `tests/integration/batched-analysis.test.ts` — 2 tests (reduced API calls verification, fallback on parse failure)
+  - ✅ **26b COMPLETE**: All 8 tasks done, 23 Phase 26 tests passing (6 parallel + 7 batcher + 8 parser + 2 integration)
+- **26c Session 4 Changes** (2026-02-10 — T564-T568):
+  - ✅ Created `src/heuristics/viewport-selector.ts` — `ViewportMode`, `CategoryViewportConfig`, `VIEWPORT_REQUIREMENTS` (10 categories), `selectViewportsForCategory()`, `filterDOMForViewports()`
+  - ✅ Integrated viewport filtering into `analysis-orchestrator.ts` — `enableViewportFiltering: false` default (opt-in), filters in `analyzeCategory()` and `runBatchedAnalysis()` (union of viewport indices for batches)
+  - ✅ Added `enableViewportFiltering` to `AnalyzeOptions` in `cro-agent.ts`, wired through to orchestrator
+  - ✅ Added `--viewport-filtering` CLI flag in `src/cli.ts` (opt-in), help text updated
+  - ✅ Exported `ViewportMode`, `CategoryViewportConfig`, `selectViewportsForCategory`, `filterDOMForViewports`, `VIEWPORT_REQUIREMENTS` from `src/heuristics/index.ts`
+  - ✅ Created `tests/unit/viewport-filtering.test.ts` — 13 tests (VIEWPORT_REQUIREMENTS, selectViewportsForCategory 7 modes, filterDOMForViewports 5 cases)
+  - ✅ Created `tests/integration/viewport-filtering.test.ts` — 2 tests (filtered vs unfiltered through orchestrator)
+  - ✅ **26c COMPLETE**: All 5 tasks done, 38 Phase 26 tests passing (6 parallel + 7 batcher + 8 parser + 13 viewport + 2 batch int + 2 viewport int)
+- **26e Session 5 Changes** (2026-02-10 — T569-T574):
+  - ✅ Created `src/validation/result-comparator.ts` — `compareResults()`, `ComparisonResult`, `EvaluationDiscrepancy` (matches by heuristicId, tracks missing evaluations)
+  - ✅ Created `src/validation/discrepancy-classifier.ts` — `classifyDiscrepancy()`, `QualityDiscrepancy`, `DiscrepancySeverity` (critical/major/minor classification with likelyCause)
+  - ✅ Created `src/validation/quality-validator.ts` — `QualityValidator` class: runs baseline (sequential, no batch, no filter) + optimized (parallel, batched, filtered), compares, classifies, checks threshold + no critical, generates recommendations
+  - ✅ Added `--validate-quality` CLI flag in `src/cli.ts`, wired through `processVisionMode()` with full console output (match rate, discrepancies, recommendations)
+  - ✅ Updated `src/validation/index.ts` — exported all quality validation modules (compareResults, classifyDiscrepancy, QualityValidator, types)
+  - ✅ Created `tests/unit/quality-validation.test.ts` — 12 tests (5 compareResults + 7 classifyDiscrepancy)
+  - ✅ Created `tests/integration/quality-validation.test.ts` — 2 tests (full validation flow with mocked LLM)
+  - ✅ **26e COMPLETE**: All 6 tasks done, 52 Phase 26 tests passing (6 parallel + 7 batcher + 8 parser + 13 viewport + 12 quality unit + 2 batch int + 2 viewport int + 2 quality int)
+- **26f Session 6 Changes** (2026-02-10 — T575-T577):
+  - ✅ Created `tests/e2e/optimization-parallel-batch.test.ts` — 1 E2E test (10 categories, 5 batched LLM calls, parallel execution, all evaluations valid)
+  - ✅ Created `tests/e2e/optimization-viewport.test.ts` — 1 E2E test (6 categories, viewport filtering per-category verified, above_fold/below_fold/all modes)
+  - ✅ Created `tests/e2e/optimization-full.test.ts` — 2 E2E tests (all optimizations combined + quality validation against baseline)
+  - ✅ **Phase 26 COMPLETE**: All 28 tasks done, 56 tests passing (46 unit + 6 integration + 4 E2E)
 - **Dropped**: ~~26d: Response token optimization~~ (1.5% savings), ~~runtime auto-rollback~~ (over-engineered)
 - **Quality Guarantee**: CI-only validation compares optimized vs baseline, requires ≥95% match rate
 - **Backward Compatible**: All optimizations enabled by default with opt-out flags
-- **CLI Flags**: `--sequential-analysis`, `--no-category-batching`, `--no-viewport-filtering`, `--validate-quality`
-- **Tasks**: T550-T577 (28 tasks)
-- **Tests**: 28 (20 unit + 4 integration + 4 E2E)
+- **CLI Flags**: `--sequential-analysis`, `--category-batching`, `--viewport-filtering`, `--validate-quality`
+- **Tasks**: T550-T577 (28 tasks, 28 complete ✅)
+- **Tests**: 56 (46 unit + 6 integration + 4 E2E) — ALL PASSING
 - **See**: `spec/requirements-phase26.md`, `plan/phase-26.md`, `tasks/phase-26.md`
 
 **1. Phase 25 Bug Fixes & Enhancements** - ✅ COMPLETE (2026-02-05)
@@ -305,7 +363,7 @@ For any feature/bug fix request:
   4. **25d**: Above-fold annotation (fold line on screenshots)
   5. **25e**: Tiled screenshot mode (alternative capture)
   6. **25f**: Deterministic collection (skip LLM for scrolling)
-  7. **25g**: Evidence mapping + confidence + packaging (nodeId, boxes, EvidencePackage)
+  7. **25g**: Evidence mapping + confidence + packaging (elementIndex, boxes, EvidencePackage)
   8. **25h**: Determinism + noise suppression + lazy-load + metrics
   9. **25i**: Hybrid collection (cheap validator + conditional LLM QA)
 - **Pipeline**: DOM Freeze → Noise Suppression → DOM Extract → CRO Match → Structured Data → Deterministic Collection → Cheap Validator → (LLM QA if needed) → Recheck → Reconciliation → Evidence Package
@@ -415,7 +473,7 @@ For any feature/bug fix request:
 
 | Change | Phase | Tasks | CLI Milestone | Status |
 |--------|-------|-------|---------------|--------|
-| **LLM Analysis Optimization** | 26 | 28 | `--sequential-analysis`, `--no-category-batching`, `--no-viewport-filtering`, `--validate-quality` | 📋 PLANNED |
+| **LLM Analysis Optimization** | 26 | 28 | `--sequential-analysis`, `--category-batching`, `--viewport-filtering`, `--validate-quality` | ✅ COMPLETE |
 | **Enhanced Extraction & Screenshots** | 25 | 76 | `--screenshot-mode`, `--no-evidence-json`, `--skip-collection-qa` | ✅ COMPLETE |
 | **Hybrid LLM Page Detection** | 24 | 23 | `--no-llm-page-detection`, `--force-llm-detection`, `--llm-detection-threshold` | ✅ COMPLETE |
 | **LLM Input Capture** | 23 | 9 | Save DOM, screenshots, prompts | ✅ COMPLETE |
@@ -494,15 +552,15 @@ Phase 25-CLI: npm run start -- --vision https://example.com  ✅ (full quality p
             npm run start -- --vision --llm-guided-collection https://example.com  ✅ (old LLM-guided mode)
             npm run start -- --vision --screenshot-mode=tiled https://example.com  ✅ (tiled screenshots)
 
-# Phase 26 CLI (PLANNED - optimization flags):
-Phase 26-CLI: npm run start -- --vision https://example.com  📋 (10x faster with parallel + batching)
-            npm run start -- --vision --sequential-analysis https://example.com  📋 (disable parallel)
-            npm run start -- --vision --no-category-batching https://example.com  📋 (one call per category)
-            npm run start -- --vision --no-viewport-filtering https://example.com  📋 (send all viewports)
-            npm run start -- --vision --max-concurrent-categories 3 https://example.com  📋 (rate limit)
+# Phase 26 CLI (COMPLETE - optimization flags):
+Phase 26-CLI: npm run start -- --vision https://example.com  ✅ (3-4x faster with parallel analysis, default)
+            npm run start -- --vision --sequential-analysis https://example.com  ✅ (disable parallel)
+            npm run start -- --vision --category-batching https://example.com  ✅ (opt-in: batch categories, saves tokens)
+            npm run start -- --vision --viewport-filtering https://example.com  ✅ (opt-in: filter viewports, saves tokens)
+            npm run start -- --vision --max-concurrent-categories 3 https://example.com  ✅ (rate limit)
 
-# Phase 26 CLI (PLANNED - quality validation, CI-only):
-Phase 26-QA:  npm run start -- --vision --validate-quality https://example.com  📋 (compare vs baseline, CI use)
+# Phase 26 CLI (quality validation, CI-only):
+Phase 26-QA:  npm run start -- --vision --validate-quality https://example.com  ✅ (compare vs baseline, CI use)
 
 # DEPRECATED ALIASES (still work, mapped to new flags):
 # --vision-agent → --vision
