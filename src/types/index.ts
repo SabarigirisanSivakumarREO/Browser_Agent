@@ -188,7 +188,7 @@ export interface Phase25Config {
   maxTiles: number;
   /** Annotate screenshots with fold line (default: true) */
   annotateFoldLine: boolean;
-  /** Viewport height for fold line annotation (default: 720) */
+  /** Viewport height for fold line annotation (default: 800) */
   viewportHeight: number;
 }
 
@@ -201,7 +201,7 @@ export const DEFAULT_PHASE25_CONFIG: Phase25Config = {
   tileOverlapPx: 100,
   maxTiles: 5,
   annotateFoldLine: true,
-  viewportHeight: 720,
+  viewportHeight: 800,
 };
 
 // ============================================================================
@@ -301,3 +301,32 @@ export const createEmptyValidatorSignals = (viewportIndex: number): ViewportVali
   failedImages: 0,
   scrollPositionVerified: true,
 });
+
+// ============================================================================
+// Phase 29: AX Tree Types
+// ============================================================================
+
+/**
+ * Configuration for accessibility tree capture and serialization.
+ */
+export interface AXTreeSerializerConfig {
+  /** Token budget for serialized output (default: 500) */
+  maxTokens: number;
+  /** Use Playwright's interesting-only filter (default: true) */
+  interestingOnly: boolean;
+  /** State properties to include in output */
+  includeStates: string[];
+  /** Spaces per indentation level (default: 2) */
+  indentSize: number;
+}
+
+/** Default AX tree serializer configuration */
+export const DEFAULT_AX_TREE_CONFIG: AXTreeSerializerConfig = {
+  maxTokens: 500,
+  interestingOnly: true,
+  includeStates: [
+    'disabled', 'checked', 'expanded', 'required',
+    'selected', 'invalid', 'pressed',
+  ],
+  indentSize: 2,
+};

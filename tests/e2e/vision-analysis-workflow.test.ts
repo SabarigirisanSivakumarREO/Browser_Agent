@@ -159,7 +159,7 @@ describe.skipIf(skipE2E)('Vision Analysis E2E Workflow', () => {
     it('should correctly identify supported page types', () => {
       expect(isPageTypeSupported('pdp')).toBe(true);
       expect(isPageTypeSupported('homepage')).toBe(false);
-      expect(isPageTypeSupported('plp')).toBe(false);
+      expect(isPageTypeSupported('plp')).toBe(true);  // Phase 22A: PLP now supported
     });
   });
 
@@ -209,7 +209,7 @@ describe.skipIf(skipE2E)('Vision Analysis E2E Workflow', () => {
       const analyzer = createCROVisionAnalyzer();
       const config = analyzer.getConfig();
 
-      expect(config.model).toBe('gpt-4o');
+      expect(config.model).toBe('gpt-4o-mini');  // Phase 28 revert: Default back to gpt-4o-mini
       expect(config.maxTokens).toBe(4096);
       expect(config.temperature).toBe(0.1);
       expect(config.includeObservations).toBe(true);

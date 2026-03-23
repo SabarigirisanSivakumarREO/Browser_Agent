@@ -13,6 +13,7 @@ import type { HeuristicEvaluation, EvaluationStatus, DOMElementRef } from './vis
 import type { Severity } from '../models/cro-insight.js';
 import { createLogger } from '../utils/index.js';
 import { MODEL_DEFAULTS, type AnalysisModel } from './model-config.js';
+import { cropForCategory, compressForLLM } from './vision/image-crop-pipeline.js';
 
 /**
  * Configuration for category analyzer
@@ -26,6 +27,10 @@ export interface CategoryAnalyzerConfig {
   temperature: number;
   /** Timeout for LLM call in milliseconds */
   timeoutMs: number;
+  /** Phase 30: Enable category-aware auto-cropping (default: true) */
+  autoCrop?: boolean;
+  /** Phase 30: Max tokens per image (default: 300) */
+  imageTokenBudget?: number;
 }
 
 /**
@@ -152,8 +157,46 @@ export class CategoryAnalyzer {
     // Build user message with DOM context, screenshots, and heuristics
     const userMessage = this.buildUserMessage(snapshots, category, pageType);
 
+    // Phase 30 (T665): Auto-crop screenshots for this category,
+    // or compress to token budget if auto-crop is disabled.
+    const tokenBudget = this.config.imageTokenBudget ?? 300;
+    const processedSnapshots: ViewportSnapshot[] = [];
+    for (const snapshot of snapshots) {
+      try {
+        if (this.config.autoCrop !== false) {
+          // Crop to category-relevant region + compress
+          const cropResult = await cropForCategory(
+            snapshot.screenshot.base64,
+            category.name,
+            snapshot.visibleElements ?? [],
+            1280,
+            800,
+            { maxTokensPerImage: tokenBudget }
+          );
+          processedSnapshots.push({
+            ...snapshot,
+            screenshot: { ...snapshot.screenshot, base64: cropResult.base64 },
+          });
+        } else {
+          // No crop, but still compress full-res to fit token budget
+          const compressed = await compressForLLM(
+            snapshot.screenshot.base64,
+            tokenBudget
+          );
+          processedSnapshots.push({
+            ...snapshot,
+            screenshot: { ...snapshot.screenshot, base64: compressed.base64 },
+          });
+        }
+      } catch {
+        // Fallback to original on failure
+        processedSnapshots.push(snapshot);
+      }
+    }
+    const analysisSnapshots = processedSnapshots;
+
     // Build messages array with images
-    const messages = this.buildMessagesWithImages(systemPrompt, userMessage, snapshots);
+    const messages = this.buildMessagesWithImages(systemPrompt, userMessage, analysisSnapshots);
 
     // Phase 23 (T402): Capture LLM inputs for debugging
     const capturedInputs: CapturedCategoryInputs = {
@@ -373,6 +416,12 @@ Respond with valid JSON only.`;
       const positionsBlock = buildElementPositionsBlock(snapshot);
       if (positionsBlock) {
         parts.push(positionsBlock);
+      }
+
+      // Phase 29 (T646): Add accessibility tree for semantic context
+      const axTreeBlock = buildAccessibilityTreeBlock(snapshot);
+      if (axTreeBlock) {
+        parts.push(axTreeBlock);
       }
 
       parts.push('');
@@ -605,6 +654,22 @@ export function buildElementPositionsBlock(snapshot: ViewportSnapshot): string |
 
   lines.push('</element_positions>');
   return lines.join('\n');
+}
+
+/**
+ * Phase 29 (T645): Build accessibility tree block for LLM prompt.
+ *
+ * Returns an <accessibility_tree> block with the serialized AX tree
+ * from the viewport snapshot, or null if no AX tree data is available.
+ */
+export function buildAccessibilityTreeBlock(
+  snapshot: ViewportSnapshot
+): string | null {
+  if (!snapshot.axTree) {
+    return null;
+  }
+
+  return `<accessibility_tree>\n${snapshot.axTree}\n</accessibility_tree>`;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

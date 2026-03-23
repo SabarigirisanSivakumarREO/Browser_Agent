@@ -42,7 +42,7 @@ export interface TiledScreenshotConfig {
   maxTiles: number;
   /** Annotate first tile with fold line (default: true) */
   annotateFoldLine: boolean;
-  /** Viewport height for fold line annotation (default: 720) */
+  /** Viewport height for fold line annotation (default: 800) */
   viewportHeight: number;
   /** Enable layout box mapping for evidence (default: true) */
   enableLayoutMapping: boolean;
@@ -64,7 +64,7 @@ export const DEFAULT_TILED_CONFIG: TiledScreenshotConfig = {
   overlapPx: 100,
   maxTiles: 5,
   annotateFoldLine: true,
-  viewportHeight: 720,
+  viewportHeight: 800,
   enableLayoutMapping: true,
   layoutMappingLimit: 20,
   layoutMappingTypes: ['cta', 'price', 'variant', 'shipping', 'stock', 'gallery'],

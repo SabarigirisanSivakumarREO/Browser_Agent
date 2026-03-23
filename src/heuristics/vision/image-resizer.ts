@@ -25,7 +25,7 @@ export async function processFullPageScreenshot(
   // Get original image metadata
   const metadata = await sharp(buffer).metadata();
   const originalWidth = metadata.width ?? 1280;
-  const originalHeight = metadata.height ?? 720;
+  const originalHeight = metadata.height ?? 800;
 
   const originalDimensions = { width: originalWidth, height: originalHeight };
 

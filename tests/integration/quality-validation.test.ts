@@ -133,6 +133,7 @@ vi.mock('../../src/heuristics/category-analyzer.js', () => ({
   // Element mapping utilities (no-op in integration tests)
   populateElementRefs: vi.fn(),
   buildElementPositionsBlock: vi.fn().mockReturnValue(null),
+  buildAccessibilityTreeBlock: vi.fn().mockReturnValue(null),
 }));
 
 // Mock logger
@@ -148,6 +149,12 @@ vi.mock('../../src/utils/index.js', () => ({
 // Mock vision types
 vi.mock('../../src/heuristics/vision/types.js', () => ({
   getInsightCategory: vi.fn().mockReturnValue('cta'),
+}));
+
+vi.mock('../../src/heuristics/vision/image-crop-pipeline.js', () => ({
+  cropForCategory: vi.fn().mockResolvedValue({ base64: 'mock-cropped', tokens: 170, cropped: true }),
+  compressForLLM: vi.fn().mockResolvedValue({ base64: 'mock-compressed', tokens: 170 }),
+  DEFAULT_CROP_CONFIG: { maxTokensPerImage: 300, paddingPx: 50, minCropSize: 100, jpegQualityRange: [30, 70], coverageThreshold: 0.8 },
 }));
 
 // Import after mocks

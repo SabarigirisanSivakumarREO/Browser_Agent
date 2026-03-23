@@ -70,6 +70,10 @@ export interface ViewportSnapshot {
   // Phase 25g: Layout boxes for evidence packaging (T511)
   /** Element bounding boxes for CRO elements (price, cta, variant, etc.) */
   layoutBoxes?: import('../browser/dom/coordinate-mapper.js').ElementBox[];
+
+  // Phase 29: Accessibility tree (T640)
+  /** Serialized filtered accessibility tree for LLM context */
+  axTree?: string;
 }
 
 /**

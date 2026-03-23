@@ -50,6 +50,28 @@ export {
   parseEvaluationsWithElements,
 } from './response-parser.js';
 
+// Phase 30a: Image Token Calculator (T653)
+export {
+  calculateImageTokens,
+  findOptimalDimensions,
+} from './image-token-calculator.js';
+
+// Phase 30b: Category Crop Mapper (T656)
+export {
+  computeCropRegion,
+  CATEGORY_ELEMENT_TYPES,
+  type CropRegion,
+} from './category-crop-mapper.js';
+
+// Phase 30c: Auto-Crop Pipeline (T659)
+export {
+  cropForCategory,
+  compressForLLM,
+  DEFAULT_CROP_CONFIG,
+  type CropPipelineConfig,
+  type CropResult,
+} from './image-crop-pipeline.js';
+
 // NOTE: The following modules have been DEPRECATED per CR-001:
 // - multi-viewport-analyzer.ts (removed --full-page-vision mode)
 // - result-merger.ts (used only by multi-viewport analyzer)

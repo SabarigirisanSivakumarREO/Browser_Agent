@@ -22,6 +22,7 @@ import { buildBatchedSystemPrompt, buildBatchedUserMessage } from './batch-promp
 import { parseBatchedResponse, BatchParseError } from './batch-response-parser.js';
 import { selectViewportsForCategory } from './viewport-selector.js';
 import { crossValidateEvaluations } from './cross-validator.js';
+import { compressForLLM } from './vision/image-crop-pipeline.js';
 
 /**
  * Configuration for analysis orchestrator
@@ -304,14 +305,19 @@ export class AnalysisOrchestrator {
         const systemPrompt = buildBatchedSystemPrompt(pageType);
         const userMessage = buildBatchedUserMessage(categories, batchSnapshots, pageType);
 
-        // Build LLM messages with images
+        // Build LLM messages with images (compress full-res to token budget)
+        const imageTokenBudget = this.config.analyzerConfig?.imageTokenBudget ?? 300;
         const userContent: Array<{ type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } }> = [
           { type: 'text', text: userMessage },
         ];
         for (const snapshot of batchSnapshots) {
+          const compressed = await compressForLLM(
+            snapshot.screenshot.base64,
+            imageTokenBudget
+          );
           userContent.push({
             type: 'image_url',
-            image_url: { url: `data:image/png;base64,${snapshot.screenshot.base64}` },
+            image_url: { url: `data:image/jpeg;base64,${compressed.base64}` },
           });
         }
 

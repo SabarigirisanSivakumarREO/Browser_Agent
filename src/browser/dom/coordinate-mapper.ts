@@ -303,7 +303,7 @@ export async function computeLayoutBoxes(
   domTree: DOMTree,
   scrollY: number,
   viewportIndex: number,
-  viewportHeight: number = 720
+  viewportHeight: number = 800
 ): Promise<ElementBox[]> {
   if (!domTree.elementLookup || elementIndices.length === 0) {
     return [];

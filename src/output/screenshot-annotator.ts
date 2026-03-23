@@ -441,7 +441,7 @@ export async function annotateFoldLine(
     // Get image metadata
     const metadata = await sharp(screenshot).metadata();
     const width = metadata.width ?? 1280;
-    const height = metadata.height ?? 720;
+    const height = metadata.height ?? 800;
 
     // Don't annotate if viewport height exceeds image height
     if (viewportHeight >= height) {
@@ -518,7 +518,7 @@ export async function annotateScreenshot(
     // Get image metadata
     const metadata = await sharp(imageBuffer).metadata();
     const width = metadata.width ?? 1280;
-    const height = metadata.height ?? 720;
+    const height = metadata.height ?? 800;
 
     // Filter to only visible elements
     const visibleOnly = visibleElements.filter((e) => e.screenshotCoords.isVisible);

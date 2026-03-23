@@ -27,7 +27,7 @@ import type {
 } from '../models/index.js';
 import { DEFAULT_CRO_OPTIONS, parseAgentOutput, DEFAULT_COVERAGE_CONFIG } from '../models/index.js';
 import type { CaptureViewportResult } from './tools/cro/capture-viewport-tool.js';
-import { BrowserManager, PageLoader } from '../browser/index.js';
+import { BrowserManager, PageLoader, captureAccessibilityTree } from '../browser/index.js';
 import {
   DOMExtractor,
   DOMMerger,
@@ -317,6 +317,27 @@ export interface AnalyzeOptions {
    * Saves tokens but may miss context. Opt-in via --viewport-filtering.
    */
   enableViewportFiltering?: boolean;
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // Phase 29: Accessibility Tree Options
+  // ═══════════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Capture accessibility tree at each viewport (default: true)
+   * When false, AX tree is not captured (opt-out via --no-ax-tree CLI flag).
+   */
+  captureAxTree?: boolean;
+
+  /**
+   * Phase 30: Enable category-aware auto-cropping (default: true)
+   * When false, full viewport screenshots are sent to LLM.
+   */
+  autoCrop?: boolean;
+
+  /**
+   * Phase 30: Max tokens per image (default: 300)
+   */
+  imageTokenBudget?: number;
 
   // ═══════════════════════════════════════════════════════════════════════════════
   // Deprecated Options (kept for backward compatibility)
@@ -627,7 +648,7 @@ export class CROAgent {
           ...analyzeOptions?.hybridDetectionConfig,
           llmModel: normalizeVisionOptions(analyzeOptions).visionModel,
         });
-        const viewportSize = page.viewportSize() || { width: 1280, height: 720 };
+        const viewportSize = page.viewportSize() || { width: 1280, height: 800 };
         const pageTypeState: PageState = {
           url,
           title: pageTitle,
@@ -704,6 +725,13 @@ export class CROAgent {
               const domExtractor = new DOMExtractor();
               const currentDom = await domExtractor.extract(page);
 
+              // Phase 29 (T642): Capture AX tree once for all tiles
+              let tiledAxTree: string | undefined;
+              if (analyzeOptions?.captureAxTree !== false) {
+                const axResult = await captureAccessibilityTree(page);
+                if (axResult) tiledAxTree = axResult;
+              }
+
               // Convert tiles to ViewportSnapshot format
               collectedSnapshots = tiledResult.tiles.map((tile) => ({
                 viewportIndex: tile.index,
@@ -717,6 +745,7 @@ export class CROAgent {
                   elementCount: currentDom.croElementCount,
                 },
                 timestamp: Date.now(),
+                axTree: tiledAxTree,
               }));
 
               console.log(`  │ ${c.success('✓')} Tiled capture: ${tiledResult.tiles.length} tiles in ${tiledResult.captureTimeMs}ms`);
@@ -771,11 +800,8 @@ export class CROAgent {
                 } catch { /* Continue without annotation */ }
               }
 
-              // Compress for LLM
-              const compressedBuffer = await sharp(screenshotBuffer)
-                .resize(384, null, { fit: 'inside', withoutEnlargement: true })
-                .jpeg({ quality: 50 })
-                .toBuffer();
+              // Phase 30: Store full-res screenshot; compression at LLM submission
+              const screenshotBase64 = rawScreenshotBuffer.toString('base64');
 
               // Extract DOM
               const domExtractor = new DOMExtractor();
@@ -783,11 +809,18 @@ export class CROAgent {
               const serializer = new DOMSerializer({ maxTokens: 2000 });
               const serialized = serializer.serialize(extractedDom);
 
+              // Phase 29 (T643): Capture AX tree at each viewport
+              let hybridAxTree: string | undefined;
+              if (analyzeOptions?.captureAxTree !== false) {
+                const axResult = await captureAccessibilityTree(page);
+                if (axResult) hybridAxTree = axResult;
+              }
+
               viewportSnapshots.push({
                 scrollPosition: targetScrollY,
                 viewportIndex: i,
                 screenshot: {
-                  base64: compressedBuffer.toString('base64'),
+                  base64: screenshotBase64,
                   capturedAt: Date.now(),
                 },
                 dom: {
@@ -795,6 +828,7 @@ export class CROAgent {
                   elementCount: serialized.elementCount,
                 },
                 fullResolutionBase64: rawScreenshotBuffer.toString('base64'),
+                axTree: hybridAxTree,
               });
             }
 
@@ -871,7 +905,8 @@ export class CROAgent {
                 page,
                 pageHeight,
                 viewportHeight,
-                analyzeOptions?.skipCollectionQA ?? false
+                analyzeOptions?.skipCollectionQA ?? false,
+                analyzeOptions?.captureAxTree !== false
               );
             }
           }
@@ -888,7 +923,11 @@ export class CROAgent {
             try {
               // Create analysis orchestrator with category filtering if specified
               const orchestrator = createAnalysisOrchestrator({
-                analyzerConfig: { model: visionModel },
+                analyzerConfig: {
+                  model: visionModel,
+                  autoCrop: analyzeOptions?.autoCrop,
+                  imageTokenBudget: analyzeOptions?.imageTokenBudget,
+                },
                 includeCategories: analyzeOptions?.heuristicCategories,
                 parallelAnalysis: analyzeOptions?.parallelAnalysis ?? true,
                 maxConcurrentCategories: analyzeOptions?.maxConcurrentCategories ?? 5,
@@ -1486,7 +1525,7 @@ export class CROAgent {
     url: string,
     title: string
   ): Promise<PageState> {
-    const viewportSize = page.viewportSize() || { width: 1280, height: 720 };
+    const viewportSize = page.viewportSize() || { width: 1280, height: 800 };
     // Use string function to avoid TypeScript DOM type issues
     const scroll = await page.evaluate(`(() => ({
       x: window.scrollX,
@@ -1656,7 +1695,7 @@ export class CROAgent {
   ): Promise<ViewportSnapshot[]> {
     // Phase 25a (T474): Dynamic collection steps based on page dimensions
     const pageHeight = stateManager.getPageHeight();
-    const viewportHeight = 720; // Standard viewport height
+    const viewportHeight = 800; // Standard viewport height
     const maxCollectionSteps = calculateMaxCollectionSteps(pageHeight, viewportHeight);
     const expectedViewports = Math.ceil(pageHeight / (viewportHeight - 120));
     const snapshots: ViewportSnapshot[] = [];
@@ -1822,15 +1861,16 @@ export class CROAgent {
    *
    * @param page - Playwright page instance
    * @param pageHeight - Total page height
-   * @param viewportHeight - Viewport height (default: 720)
+   * @param viewportHeight - Viewport height (default: 800)
    * @param skipCollectionQA - Skip LLM QA even if cheap validator flags issues (default: false)
    * @returns Array of collected viewport snapshots
    */
   private async runDeterministicCollection(
     page: Page,
     pageHeight: number,
-    viewportHeight: number = 720,
-    skipCollectionQA: boolean = false
+    viewportHeight: number = 800,
+    skipCollectionQA: boolean = false,
+    captureAxTree: boolean = true
   ): Promise<ViewportSnapshot[]> {
     const snapshots: ViewportSnapshot[] = [];
     const collectedSignals: ViewportValidatorSignals[] = [];
@@ -1857,8 +1897,9 @@ export class CROAgent {
 
     // DOM serializer config (same as capture-viewport-tool)
     const DOM_TOKEN_BUDGET = 2000;
-    const COMPRESSED_IMAGE_WIDTH = 384;
-    const JPEG_QUALITY = 50;
+    // Phase 30: Removed COMPRESSED_IMAGE_WIDTH (384) and JPEG_QUALITY (50)
+    // Screenshots are now stored at full resolution; compression happens
+    // at LLM submission time via the auto-crop pipeline in category-analyzer.
 
     // Phase 25-fix: Reliable scroll to top with verification
     await this.scrollToPositionWithVerification(page, 0);
@@ -1922,8 +1963,7 @@ export class CROAgent {
       // Phase 25-fix: Store full resolution for evidence
       const fullResolutionBase64 = rawScreenshotBuffer.toString('base64');
 
-      // Annotate fold line on first viewport (only if actually at top)
-      let screenshotBuffer = rawScreenshotBuffer;
+      // Annotate fold line on first viewport for evidence screenshots
       if (isFirstViewport && actualScrollY === 0) {
         try {
           const { annotateFoldLine } = await import('../output/screenshot-annotator.js');
@@ -1932,7 +1972,6 @@ export class CROAgent {
             showLabel: true,
           });
           if (foldResult.success && foldResult.annotatedBuffer) {
-            screenshotBuffer = foldResult.annotatedBuffer;
             console.log(`  │ ${c.success('✓')} Fold line annotated at ${actualViewportHeight}px`);
           }
         } catch {
@@ -1940,16 +1979,11 @@ export class CROAgent {
         }
       }
 
-      // Compress screenshot for LLM (smaller = fewer tokens = lower cost)
-      const compressedBuffer = await sharp(screenshotBuffer)
-        .resize(COMPRESSED_IMAGE_WIDTH, null, {
-          fit: 'inside',
-          withoutEnlargement: true,
-        })
-        .jpeg({ quality: JPEG_QUALITY })
-        .toBuffer();
-
-      const screenshotBase64 = compressedBuffer.toString('base64');
+      // Phase 30: Store full-resolution PNG for LLM submission.
+      // Compression now happens at LLM submission time via the auto-crop
+      // pipeline in category-analyzer (per-category cropping + token-aware
+      // compression). This avoids double-compression and preserves detail.
+      const screenshotBase64 = rawScreenshotBuffer.toString('base64');
 
       // Extract and serialize DOM
       const extractor = new DOMExtractor();
@@ -1960,6 +1994,15 @@ export class CROAgent {
       // Map elements to screenshot coordinates (with viewportId like V0-0, V1-0, etc.)
       const elementMappings = mapElementsToScreenshot(domTree, actualScrollY, viewport, i);
       const visibleElements = filterVisibleElements(elementMappings);
+
+      // Phase 29: Capture accessibility tree (T641)
+      let axTree: string | undefined;
+      if (captureAxTree) {
+        const axResult = await captureAccessibilityTree(page);
+        if (axResult) {
+          axTree = axResult;
+        }
+      }
 
       // Create snapshot with both compressed and full resolution screenshots
       const snapshot: ViewportSnapshot = {
@@ -1977,6 +2020,8 @@ export class CROAgent {
         visibleElements,
         // Phase 25-fix: Full resolution for evidence files
         fullResolutionBase64,
+        // Phase 29: Accessibility tree
+        axTree,
       };
 
       snapshots.push(snapshot);
@@ -1994,7 +2039,7 @@ export class CROAgent {
       console.log(`  │ ${c.success('✓')} Captured at ${actualScrollY}px`);
       console.log(`  │ → DOM elements: ${snapshot.dom.elementCount}`);
       console.log(`  │ → Visible elements: ${visibleElements.length}`);
-      console.log(`  │ → Screenshot: ${(compressedBuffer.length / 1024).toFixed(1)}KB (LLM), ${(rawScreenshotBuffer.length / 1024).toFixed(1)}KB (evidence)`);
+      console.log(`  │ → Screenshot: ${(rawScreenshotBuffer.length / 1024).toFixed(1)}KB (full-res, cropped at LLM submission)`);
 
       // Log signal summary if issues detected
       if (signals.spinnerDetected || signals.skeletonDetected || signals.blankImageCount > 0) {

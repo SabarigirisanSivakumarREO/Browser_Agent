@@ -8,7 +8,7 @@
 
 import type { ViewportSnapshot } from '../models/index.js';
 import type { HeuristicCategory } from './knowledge/index.js';
-import { buildElementPositionsBlock } from './category-analyzer.js';
+import { buildElementPositionsBlock, buildAccessibilityTreeBlock } from './category-analyzer.js';
 
 /**
  * Build a system prompt for batched multi-category analysis.
@@ -201,6 +201,12 @@ function buildDOMContextSection(snapshots: ViewportSnapshot[]): string {
     const positionsBlock = buildElementPositionsBlock(snapshot);
     if (positionsBlock) {
       parts.push(positionsBlock);
+    }
+
+    // Phase 29 (T647): Add accessibility tree for semantic context
+    const axTreeBlock = buildAccessibilityTreeBlock(snapshot);
+    if (axTreeBlock) {
+      parts.push(axTreeBlock);
     }
 
     parts.push('');

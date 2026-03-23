@@ -105,6 +105,7 @@ export {
   extractElementRefs,
   toNumericIndex,
   buildElementPositionsBlock,
+  buildAccessibilityTreeBlock,
   populateElementRefs,
 } from './category-analyzer.js';
 

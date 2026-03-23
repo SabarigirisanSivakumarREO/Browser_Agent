@@ -534,7 +534,7 @@ export class StateManager {
    * Get scroll progress percentage (0-100)
    */
   getScrollProgress(): number {
-    const maxScroll = this.state.pageHeight - 720; // Assume 720px viewport
+    const maxScroll = this.state.pageHeight - 800; // Assume 800px viewport
     if (maxScroll <= 0) return 100;
     return Math.min(100, (this.state.currentScrollY / maxScroll) * 100);
   }

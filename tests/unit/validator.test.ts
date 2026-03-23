@@ -16,7 +16,7 @@ describe('validateUrl', () => {
     it('should accept valid https URL', () => {
       const result = validateUrl('https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy');
       expect(result.valid).toBe(true);
-      expect(result.normalizedUrl).toBe('https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy/');
+      expect(result.normalizedUrl).toBe('https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy');
     });
 
     it('should accept URL with path', () => {
@@ -40,7 +40,7 @@ describe('validateUrl', () => {
     it('should trim whitespace from URL', () => {
       const result = validateUrl('  https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy  ');
       expect(result.valid).toBe(true);
-      expect(result.normalizedUrl).toBe('https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy/');
+      expect(result.normalizedUrl).toBe('https://www.peregrineclothing.co.uk/collections/polo-shirts/products/lynton-polo-shirt?colour=Navy');
     });
   });
 

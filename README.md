@@ -8,14 +8,17 @@ Browser Agent is a CLI tool that autonomously navigates web pages, extracts CRO-
 
 ## Features
 
-- **Vision-Based CRO Analysis** - Unified DOM + screenshot analysis across CTAs, forms, trust signals, value props, navigation, and friction points
+- **Vision-Based CRO Analysis** - Unified DOM + screenshot + accessibility tree analysis across CTAs, forms, trust signals, value props, navigation, and friction points
 - **Three-Phase Pipeline** - Collection → Analysis → Output with deterministic data capture
 - **Hybrid Page Type Detection** - Three-tier detection: Playwright DOM analysis → URL/selector heuristics → LLM fallback
 - **Parallel LLM Analysis** - Category-based evaluation with p-limit concurrency control (3-4x speedup)
-- **Evidence Capture** - Screenshots with bounding box annotations, element coordinate mapping, evidence JSON export
+- **Accessibility Tree Context** - Captures ARIA roles, computed names, and element states (disabled, checked, expanded, required) for semantic understanding
+- **Category-Aware Auto-Cropping** - Crops screenshots to CRO-relevant regions per category before LLM submission, reducing image tokens by 30-50%
+- **Token-Aware Image Pipeline** - Compresses images to fit OpenAI's tile-based token budget (default: 300 tokens/image) with adaptive quality
+- **Evidence Capture** - Full-resolution screenshots with bounding box annotations, element coordinate mapping, evidence JSON export
 - **Page Type Knowledge Bases** - Heuristic rules per page type (PDP, PLP, with Homepage/Cart/Checkout planned)
 - **Hypothesis Generation** - Creates testable A/B test hypotheses with expected impact
-- **Browser Automation** - Powered by Playwright with cookie consent handling and full-page coverage
+- **Browser Automation** - Powered by Playwright (1280x800 viewport) with cookie consent handling and full-page coverage
 - **DOM Extraction** - CRO-relevant elements with enhanced selectors (price, variant, stock, shipping, gallery)
 - **Structured Data Extraction** - JSON-LD Product schema parsing
 - **Screenshot Modes** - Viewport, tiled, or hybrid capture strategies
@@ -77,6 +80,10 @@ OPENAI_API_KEY=sk-your-api-key-here
 | `saveEvidence` | `true` | Save screenshots as evidence |
 | `annotateScreenshots` | `true` | Annotate screenshots with bounding boxes |
 | `minConfidence` | `0.7` | Minimum confidence to display results |
+| `captureAxTree` | `true` | Capture accessibility tree at each viewport |
+| `autoCrop` | `true` | Category-aware auto-cropping for LLM images |
+| `imageTokenBudget` | `300` | Max OpenAI vision tokens per image |
+| `viewport` | `1280x800` | Browser viewport dimensions |
 
 ## Usage
 
@@ -112,6 +119,7 @@ npm run start -- https://www.example.com --output-format json --output-file anal
 --vision-max-steps <n>        Max steps for vision collection (default: 20)
 --fast-analysis               Use cheaper model for cost-sensitive runs
 --min-confidence <n>          Minimum confidence threshold 0-1 (default: 0.7)
+--no-ax-tree                  Disable accessibility tree capture (default: enabled)
 
 # Screenshot & Evidence Options
 --screenshot-mode <mode>      Screenshot mode: viewport, tiled, hybrid (default: viewport)
@@ -137,6 +145,8 @@ npm run start -- https://www.example.com --output-format json --output-file anal
 --category-batching           Enable category batching (opt-in, saves tokens)
 --viewport-filtering          Enable viewport filtering (opt-in, sends relevant viewports only)
 --validate-quality            Run quality validation comparing optimized vs baseline (CI use)
+--no-auto-crop                Disable category-aware auto-cropping (default: enabled)
+--image-token-budget <n>      Max OpenAI vision tokens per image 100-1000 (default: 300)
 
 # Output Options
 --output-format <fmt>         Output format: console, markdown, json (default: console)
@@ -249,15 +259,16 @@ console.log(visionResult.runId);                // Deterministic run ID
   ┌──────────────┐   ┌───────────────┐   ┌─────────────────────┐
   │  Playwright  │   │ Category      │   │ Dedup + Prioritize  │
   │  + DOM Ext.  │   │ Analyzer      │   │ + Hypotheses        │
-  │  + Evidence  │   │ + Knowledge   │   │ + Scoring           │
+  │  + AX Tree   │   │ + Auto-Crop   │   │ + Scoring           │
+  │  + Evidence  │   │ + Knowledge   │   │                     │
   └──────────────┘   └───────────────┘   └─────────────────────┘
 ```
 
 ### Three-Phase Data Flow
 
-1. **Collection Phase** - Browser loads page, deterministic scroll + capture loop collects DOM + screenshots at each viewport position. Cookie consent auto-dismissed. Cheap validator checks data quality, LLM QA escalates if needed.
-2. **Analysis Phase** - Hybrid page type detection (Playwright → heuristics → LLM fallback). Category-based LLM analysis runs in parallel against page-type-specific knowledge bases. Each category evaluates relevant heuristics with element position context.
-3. **Output Phase** - Insights deduplicated, prioritized by severity + business type. A/B test hypotheses generated. CRO scores calculated. Reports exported. Evidence screenshots annotated with bounding boxes.
+1. **Collection Phase** - Browser loads page (1280x800 viewport), deterministic scroll + capture loop collects DOM, full-resolution screenshots, and accessibility tree at each viewport position. Cookie consent auto-dismissed, UI noise suppressed. Cheap validator checks data quality, LLM QA escalates if needed.
+2. **Analysis Phase** - Hybrid page type detection (Playwright → heuristics → LLM fallback). Category-based LLM analysis runs in parallel. Per-category auto-cropping extracts relevant regions from screenshots, then token-aware compression fits images within budget. LLM receives cropped images + DOM + AX tree + element positions for each category.
+3. **Output Phase** - Insights deduplicated, prioritized by severity + business type. A/B test hypotheses generated. CRO scores calculated. Reports exported. Evidence screenshots (full-resolution) annotated with bounding boxes.
 
 ### Module Structure
 
@@ -265,7 +276,11 @@ console.log(visionResult.runId);                // Deterministic run ID
 |--------|----------------|
 | `CROAgent` | Main orchestrator — collection, analysis, post-processing |
 | `AnalysisOrchestrator` | Coordinates parallel/batched category-based LLM analysis |
-| `CategoryAnalyzer` | Single-category LLM evaluation with element position context |
+| `CategoryAnalyzer` | Single-category LLM evaluation with auto-crop + AX tree context |
+| `AXTreeSerializer` | Captures and serializes browser accessibility tree (roles, names, states) |
+| `ImageCropPipeline` | Category-aware auto-cropping + token-aware compression |
+| `ImageTokenCalculator` | Calculates OpenAI vision token costs (tile-based model) |
+| `CategoryCropMapper` | Maps categories to CRO element types, computes union bounding boxes |
 | `HybridPageTypeDetector` | Three-tier page type detection (Playwright → heuristics → LLM) |
 | `PlaywrightPageDetector` | DOM-based page type signals (JSON-LD, CTAs, variants) |
 | `StateManager` | Manages agent state across analysis steps |
@@ -327,6 +342,7 @@ browser-agent/
 │   │   ├── page-loader.ts        # URL navigation, hybrid wait strategy
 │   │   ├── cookie-handler.ts     # Cookie consent detection + dismissal
 │   │   ├── cookie-patterns.ts    # Cookie banner patterns (Shopify, Alpine.js, etc.)
+│   │   ├── ax-tree-serializer.ts  # Accessibility tree capture + serialize
 │   │   ├── cleanup/              # UI noise suppression
 │   │   │   └── ui-noise.ts
 │   │   ├── media/                # Media readiness checks
@@ -363,13 +379,15 @@ browser-agent/
 │   │   │   ├── pdp/                  # PDP heuristics (25 rules)
 │   │   │   ├── plp/                  # PLP heuristics (25 rules)
 │   │   │   └── types.ts             # Knowledge base types
-│   │   └── vision/                   # Vision analysis
+│   │   └── vision/                   # Vision analysis + optimization
 │   │       ├── analyzer.ts           # CROVisionAnalyzer
-│   │       ├── multi-viewport-analyzer.ts
+│   │       ├── image-token-calculator.ts  # OpenAI vision token cost (tile model)
+│   │       ├── category-crop-mapper.ts    # Category → element type mapping + union bbox
+│   │       ├── image-crop-pipeline.ts     # Auto-crop + token-aware compression
 │   │       ├── prompt-builder.ts     # Vision prompt construction
 │   │       ├── response-parser.ts    # Vision response parsing
 │   │       ├── result-merger.ts      # Multi-viewport result merging
-│   │       └── image-resizer.ts      # Screenshot compression
+│   │       └── image-resizer.ts      # Legacy screenshot compression
 │   ├── models/                   # Data models (Zod schemas)
 │   │   ├── dom-tree.ts           # DOM tree + node structures
 │   │   ├── cro-insight.ts        # CRO insights with evidence fields
@@ -413,9 +431,9 @@ browser-agent/
 │       ├── discrepancy-classifier.ts # Discrepancy severity classification
 │       └── quality-validator.ts      # Quality validation orchestrator (CI use)
 ├── tests/
-│   ├── unit/                     # ~52 unit test files
-│   ├── integration/              # ~23 integration test files
-│   └── e2e/                      # ~9 E2E test files
+│   ├── unit/                     # 55 unit test files
+│   ├── integration/              # 23 integration test files
+│   └── e2e/                      # 9 E2E test files
 ├── design/                       # Architecture diagrams
 │   ├── architecture-overview.svg
 │   ├── component-details.svg

@@ -93,6 +93,11 @@ function parseArgs(): {
   validateQuality: boolean;  // Run quality validation comparing optimized vs baseline
   // Phase 27D: Confidence filtering
   minConfidence: number;  // Minimum confidence threshold for display (default: 0.7)
+  // Phase 29: AX tree capture
+  captureAxTree: boolean;  // Capture accessibility tree (default: true)
+  // Phase 30: Vision optimization
+  autoCrop: boolean;  // Category-aware auto-cropping (default: true)
+  imageTokenBudget: number;  // Max tokens per image (default: 300)
   verbose: boolean;
   help: boolean;
 } {
@@ -138,6 +143,11 @@ function parseArgs(): {
   let validateQuality = false;  // Default: no quality validation
   // Phase 27D: Confidence filtering
   let minConfidence = 0.7;  // Default: hide evaluations below 70% confidence
+  // Phase 29: AX tree capture
+  let captureAxTree = true;  // Default: capture accessibility tree
+  // Phase 30: Vision optimization
+  let autoCrop = true;  // Default: category-aware auto-cropping enabled
+  let imageTokenBudget = 300;  // Default: 300 tokens per image
   let verbose = false;
   let help = false;
 
@@ -396,6 +406,26 @@ function parseArgs(): {
     } else if (arg === '--validate-quality') {
       // Phase 26e: Run quality validation comparing optimized vs baseline (CI use)
       validateQuality = true;
+    } else if (arg === '--no-ax-tree') {
+      // Phase 29: Disable accessibility tree capture
+      captureAxTree = false;
+    } else if (arg === '--no-auto-crop') {
+      // Phase 30: Disable category-aware auto-cropping
+      autoCrop = false;
+    } else if (arg === '--image-token-budget' && args[i + 1]) {
+      // Phase 30: Set max tokens per image
+      imageTokenBudget = parseInt(args[i + 1] ?? '300', 10);
+      if (isNaN(imageTokenBudget) || imageTokenBudget < 100 || imageTokenBudget > 1000) {
+        console.error('Invalid image-token-budget value. Must be between 100 and 1000.');
+        process.exit(1);
+      }
+      i++;
+    } else if (arg?.startsWith('--image-token-budget=')) {
+      imageTokenBudget = parseInt(arg.split('=')[1] ?? '300', 10);
+      if (isNaN(imageTokenBudget) || imageTokenBudget < 100 || imageTokenBudget > 1000) {
+        console.error('Invalid image-token-budget value. Must be between 100 and 1000.');
+        process.exit(1);
+      }
     } else if (arg && !arg.startsWith('-')) {
       urls.push(arg);
     }
@@ -443,6 +473,11 @@ function parseArgs(): {
     validateQuality,
     // Phase 27D: Confidence filtering
     minConfidence,
+    // Phase 29: AX tree capture
+    captureAxTree,
+    // Phase 30: Vision optimization
+    autoCrop,
+    imageTokenBudget,
     verbose,
     help,
   };
@@ -690,7 +725,7 @@ async function processToolExecution(
     const extractor = new DOMExtractor();
     const domTree = await extractor.extract(page);
 
-    const viewportSize = page.viewportSize() || { width: 1280, height: 720 };
+    const viewportSize = page.viewportSize() || { width: 1280, height: 800 };
     const viewport = {
       width: viewportSize.width,
       height: viewportSize.height,
@@ -892,6 +927,11 @@ async function processVisionMode(
       categoryBatching: options.categoryBatching ?? false,
       // Phase 26c: Viewport filtering (opt-in)
       enableViewportFiltering: options.viewportFiltering ?? false,
+      // Phase 29: AX tree capture
+      captureAxTree: options.captureAxTree,
+      // Phase 30: Vision optimization
+      autoCrop: options.autoCrop,
+      imageTokenBudget: options.imageTokenBudget,
     });
 
     // Show collection complete summary
@@ -1170,14 +1210,14 @@ async function processVisionMode(
         // Calculate page height from the highest scroll position + viewport height
         const lastSnapshot = result.snapshots[result.snapshots.length - 1];
         const estimatedPageHeight = lastSnapshot
-          ? lastSnapshot.scrollPosition + 720
+          ? lastSnapshot.scrollPosition + 800
           : null;
 
         const evidencePackage = buildEvidencePackage({
           url,
           mode: options.screenshotMode,
           viewportWidth: 1280,
-          viewportHeight: 720,
+          viewportHeight: 800,
           pageHeight: estimatedPageHeight,
           snapshots: result.snapshots,
           structuredData: null, // TODO: Add structuredData to CROAnalysisResult
@@ -1469,6 +1509,11 @@ async function main(): Promise<void> {
     validateQuality,
     // Phase 27D: Confidence filtering
     minConfidence,
+    // Phase 29: AX tree capture
+    captureAxTree,
+    // Phase 30: Vision optimization
+    autoCrop,
+    imageTokenBudget,
     verbose,
     help,
   } = parseArgs();

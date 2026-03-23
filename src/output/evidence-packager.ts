@@ -206,9 +206,9 @@ function snapshotToEvidence(
     type: 'viewport',
     scrollY: snapshot.scrollPosition,
     startY: snapshot.scrollPosition,
-    endY: snapshot.scrollPosition + 720, // Assuming standard viewport height
+    endY: snapshot.scrollPosition + 800, // Assuming standard viewport height
     width: 1280, // Standard width
-    height: 720, // Standard viewport height
+    height: 800, // Standard viewport height
     isAboveFold: snapshot.viewportIndex === 0,
     timestamp: new Date(snapshot.screenshot.capturedAt).toISOString(),
     visibleElementIndices: visibleIndices,

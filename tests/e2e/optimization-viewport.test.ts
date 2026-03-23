@@ -43,6 +43,7 @@ vi.mock('../../src/heuristics/category-analyzer.js', () => {
     DEFAULT_CATEGORY_ANALYZER_CONFIG: { model: 'gpt-4o', maxTokens: 4096, temperature: 0.1, timeoutMs: 60000 },
     populateElementRefs: vi.fn(),
     buildElementPositionsBlock: vi.fn().mockReturnValue(null),
+    buildAccessibilityTreeBlock: vi.fn().mockReturnValue(null),
   };
 });
 

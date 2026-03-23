@@ -28,6 +28,7 @@ vi.mock('../../src/heuristics/category-analyzer.js', () => {
     },
     populateElementRefs: vi.fn(),
     buildElementPositionsBlock: vi.fn().mockReturnValue(null),
+    buildAccessibilityTreeBlock: vi.fn().mockReturnValue(null),
   };
 });
 
