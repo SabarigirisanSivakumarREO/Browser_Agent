@@ -22,6 +22,14 @@ export interface AgentLoopConfig {
   escalationThreshold?: number;
   verifyEveryNSteps?: number;
   verbose?: boolean;
+  /** Enable sub-goal decomposition (default: true) */
+  enableSubGoals?: boolean;
+  /** Enable critique of each action after execution (default: false) */
+  enableCritique?: boolean;
+  /** Enable multi-candidate planning (default: false) */
+  enableMultiCandidate?: boolean;
+  /** Number of candidate actions to generate when multi-candidate is on (default: 3) */
+  candidateCount?: number;
 }
 
 /** Output from the agent loop */
@@ -59,6 +67,12 @@ export interface ActionRecord {
   domHashAfter: string;
   durationMs: number;
   timestamp: string;
+  /** Score of the selected candidate (if multi-candidate was enabled) */
+  candidateScore?: number;
+  /** Rank of the selected candidate (if multi-candidate was enabled) */
+  candidateRank?: number;
+  /** Critique result for this action (if critique was enabled) */
+  critiqueResult?: CritiqueResult;
 }
 
 // ---------------------------------------------------------------------------
@@ -118,7 +132,11 @@ export interface VerificationResult {
 export type FailureType =
   | 'ELEMENT_NOT_FOUND'
   | 'ACTION_HAD_NO_EFFECT'
-  | 'BUDGET_EXCEEDED';
+  | 'BUDGET_EXCEEDED'
+  | 'WRONG_PAGE'
+  | 'FORM_ERROR'
+  | 'REDIRECT_LOOP'
+  | 'PAGE_CRASHED';
 
 /** A detected failure with retry context */
 export interface DetectedFailure {
@@ -163,3 +181,41 @@ export interface AgentLoopDeps {
   page: Page;
   toolExecutor: ToolExecutor;
 }
+
+// ---------------------------------------------------------------------------
+// Phase 33: Reliability Enhancements
+// ---------------------------------------------------------------------------
+
+/** A decomposed sub-goal for incremental progress tracking */
+export interface SubGoal {
+  description: string;
+  successCriteria: string;
+  estimatedSteps: number;
+}
+
+/** LLM critique of a completed action */
+export interface CritiqueResult {
+  actionWasUseful: boolean;
+  /** Progress score from 0 (no progress) to 1 (full progress) */
+  progressScore: number;
+  reasoning: string;
+  suggestion?: string;
+}
+
+/** A candidate action from multi-candidate planning, extending PlannerOutput */
+export interface ActionCandidate extends PlannerOutput {
+  /** Self-assessed score from 0 (poor) to 1 (ideal) */
+  selfScore: number;
+  /** Description of the risk associated with this candidate */
+  risk: string;
+}
+
+// ---------------------------------------------------------------------------
+// Phase 33: Constants
+// ---------------------------------------------------------------------------
+
+/** Number of recent critique results to retain in context */
+export const CRITIQUE_HISTORY_SIZE = 3;
+
+/** Tool names that target specific DOM elements by index */
+export const ELEMENT_TARGETING_TOOLS = ['click', 'type_text', 'select_option', 'hover', 'drag_and_drop'] as const;
