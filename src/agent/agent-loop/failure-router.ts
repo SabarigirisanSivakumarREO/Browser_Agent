@@ -34,7 +34,10 @@ export function detectFailure(
   toolName: string,
   result: ToolResult,
   domHashBefore: string,
-  domHashAfter: string
+  domHashAfter: string,
+  preState?: { url: string; axTreeText: string | null },
+  postState?: { url: string; axTreeText: string | null },
+  actionHistory?: Array<{ toolName: string; toolParams: Record<string, unknown>; domHashAfter: string }>
 ): DetectedFailure | null {
   // Element not found
   if (!result.success && result.error && /not found/i.test(result.error)) {
@@ -59,6 +62,55 @@ export function detectFailure(
     };
   }
 
+  // WRONG_PAGE: navigated to login/error/404 page
+  if (preState && postState) {
+    const errorPagePattern = /\/(?:login|signin|sign-in|error|404|403|unauthorized|access-denied)/i;
+    if (errorPagePattern.test(postState.url) && !errorPagePattern.test(preState.url)) {
+      return {
+        type: 'WRONG_PAGE',
+        details: `Navigated to error/auth page: ${postState.url}`,
+        retryCount: 0,
+      };
+    }
+  }
+
+  // FORM_ERROR: error text appeared in AX tree
+  if (preState && postState && postState.axTreeText) {
+    const errorPattern = /\b(error|invalid|required|failed|please correct)\b/i;
+    const hadErrors = preState.axTreeText && errorPattern.test(preState.axTreeText);
+    const hasErrors = errorPattern.test(postState.axTreeText);
+    if (hasErrors && !hadErrors) {
+      return {
+        type: 'FORM_ERROR',
+        details: 'Form validation error appeared after action',
+        retryCount: 0,
+      };
+    }
+  }
+
+  // REDIRECT_LOOP: same DOM hash seen 3+ times in action history
+  if (actionHistory && actionHistory.length >= 2) {
+    const hashCount = actionHistory.filter((a) => a.domHashAfter === domHashAfter).length;
+    if (hashCount >= 3) {
+      return {
+        type: 'REDIRECT_LOOP',
+        details: `Same page state visited ${hashCount} times (domHash: ${domHashAfter.slice(0, 8)})`,
+        retryCount: 0,
+      };
+    }
+  }
+
+  // PAGE_CRASHED: unexpected navigation to about:blank
+  if (preState && postState) {
+    if (postState.url === 'about:blank' && preState.url !== 'about:blank') {
+      return {
+        type: 'PAGE_CRASHED',
+        details: `Page crashed: navigated from ${preState.url} to about:blank`,
+        retryCount: 0,
+      };
+    }
+  }
+
   return null;
 }
 
@@ -78,6 +130,14 @@ export function routeFailure(failure: DetectedFailure): RoutedFailure {
     case 'ACTION_HAD_NO_EFFECT':
       return { failure, strategy: 'REPLAN_WITH_DIAGNOSTIC' };
     case 'BUDGET_EXCEEDED':
+      return { failure, strategy: 'TERMINATE' };
+    case 'WRONG_PAGE':
+      return { failure, strategy: 'REPLAN' };
+    case 'FORM_ERROR':
+      return { failure, strategy: 'REPLAN_WITH_DIAGNOSTIC' };
+    case 'REDIRECT_LOOP':
+      return { failure, strategy: 'TERMINATE' };
+    case 'PAGE_CRASHED':
       return { failure, strategy: 'TERMINATE' };
   }
 }

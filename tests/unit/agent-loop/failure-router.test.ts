@@ -70,3 +70,58 @@ describe('detectFailure', () => {
     expect(failure).toBeNull();
   });
 });
+
+describe('enhanced failure detection (Phase 33a)', () => {
+  it('detects WRONG_PAGE when URL changes to login page', () => {
+    const result = { success: true, insights: [] };
+    const failure = detectFailure('click', result, 'abc', 'def',
+      { url: 'https://shop.com/product', axTreeText: null },
+      { url: 'https://shop.com/login', axTreeText: null },
+    );
+    expect(failure).not.toBeNull();
+    expect(failure!.type).toBe('WRONG_PAGE');
+  });
+
+  it('detects FORM_ERROR when AX tree gains error text', () => {
+    const result = { success: true, insights: [] };
+    const failure = detectFailure('type_text', result, 'abc', 'def',
+      { url: 'https://shop.com/checkout', axTreeText: 'form input name email' },
+      { url: 'https://shop.com/checkout', axTreeText: 'form input name email error: invalid email' },
+    );
+    expect(failure).not.toBeNull();
+    expect(failure!.type).toBe('FORM_ERROR');
+  });
+
+  it('detects REDIRECT_LOOP when same DOM hash seen 3+ times', () => {
+    const result = { success: true, insights: [] };
+    const history = [
+      { toolName: 'click', toolParams: {}, domHashAfter: 'samehash' },
+      { toolName: 'click', toolParams: {}, domHashAfter: 'samehash' },
+      { toolName: 'click', toolParams: {}, domHashAfter: 'samehash' },
+    ];
+    const failure = detectFailure('click', result, 'other', 'samehash',
+      undefined, undefined, history
+    );
+    expect(failure).not.toBeNull();
+    expect(failure!.type).toBe('REDIRECT_LOOP');
+  });
+
+  it('detects PAGE_CRASHED when URL becomes about:blank', () => {
+    const result = { success: true, insights: [] };
+    const failure = detectFailure('click', result, 'abc', 'def',
+      { url: 'https://shop.com/product', axTreeText: null },
+      { url: 'about:blank', axTreeText: null },
+    );
+    expect(failure).not.toBeNull();
+    expect(failure!.type).toBe('PAGE_CRASHED');
+  });
+});
+
+describe('routeFailure - new types (Phase 33a)', () => {
+  it('WRONG_PAGE → REPLAN', () => {
+    expect(routeFailure({ type: 'WRONG_PAGE', details: '', retryCount: 0 }).strategy).toBe('REPLAN');
+  });
+  it('REDIRECT_LOOP → TERMINATE', () => {
+    expect(routeFailure({ type: 'REDIRECT_LOOP', details: '', retryCount: 0 }).strategy).toBe('TERMINATE');
+  });
+});
