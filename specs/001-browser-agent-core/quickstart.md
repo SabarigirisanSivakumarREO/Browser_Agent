@@ -15,8 +15,8 @@ Read specs/001-browser-agent-core/quickstart.md to get the complete project cont
 
 ## Session Bootstrap (READ THIS FIRST)
 
-**Status**: CR-001 ✅ | Phase 21h ✅ | Phase 21i ✅ | Phase 21j ✅ | Phase 21l ✅ | Phase 23 ✅ | Phase 24 ✅ | Phase 25 ✅ | Phase 26 ✅ | Phase 22A ✅ | Element Mapping ✅
-- Completed: 525 tasks (Phases 1-19, 12b, 12c, 21a-21l, CR-001, Phases 23-26, 22A) + Element Mapping quality fix
+**Status**: CR-001 ✅ | Phase 21h ✅ | Phase 21i ✅ | Phase 21j ✅ | Phase 21l ✅ | Phase 23 ✅ | Phase 24 ✅ | Phase 25 ✅ | Phase 26 ✅ | Phase 22A ✅ | Element Mapping ✅ | Phase 31 ✅ | Phase 32 ✅
+- Completed: 553+ tasks (Phases 1-19, 12b, 12c, 21a-21l, CR-001, Phases 23-32, 22A) + Element Mapping quality fix
 - **CR-001 COMPLETE** (2026-01-30):
   - ✅ Merged Vision Agent into CRO Agent (single agent loop)
   - ✅ Removed redundant vision modes (--full-page-vision, --full-page-screenshot)
@@ -41,6 +41,8 @@ Read specs/001-browser-agent-core/quickstart.md to get the complete project cont
 - **Phase 26: LLM Analysis Optimization (28 tasks) ✅ COMPLETE** - Parallel analysis, category batching, viewport filtering, CI-only quality validation, E2E tests
 - **Phase 22: Page Type Knowledge Bases (38 tasks) ⏳ IN PROGRESS** — 22A PLP ✅ (25 heuristics, 15 tests), 22B-E 📋 (Homepage, Cart, Checkout, Generic)
 - **Phase 27: Analysis Quality & Annotation Fix (19 tasks) ✅ COMPLETE** — 27A ✅ (model default: gpt-4o-mini), 27B ✅ (structured element refs), 27C ✅ (prompt strengthening), 27D ✅ (confidence filtering), 27E ✅ (dedup fix), 27F ✅ (annotation fix), 27G ✅ (DOM cross-validation)
+- **Phase 31: Browser Interaction Tools (37 tasks) ✅ COMPLETE** — 13 new tools (type_text, press_key, select_option, etc.), 28 tests
+- **Phase 32: Agent Loop with Plan-Act-Verify (28 tasks) ✅ COMPLETE** — Goal-directed agent loop (`--agent-mode`), perceiver, planner, verifier, failure router, budget controller, confidence decay. 25 tests (22 unit + 3 integration). Usage: `npm run start -- --agent-mode "Search Wikipedia for TypeScript" https://wikipedia.org`
 
 **Phase 25 Progress** (2026-02-04) ✅ **COMPLETE**:
 - ✅ **25a** T473-T476: Dynamic collection steps (based on page height) - 14 unit tests
