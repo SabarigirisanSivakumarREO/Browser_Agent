@@ -223,7 +223,7 @@
 
 **Goal**: Generate 2-3 candidates per step with self-ranking. Opt-in.
 
-- [ ] T767 Create `src/agent/agent-loop/candidate-generator.ts`:
+- [x] T767 Create `src/agent/agent-loop/candidate-generator.ts`:
   - `CANDIDATE_PROMPT_SUFFIX` const — "Propose 2-3 candidate actions. For each, rate confidence 0-1 and identify risk..."
   - `generateCandidates(llm, goal, currentSubGoal, state, recentActions, failureContext, budgetStatus, confidence, critiqueHistory, visitedUrls): Promise<ActionCandidate[]>`
   - Build prompt: same context as planner + candidate suffix
@@ -234,7 +234,7 @@
   - On failure: fall back to `planNextAction`, wrap result as `ActionCandidate` with `selfScore: 0.5, risk: 'fallback'`
   - Export: `generateCandidates`, `plannerOutputToCandidate`, `deduplicateCandidates`
 
-- [ ] T768 [P] Create `tests/unit/agent-loop/candidate-generator.test.ts` — 4 tests:
+- [x] T768 [P] Create `tests/unit/agent-loop/candidate-generator.test.ts` — 4 tests:
   1. Parses multi-candidate JSON response correctly
   2. Deduplicates candidates with same toolName + elementIndex
   3. Falls back to planNextAction on parse failure
@@ -242,7 +242,7 @@
 
 ### 33d Loop Integration
 
-- [ ] T769 Modify `src/agent/agent-loop/agent-loop.ts` for 33d:
+- [x] T769 Modify `src/agent/agent-loop/agent-loop.ts` for 33d:
   - If `config.enableMultiCandidate`:
     - Replace `planNextAction` call with `generateCandidates` call
     - Execute top candidate (index 0)
@@ -250,16 +250,16 @@
     - Log all candidates if verbose
   - Else: use existing `planNextAction` (unchanged)
 
-- [ ] T770 Add CLI flags in `src/cli.ts`:
+- [x] T770 Add CLI flags in `src/cli.ts`:
   - `--multi-candidate` → `enableMultiCandidate: true`
   - `--candidates <n>` → `candidateCount: n` (default 3, validate 1-5)
 
-- [ ] T771 [P] Create `tests/integration/agent-loop-candidates.test.ts` — 2 tests:
+- [x] T771 [P] Create `tests/integration/agent-loop-candidates.test.ts` — 2 tests:
   1. Multi-candidate mode: generates 3 candidates, executes top-scored
   2. Fallback: when generation fails, falls back to single plan
 
-- [ ] T772 Run typecheck + full agent-loop tests
-- [ ] T773 Commit: `feat(phase-33d): add multi-candidate generation with self-ranking`
+- [x] T772 Run typecheck + full agent-loop tests
+- [x] T773 Commit: `feat(phase-33d): add multi-candidate generation with self-ranking`
 
 **Checkpoint**: Multi-candidate generation complete. 49 tests total.
 
@@ -267,7 +267,7 @@
 
 ## Phase 33e: Barrel Exports, Regression & Docs
 
-- [ ] T774 Update `src/agent/agent-loop/index.ts` — add exports for all new modules:
+- [x] T774 Update `src/agent/agent-loop/index.ts` — add exports for all new modules:
   - `preValidateElement` from element-pre-validator
   - `VisitedStateTracker`, `normalizeUrl` from visited-state-tracker
   - `decomposeGoal`, `shouldDecompose`, `checkSubGoalCompletion` from sub-goal-planner
@@ -275,18 +275,18 @@
   - `generateCandidates`, `deduplicateCandidates` from candidate-generator
   - All new types: `SubGoal`, `CritiqueResult`, `ActionCandidate`
 
-- [ ] T775 Run `npm test` — verify ALL 1370+ existing tests + ~27 new tests pass. Zero regressions.
+- [x] T775 Run `npm test` — verify ALL 1370+ existing tests + ~27 new tests pass. Zero regressions.
 
-- [ ] T776 Update `specs/001-browser-agent-core/quickstart.md`:
+- [x] T776 Update `specs/001-browser-agent-core/quickstart.md`:
   - Add Phase 33 to status section
   - Document new CLI flags: `--no-sub-goals`, `--self-critique`, `--multi-candidate`, `--candidates`
   - Update test count
 
-- [ ] T777 Update `CLAUDE.md`:
+- [x] T777 Update `CLAUDE.md`:
   - Add Phase 33 to Current Status
   - Update tool count / module description for agent-loop
 
-- [ ] T778 Commit: `docs(phase-33): update quickstart and CLAUDE.md with Phase 33 status`
+- [x] T778 Commit: `docs(phase-33): update quickstart and CLAUDE.md with Phase 33 status`
 
 **Checkpoint**: Phase 33 complete. All tests pass.
 
