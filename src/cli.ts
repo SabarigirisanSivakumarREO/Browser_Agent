@@ -26,6 +26,7 @@ import {
 } from './output/index.js';
 import { createCRORegistry, ToolExecutor } from './agent/tools/index.js';
 import { CROAgent, type CROAnalysisResult, type CROScores } from './agent/index.js';
+import { runAgentLoop, type AgentLoopConfig, type AgentLoopResult } from './agent/agent-loop/index.js';
 import { QualityValidator } from './validation/index.js';
 // NOTE: Vision Agent module removed in CR-001-D. Use CROAgent with vision: true
 import type { CROActionName, PageState, ScanMode, CoverageConfig } from './models/index.js';
@@ -98,6 +99,10 @@ function parseArgs(): {
   // Phase 30: Vision optimization
   autoCrop: boolean;  // Category-aware auto-cropping (default: true)
   imageTokenBudget: number;  // Max tokens per image (default: 300)
+  // Phase 32: Agent mode
+  agentMode: string | null;  // Goal string for agent mode (null = CRO mode)
+  agentMaxSteps: number;  // Max steps for agent loop (default: 20)
+  agentMaxTimeMs: number;  // Max time for agent loop (default: 120000)
   verbose: boolean;
   help: boolean;
 } {
@@ -148,6 +153,10 @@ function parseArgs(): {
   // Phase 30: Vision optimization
   let autoCrop = true;  // Default: category-aware auto-cropping enabled
   let imageTokenBudget = 300;  // Default: 300 tokens per image
+  // Phase 32: Agent mode
+  let agentMode: string | null = null;  // Goal string for agent mode
+  let agentMaxSteps = 20;  // Max steps for agent loop
+  let agentMaxTimeMs = 120000;  // Max time for agent loop (2 minutes)
   let verbose = false;
   let help = false;
 
@@ -297,6 +306,26 @@ function parseArgs(): {
         console.error('Invalid vision-agent-max-steps value. Must be between 1 and 50.');
         process.exit(1);
       }
+    } else if (arg === '--agent-mode' && args[i + 1]) {
+      // Phase 32: Agent mode - goal-directed browser automation
+      agentMode = args[i + 1] ?? null;
+      i++;
+    } else if (arg?.startsWith('--agent-mode=')) {
+      agentMode = arg.split('=').slice(1).join('=') || null;
+    } else if (arg === '--agent-max-steps' && args[i + 1]) {
+      agentMaxSteps = parseInt(args[i + 1] ?? '20', 10);
+      if (isNaN(agentMaxSteps) || agentMaxSteps < 1 || agentMaxSteps > 100) {
+        console.error('Invalid agent-max-steps value. Must be between 1 and 100.');
+        process.exit(1);
+      }
+      i++;
+    } else if (arg === '--agent-max-time' && args[i + 1]) {
+      agentMaxTimeMs = parseInt(args[i + 1] ?? '120000', 10);
+      if (isNaN(agentMaxTimeMs) || agentMaxTimeMs < 5000) {
+        console.error('Invalid agent-max-time value. Must be at least 5000ms.');
+        process.exit(1);
+      }
+      i++;
     } else if (arg === '--save-evidence') {
       // Phase 21h: Enable evidence saving (now default, kept for backward compatibility)
       saveEvidence = true;
@@ -478,6 +507,10 @@ function parseArgs(): {
     // Phase 30: Vision optimization
     autoCrop,
     imageTokenBudget,
+    // Phase 32: Agent mode
+    agentMode,
+    agentMaxSteps,
+    agentMaxTimeMs,
     verbose,
     help,
   };
@@ -570,6 +603,12 @@ COLLECTION MODE OPTIONS (Phase 25f-25i):
                             By default, collection runs a cheap validator (0 LLM calls) and
                             escalates to LLM QA only if quality issues are detected.
                             When enabled, skips LLM QA entirely (faster, but may miss issues).
+
+AGENT MODE OPTIONS (Phase 32):
+  --agent-mode <goal>       Run goal-directed browser automation instead of CRO analysis
+                            Example: --agent-mode "Search Wikipedia for TypeScript"
+  --agent-max-steps <N>     Max steps for agent loop (default: 20, max: 100)
+  --agent-max-time <ms>     Max time in ms for agent loop (default: 120000)
 
 ANALYSIS OPTIMIZATION OPTIONS (Phase 26):
   --sequential-analysis     Disable parallel analysis, run categories sequentially
@@ -1514,6 +1553,10 @@ async function main(): Promise<void> {
     // Phase 30: Vision optimization
     autoCrop,
     imageTokenBudget,
+    // Phase 32: Agent mode
+    agentMode,
+    agentMaxSteps,
+    agentMaxTimeMs,
     verbose,
     help,
   } = parseArgs();
@@ -1525,6 +1568,74 @@ async function main(): Promise<void> {
   }
 
   const useColors = process.stdout.isTTY ?? false;
+
+  // Phase 32: Agent mode — goal-directed browser automation
+  if (agentMode) {
+    const url = urls[0];
+    console.log(`\n🤖 Agent Mode: "${agentMode}"`);
+    console.log(`   Starting URL: ${url}`);
+    console.log(`   Budget: ${agentMaxSteps} steps / ${agentMaxTimeMs}ms\n`);
+
+    const browserManager = new BrowserManager({
+      headless,
+      browserType: 'chromium',
+      timeout,
+      waitUntil,
+      postLoadWait,
+    });
+    await browserManager.launch();
+    const page = browserManager.getPage();
+
+    try {
+      const { ChatOpenAI } = await import('@langchain/openai');
+      const llm = new ChatOpenAI({
+        modelName: 'gpt-4o-mini',
+        temperature: 0,
+      });
+
+      const registry = createCRORegistry();
+      const toolExecutor = new ToolExecutor(registry);
+
+      const agentConfig: AgentLoopConfig = {
+        goal: agentMode,
+        startUrl: url,
+        maxSteps: agentMaxSteps,
+        maxTimeMs: agentMaxTimeMs,
+        verbose,
+      };
+
+      const result: AgentLoopResult = await runAgentLoop(agentConfig, {
+        llm,
+        page,
+        toolExecutor,
+      });
+
+      // Print result summary
+      console.log(`\n${'─'.repeat(60)}`);
+      console.log(`Status: ${result.status}`);
+      console.log(`Goal satisfied: ${result.goalSatisfied ? 'YES' : 'NO'}`);
+      console.log(`Steps: ${result.stepsUsed} | Time: ${result.totalTimeMs}ms`);
+      console.log(`Reason: ${result.terminationReason}`);
+      console.log(`Final URL: ${result.finalUrl}`);
+      if (result.errors.length > 0) {
+        console.log(`Errors: ${result.errors.join(', ')}`);
+      }
+      console.log(`${'─'.repeat(60)}\n`);
+
+      if (verbose && result.actionHistory.length > 0) {
+        console.log('Action History:');
+        for (const action of result.actionHistory) {
+          const symbol = action.success ? '✓' : '✗';
+          console.log(`  [${action.step}] ${symbol} ${action.toolName}(${JSON.stringify(action.toolParams)}) — ${action.durationMs}ms`);
+        }
+        console.log('');
+      }
+
+      process.exit(result.goalSatisfied ? 0 : 1);
+    } finally {
+      await browserManager.close();
+    }
+  }
 
   // Vision mode: unified collection + analysis (CR-001-D)
   if (vision) {
