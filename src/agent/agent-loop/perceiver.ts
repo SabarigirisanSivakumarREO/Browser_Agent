@@ -82,7 +82,8 @@ export async function perceivePage(page: Page): Promise<PerceivedState> {
       const results = [];
 
       for (let i = 0; i < elements.length && results.length < 20; i++) {
-        const el = elements[i];
+        const el = elements[i] as HTMLElement | undefined;
+        if (!el) continue;
         const rect = el.getBoundingClientRect();
         if (rect.width === 0 || rect.height === 0) continue;
 
