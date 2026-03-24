@@ -11,7 +11,7 @@
 
 ### 33a Types
 
-- [ ] T738 Add new types to `src/agent/agent-loop/types.ts`:
+- [x] T738 Add new types to `src/agent/agent-loop/types.ts`:
   - Expand `FailureType` union: add `'WRONG_PAGE' | 'FORM_ERROR' | 'REDIRECT_LOOP' | 'PAGE_CRASHED'`
   - Add `SubGoal` interface: `{ description: string; successCriteria: string; estimatedSteps: number }`
   - Add `CritiqueResult` interface: `{ actionWasUseful: boolean; progressScore: number; reasoning: string; suggestion?: string }`
@@ -23,7 +23,7 @@
 
 ### 33a Element Pre-Validator
 
-- [ ] T739 Create `src/agent/agent-loop/element-pre-validator.ts`:
+- [x] T739 Create `src/agent/agent-loop/element-pre-validator.ts`:
   - `preValidateElement(page: Page, toolName: string, toolParams: Record<string, unknown>, state: PerceivedState): Promise<{ valid: boolean; error?: string }>`
   - If `toolName` not in `ELEMENT_TARGETING_TOOLS`, return `{ valid: true }` (skip)
   - Extract `elementIndex` from `toolParams` (handle both `elementIndex` and `index` keys)
@@ -35,7 +35,7 @@
   - Wrap all in try/catch — on error return `{ valid: true }` (don't block execution on validation failure)
   - Export: `preValidateElement`
 
-- [ ] T740 [P] Create `tests/unit/agent-loop/element-pre-validator.test.ts` — 4 tests:
+- [x] T740 [P] Create `tests/unit/agent-loop/element-pre-validator.test.ts` — 4 tests:
   1. Returns valid for non-element tools (scroll_page, press_key)
   2. Returns invalid when element index not in perceived state
   3. Returns invalid when xpath not found in DOM (mock page.locator.count → 0)
@@ -43,7 +43,7 @@
 
 ### 33a Enhanced Failure Detection
 
-- [ ] T741 Modify `src/agent/agent-loop/failure-router.ts`:
+- [x] T741 Modify `src/agent/agent-loop/failure-router.ts`:
   - Change `detectFailure` signature to accept `preState`, `postState`, `actionHistory` params
   - Add `WRONG_PAGE` detection: if `postState.url` matches `/login|signin|error|404|403|unauthorized/i` and `preState.url` did not → `WRONG_PAGE`
   - Add `FORM_ERROR` detection: if `postState.axTreeText` contains `/\b(error|invalid|required|failed)\b/i` near changed content and `preState.axTreeText` did not → `FORM_ERROR`
@@ -52,7 +52,7 @@
   - Update `routeFailure`: `WRONG_PAGE` → `REPLAN`, `FORM_ERROR` → `REPLAN_WITH_DIAGNOSTIC`, `REDIRECT_LOOP` → `TERMINATE`, `PAGE_CRASHED` → `TERMINATE`
   - Keep existing ELEMENT_NOT_FOUND and ACTION_HAD_NO_EFFECT logic unchanged
 
-- [ ] T742 [P] Add 4 tests to `tests/unit/agent-loop/failure-router.test.ts`:
+- [x] T742 [P] Add 4 tests to `tests/unit/agent-loop/failure-router.test.ts`:
   1. Detects WRONG_PAGE when URL changes to login page
   2. Detects FORM_ERROR when AX tree gains error text
   3. Detects REDIRECT_LOOP when same URL visited 3+ times
@@ -60,7 +60,7 @@
 
 ### 33a Visited-State Tracker
 
-- [ ] T743 Create `src/agent/agent-loop/visited-state-tracker.ts`:
+- [x] T743 Create `src/agent/agent-loop/visited-state-tracker.ts`:
   - `VisitedStateTracker` class:
     - `private visits: Map<string, number>` (normalized URL → count)
     - `private history: string[]` (ordered visit list)
@@ -73,14 +73,14 @@
   - Helper: `normalizeUrl(url: string): string` — strip fragment (#...), strip trailing slash, lowercase hostname
   - Export: `VisitedStateTracker`, `normalizeUrl`
 
-- [ ] T744 [P] Create `tests/unit/agent-loop/visited-state-tracker.test.ts` — 3 tests:
+- [x] T744 [P] Create `tests/unit/agent-loop/visited-state-tracker.test.ts` — 3 tests:
   1. Records visits and returns correct counts
   2. Normalizes URLs (strips fragments, trailing slashes)
   3. Detects redirect loop at threshold
 
 ### 33a Planner Context Enrichment
 
-- [ ] T745 Modify `src/agent/agent-loop/planner.ts`:
+- [x] T745 Modify `src/agent/agent-loop/planner.ts`:
   - Add `visitedUrls?: string` and `failedCombos?: string` params to `planNextAction`
   - Add to user message template after FAILURE CONTEXT:
     ```
@@ -91,7 +91,7 @@
 
 ### 33a Loop Integration
 
-- [ ] T746 Modify `src/agent/agent-loop/agent-loop.ts` for 33a:
+- [x] T746 Modify `src/agent/agent-loop/agent-loop.ts` for 33a:
   - Import `preValidateElement`, `VisitedStateTracker`
   - Create `VisitedStateTracker` instance at loop start
   - After PERCEIVE step: `visitedTracker.recordVisit(preState.url)`
@@ -99,12 +99,12 @@
   - Pass `preState`, `postState`, `actionHistory` to expanded `detectFailure` call
   - Pass `visitedTracker.formatForPrompt()` and `formatFailedCombos(actionHistory)` to `planNextAction`
 
-- [ ] T747 Run `npm run typecheck` — verify 0 new errors in agent-loop files
+- [x] T747 Run `npm run typecheck` — verify 0 new errors in agent-loop files
 
 ### 33a Tests & Commit
 
-- [ ] T748 Run `npx vitest run tests/unit/agent-loop/` — verify all tests pass (existing 22 + 11 new = 33)
-- [ ] T749 Commit: `feat(phase-33a): add element pre-validation, enhanced failure detection, visited-state tracking`
+- [x] T748 Run `npx vitest run tests/unit/agent-loop/` — verify all tests pass (existing 22 + 11 new = 33)
+- [x] T749 Commit: `feat(phase-33a): add element pre-validation, enhanced failure detection, visited-state tracking`
 
 **Checkpoint**: Zero-cost reliability improvements complete. 33 unit tests.
 
