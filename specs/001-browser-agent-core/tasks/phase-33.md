@@ -114,14 +114,14 @@
 
 **Goal**: Decompose complex goals into sequential sub-goals with 1 upfront LLM call.
 
-- [ ] T750 Create `src/agent/agent-loop/sub-goal-planner.ts`:
+- [x] T750 Create `src/agent/agent-loop/sub-goal-planner.ts`:
   - `DECOMPOSE_PROMPT` const with system prompt: "Break this goal into 3-7 sequential sub-goals..."
   - `shouldDecompose(goal: string): boolean` — return true if `goal.length > 50` or goal matches `/\b(and|then|after|next|finally)\b/i` (multiple verbs heuristic)
   - `decomposeGoal(llm: ChatOpenAI, goal: string, startUrl: string): Promise<SubGoal[]>` — call LLM, parse JSON array, validate each has description + successCriteria + estimatedSteps. On parse failure: return single sub-goal wrapping the whole goal.
   - `checkSubGoalCompletion(subGoal: SubGoal, state: PerceivedState): boolean` — check if successCriteria matches current state: URL contains string, title contains string, or element text visible. Simple string matching, no LLM.
   - Export: `decomposeGoal`, `shouldDecompose`, `checkSubGoalCompletion`, `DECOMPOSE_PROMPT`
 
-- [ ] T751 [P] Create `tests/unit/agent-loop/sub-goal-planner.test.ts` — 4 tests:
+- [x] T751 [P] Create `tests/unit/agent-loop/sub-goal-planner.test.ts` — 4 tests:
   1. `shouldDecompose` returns true for complex goals, false for simple
   2. `decomposeGoal` parses valid LLM response into SubGoal array
   3. `checkSubGoalCompletion` matches URL-based criteria
@@ -129,7 +129,7 @@
 
 ### 33b Loop Integration
 
-- [ ] T752 Modify `src/agent/agent-loop/agent-loop.ts` for 33b:
+- [x] T752 Modify `src/agent/agent-loop/agent-loop.ts` for 33b:
   - Add config: `enableSubGoals` defaults to `true`
   - Before main loop, if `enableSubGoals && shouldDecompose(config.goal)`:
     - Call `decomposeGoal(deps.llm, config.goal, config.startUrl)`
@@ -139,15 +139,15 @@
   - If `stepsOnCurrentSubGoal >= 5`: skip to next sub-goal (stuck detection)
   - Pass `currentSubGoal.description` to planner in prompt context (add `currentSubGoal?: string` param to `planNextAction`)
 
-- [ ] T753 Modify `src/agent/agent-loop/planner.ts`:
+- [x] T753 Modify `src/agent/agent-loop/planner.ts`:
   - Add `currentSubGoal?: string` param
   - Add to user message: `CURRENT SUB-GOAL: {subGoal} (sub-goal N of M)` or `CURRENT SUB-GOAL: (none — pursuing full goal directly)`
 
-- [ ] T754 Add CLI flags in `src/cli.ts`:
+- [x] T754 Add CLI flags in `src/cli.ts`:
   - `--no-sub-goals` → `enableSubGoals: false`
 
-- [ ] T755 Run typecheck + tests: `npm run typecheck && npx vitest run tests/unit/agent-loop/`
-- [ ] T756 Commit: `feat(phase-33b): add sub-goal decomposition for complex tasks`
+- [x] T755 Run typecheck + tests: `npm run typecheck && npx vitest run tests/unit/agent-loop/`
+- [x] T756 Commit: `feat(phase-33b): add sub-goal decomposition for complex tasks`
 
 **Checkpoint**: Sub-goal decomposition complete. 37 unit tests.
 
