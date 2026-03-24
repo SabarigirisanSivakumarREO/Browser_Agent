@@ -157,33 +157,33 @@
 
 **Goal**: LLM evaluates action usefulness post-execution. Opt-in.
 
-- [ ] T757 Create `src/agent/agent-loop/self-critic.ts`:
+- [x] T757 Create `src/agent/agent-loop/self-critic.ts`:
   - `CRITIC_SYSTEM_PROMPT` const — evaluator prompt checking observable state changes against sub-goal
   - `computeStateDiff(preState: PerceivedState, postState: PerceivedState): string` — format DOM-diff-aware changes: URL change, title change, DOM hash changed/unchanged, new/removed interactive elements, element count change
   - `critiqueAction(llm, goal, currentSubGoal, action, preState, postState, recentCritiques): Promise<CritiqueResult>` — build prompt with state diff, call LLM, parse JSON. On failure: return `{ actionWasUseful: true, progressScore: 0.5, reasoning: 'Critique unavailable' }`
   - `shouldCritique(enableCritique: boolean, routerFired: boolean, verifierWillRun: boolean): boolean` — return `enableCritique && !routerFired && !verifierWillRun`
   - Export: `critiqueAction`, `shouldCritique`, `computeStateDiff`, `CRITIC_SYSTEM_PROMPT`
 
-- [ ] T758 [P] Create `tests/unit/agent-loop/self-critic.test.ts` — 4 tests:
+- [x] T758 [P] Create `tests/unit/agent-loop/self-critic.test.ts` — 4 tests:
   1. Useful action: progressScore > 0.6 when URL changed toward goal
   2. Useless action: progressScore < 0.3 when DOM unchanged
   3. DOM-diff detection: `computeStateDiff` reports element count change and new elements
   4. Fallback: returns neutral result on LLM parse failure
 
-- [ ] T759 Modify `src/agent/agent-loop/confidence-decay.ts`:
+- [x] T759 Modify `src/agent/agent-loop/confidence-decay.ts`:
   - Add `adjustFromCritique(progressScore: number): void` method
   - progressScore > 0.6: decay at half rate (`this.decayFactor * 0.5`)
   - progressScore < 0.3: decay at double rate (`this.decayFactor * 2`)
   - Otherwise: normal decay rate
   - Clamp to 0
 
-- [ ] T760 [P] Add 2 tests to `tests/unit/agent-loop/confidence-decay.test.ts`:
+- [x] T760 [P] Add 2 tests to `tests/unit/agent-loop/confidence-decay.test.ts`:
   1. `adjustFromCritique` with high progress decays slower than normal
   2. `adjustFromCritique` with low progress decays faster than normal
 
 ### 33c Loop Integration
 
-- [ ] T761 Modify `src/agent/agent-loop/agent-loop.ts` for 33c:
+- [x] T761 Modify `src/agent/agent-loop/agent-loop.ts` for 33c:
   - Import `critiqueAction`, `shouldCritique`
   - Track `critiqueHistory: CritiqueResult[]` (sliding window of CRITIQUE_HISTORY_SIZE)
   - After failure detection (step 10), determine if verifier will run this step
@@ -196,7 +196,7 @@
   - Pass `critiqueHistory` to `planNextAction` (add param)
   - When `--self-critique` enabled: auto-increase maxTimeMs by 50%
 
-- [ ] T762 Modify `src/agent/agent-loop/planner.ts`:
+- [x] T762 Modify `src/agent/agent-loop/planner.ts`:
   - Add `critiqueHistory?: CritiqueResult[]` param
   - Add to user message:
     ```
@@ -205,15 +205,15 @@
       Step M: progressScore=0.2, suggestion: "try different element"
     ```
 
-- [ ] T763 Add CLI flags in `src/cli.ts`:
+- [x] T763 Add CLI flags in `src/cli.ts`:
   - `--self-critique` → `enableCritique: true`
 
-- [ ] T764 [P] Create `tests/integration/agent-loop-critique.test.ts` — 2 tests:
+- [x] T764 [P] Create `tests/integration/agent-loop-critique.test.ts` — 2 tests:
   1. Critique runs and adjusts confidence (mock LLM returns progressScore, verify confidence adjusted)
   2. Critique skipped when deterministic router fires (verify only 1 LLM call: planner)
 
-- [ ] T765 Run typecheck + full agent-loop tests
-- [ ] T766 Commit: `feat(phase-33c): add self-critique with DOM-diff awareness`
+- [x] T765 Run typecheck + full agent-loop tests
+- [x] T766 Commit: `feat(phase-33c): add self-critique with DOM-diff awareness`
 
 **Checkpoint**: Self-critique complete. 43 tests total.
 
