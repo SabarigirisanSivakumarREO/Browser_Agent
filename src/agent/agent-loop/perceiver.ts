@@ -13,7 +13,6 @@ import type { PerceivedState, InteractiveElement } from './types.js';
 
 const AX_TREE_MAX_CHARS = 8000;
 const AX_TREE_MIN_CHARS = 500;
-const MAX_INTERACTIVE_ELEMENTS = 20;
 
 const BLOCKER_PATTERNS: Array<{ pattern: RegExp; type: string }> = [
   { pattern: /accept\s*cookies?/i, type: 'cookie_consent' },

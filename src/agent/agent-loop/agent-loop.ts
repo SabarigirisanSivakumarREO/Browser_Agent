@@ -1,0 +1,303 @@
+/**
+ * Agent Loop Orchestrator
+ *
+ * Phase 32 (T728): Main perceive→plan→act→verify loop for
+ * goal-directed browser automation.
+ */
+
+import type { Page } from 'playwright';
+import type { CROActionName } from '../../models/index.js';
+import type { PageState } from '../../models/page-state.js';
+import type { ExecutionContext } from '../tools/types.js';
+import { createLogger } from '../../utils/logger.js';
+import { perceivePage } from './perceiver.js';
+import { planNextAction } from './planner.js';
+import { verifyGoal, shouldVerify } from './verifier.js';
+import { detectFailure, routeFailure } from './failure-router.js';
+import { BudgetController } from './budget-controller.js';
+import { ConfidenceDecay } from './confidence-decay.js';
+import type {
+  AgentLoopConfig,
+  AgentLoopResult,
+  AgentLoopDeps,
+  ActionRecord,
+  PerceivedState,
+  RoutedFailure,
+} from './types.js';
+
+const SETTLE_MS = 500;
+
+/**
+ * Build a minimal PageState stub from PerceivedState for the ToolExecutor.
+ * The tool executor expects a PageState with domTree, viewport, etc.
+ * Agent-loop tools mostly need the page object, not the full state.
+ */
+function buildMinimalPageState(state: PerceivedState): PageState {
+  return {
+    url: state.url,
+    title: state.title,
+    domTree: {
+      root: {
+        tagName: 'html', xpath: '/html', text: '', isInteractive: false,
+        isVisible: true, croType: null, children: [],
+      },
+      interactiveCount: 0,
+      croElementCount: 0,
+      totalNodeCount: 0,
+      extractedAt: Date.now(),
+    },
+    viewport: { width: 1280, height: 800, deviceScaleFactor: 1, isMobile: false },
+    scrollPosition: { x: 0, y: 0, maxX: 0, maxY: 0 },
+    timestamp: Date.now(),
+  };
+}
+
+/**
+ * Build an ExecutionContext for the ToolExecutor.
+ */
+function buildContext(
+  page: Page,
+  state: PerceivedState,
+  verbose: boolean
+): ExecutionContext {
+  return {
+    page,
+    state: buildMinimalPageState(state),
+    verbose,
+  };
+}
+
+/**
+ * Create a terminal AgentLoopResult.
+ */
+function terminate(
+  status: AgentLoopResult['status'],
+  reason: string,
+  actionHistory: ActionRecord[],
+  budget: BudgetController,
+  startTime: number,
+  finalState: PerceivedState,
+  errors: string[]
+): AgentLoopResult {
+  return {
+    status,
+    goalSatisfied: status === 'SUCCESS',
+    stepsUsed: budget.stepsUsed,
+    totalTimeMs: Date.now() - startTime,
+    actionHistory,
+    terminationReason: reason,
+    errors,
+    finalUrl: finalState.url,
+    finalTitle: finalState.title,
+  };
+}
+
+/**
+ * Run the goal-directed agent loop.
+ *
+ * @param config - Loop configuration (goal, budgets, thresholds)
+ * @param deps - External dependencies (LLM, page, tool executor)
+ * @returns Structured result with status, history, and timing
+ */
+export async function runAgentLoop(
+  config: AgentLoopConfig,
+  deps: AgentLoopDeps
+): Promise<AgentLoopResult> {
+  const logger = createLogger('AgentLoop', config.verbose ?? false);
+  const maxSteps = config.maxSteps ?? 20;
+  const maxTimeMs = config.maxTimeMs ?? 120000;
+  const verifyEveryN = config.verifyEveryNSteps ?? 3;
+  const verbose = config.verbose ?? false;
+
+  const budget = new BudgetController(maxSteps, maxTimeMs);
+  const confidence = new ConfidenceDecay(
+    config.decayFactor,
+    config.escalationThreshold
+  );
+  const actionHistory: ActionRecord[] = [];
+  const errors: string[] = [];
+  let failureContext: RoutedFailure | null = null;
+  let consecutiveFailures = 0;
+  const startTime = Date.now();
+
+  // Navigate to start URL if provided
+  if (config.startUrl) {
+    try {
+      const ctx = buildContext(deps.page, {
+        url: 'about:blank', title: '', domHash: '', axTreeText: null,
+        interactiveElements: [], hasBlocker: false,
+      }, verbose);
+      await deps.toolExecutor.execute(
+        'go_to_url' as CROActionName,
+        { url: config.startUrl },
+        ctx
+      );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      errors.push(`Failed to navigate to start URL: ${msg}`);
+    }
+  }
+
+  let latestState: PerceivedState = {
+    url: deps.page.url(),
+    title: '',
+    domHash: '',
+    axTreeText: null,
+    interactiveElements: [],
+    hasBlocker: false,
+  };
+
+  try {
+    while (true) {
+      // 1. BUDGET CHECK
+      if (budget.isExceeded()) {
+        return terminate(
+          'BUDGET_EXCEEDED', 'Step or time budget exceeded',
+          actionHistory, budget, startTime, latestState, errors
+        );
+      }
+
+      // 2. CONFIDENCE CHECK
+      if (confidence.shouldEscalate()) {
+        return terminate(
+          'CONFIDENCE_LOW', `Confidence ${confidence.current.toFixed(2)} below threshold`,
+          actionHistory, budget, startTime, latestState, errors
+        );
+      }
+
+      // 3. PERCEIVE
+      const preState = await perceivePage(deps.page);
+      latestState = preState;
+
+      // 4. HANDLE BLOCKERS
+      if (preState.hasBlocker) {
+        logger.info('Blocker detected, dismissing', { type: preState.blockerType });
+        const ctx = buildContext(deps.page, preState, verbose);
+        await deps.toolExecutor.execute(
+          'dismiss_blocker' as CROActionName,
+          { strategy: 'auto' },
+          ctx
+        );
+        budget.recordStep();
+        confidence.decay();
+        continue; // re-perceive after dismissal
+      }
+
+      // 5. PLAN
+      const plan = await planNextAction(
+        deps.llm,
+        config.goal,
+        preState,
+        actionHistory.slice(-5),
+        failureContext,
+        budget.getStatus(),
+        confidence.current
+      );
+
+      logger.info(`Step ${budget.stepsUsed + 1}: ${plan.toolName}`, {
+        params: plan.toolParams,
+        reasoning: plan.reasoning,
+      });
+
+      // 6. ACT
+      const ctx = buildContext(deps.page, preState, verbose);
+      const actionStart = Date.now();
+      const result = await deps.toolExecutor.execute(
+        plan.toolName as CROActionName,
+        plan.toolParams,
+        ctx
+      );
+      const durationMs = Date.now() - actionStart;
+
+      // 7. RE-PERCEIVE
+      const postState = await perceivePage(deps.page);
+      latestState = postState;
+
+      // 8. RECORD
+      const record: ActionRecord = {
+        step: budget.stepsUsed + 1,
+        toolName: plan.toolName,
+        toolParams: plan.toolParams,
+        reasoning: plan.reasoning,
+        expectedOutcome: plan.expectedOutcome,
+        success: result.success,
+        error: result.error,
+        domHashBefore: preState.domHash,
+        domHashAfter: postState.domHash,
+        durationMs,
+        timestamp: new Date().toISOString(),
+      };
+      actionHistory.push(record);
+
+      // 9. DETECT FAILURES
+      const failure = detectFailure(
+        plan.toolName,
+        result,
+        preState.domHash,
+        postState.domHash
+      );
+
+      if (failure) {
+        consecutiveFailures++;
+        const routed = routeFailure({
+          ...failure,
+          retryCount: consecutiveFailures,
+        });
+        if (routed.strategy === 'TERMINATE') {
+          return terminate(
+            'UNRECOVERABLE_FAILURE', `${failure.type}: ${failure.details}`,
+            actionHistory, budget, startTime, postState, errors
+          );
+        }
+        failureContext = routed;
+      } else {
+        consecutiveFailures = 0;
+        failureContext = null;
+      }
+
+      // 10. VERIFY GOAL
+      if (shouldVerify(budget.stepsUsed + 1, verifyEveryN, preState, postState)) {
+        const verification = await verifyGoal(
+          deps.llm,
+          config.goal,
+          postState,
+          actionHistory
+        );
+        logger.info('Goal verification', {
+          goalSatisfied: verification.goalSatisfied,
+          confidence: verification.confidence,
+          reasoning: verification.reasoning,
+        });
+
+        if (verification.goalSatisfied && verification.confidence > 0.7) {
+          return terminate(
+            'SUCCESS', `Goal satisfied (confidence: ${verification.confidence.toFixed(2)})`,
+            actionHistory, budget, startTime, postState, errors
+          );
+        }
+      }
+
+      // 11. UPDATE
+      budget.recordStep();
+      confidence.decay();
+
+      // 12. VERBOSE OUTPUT
+      if (verbose) {
+        const symbol = result.success ? '✓' : '✗';
+        logger.info(
+          `[Step ${record.step}] ${plan.toolName}(${JSON.stringify(plan.toolParams)}) → ${symbol} (${durationMs}ms) confidence: ${confidence.current.toFixed(2)}`
+        );
+      }
+
+      // 13. SETTLE
+      await new Promise((resolve) => setTimeout(resolve, SETTLE_MS));
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    errors.push(msg);
+    return terminate(
+      'RUNNER_ERROR', `Unexpected error: ${msg}`,
+      actionHistory, budget, startTime, latestState, errors
+    );
+  }
+}
