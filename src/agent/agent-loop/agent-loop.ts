@@ -11,11 +11,13 @@ import type { PageState } from '../../models/page-state.js';
 import type { ExecutionContext } from '../tools/types.js';
 import { createLogger } from '../../utils/logger.js';
 import { perceivePage } from './perceiver.js';
-import { planNextAction } from './planner.js';
+import { planNextAction, formatFailedCombos } from './planner.js';
 import { verifyGoal, shouldVerify } from './verifier.js';
 import { detectFailure, routeFailure } from './failure-router.js';
 import { BudgetController } from './budget-controller.js';
 import { ConfidenceDecay } from './confidence-decay.js';
+import { preValidateElement } from './element-pre-validator.js';
+import { VisitedStateTracker } from './visited-state-tracker.js';
 import type {
   AgentLoopConfig,
   AgentLoopResult,
@@ -135,6 +137,7 @@ export async function runAgentLoop(
   let failureContext: RoutedFailure | null = null;
   let consecutiveFailures = 0;
   const startTime = Date.now();
+  const visitedTracker = new VisitedStateTracker();
 
   // Navigate to start URL if provided
   if (config.startUrl) {
@@ -184,6 +187,7 @@ export async function runAgentLoop(
       // 3. PERCEIVE
       const preState = await perceivePage(deps.page);
       latestState = preState;
+      visitedTracker.recordVisit(preState.url);
 
       // 4. HANDLE BLOCKERS
       if (preState.hasBlocker) {
@@ -207,7 +211,9 @@ export async function runAgentLoop(
         actionHistory.slice(-5),
         failureContext,
         budget.getStatus(),
-        confidence.current
+        confidence.current,
+        visitedTracker.formatForPrompt(),
+        formatFailedCombos(actionHistory)
       );
 
       logger.info(`Step ${budget.stepsUsed + 1}: ${plan.toolName}`, {
@@ -218,6 +224,44 @@ export async function runAgentLoop(
         interactiveElements: preState.interactiveElements.length,
         domTreeChildren: buildMinimalPageState(preState).domTree.root.children.length,
       });
+
+      // 5.5. PRE-VALIDATE ELEMENT
+      const validation = await preValidateElement(
+        deps.page, plan.toolName, plan.toolParams, preState
+      );
+      if (!validation.valid) {
+        // Skip execution — record as failed action
+        const record: ActionRecord = {
+          step: budget.stepsUsed + 1,
+          toolName: plan.toolName,
+          toolParams: plan.toolParams,
+          reasoning: plan.reasoning,
+          expectedOutcome: plan.expectedOutcome,
+          success: false,
+          error: validation.error,
+          domHashBefore: preState.domHash,
+          domHashAfter: preState.domHash,
+          durationMs: 0,
+          timestamp: new Date().toISOString(),
+        };
+        actionHistory.push(record);
+        consecutiveFailures++;
+        const routed = routeFailure({
+          type: 'ELEMENT_NOT_FOUND',
+          details: validation.error || 'Pre-validation failed',
+          retryCount: consecutiveFailures,
+        });
+        if (routed.strategy === 'TERMINATE') {
+          return terminate(
+            'UNRECOVERABLE_FAILURE', `${routed.failure.type}: ${routed.failure.details}`,
+            actionHistory, budget, startTime, preState, errors
+          );
+        }
+        failureContext = routed;
+        budget.recordStep();
+        confidence.decay();
+        continue; // skip to next iteration
+      }
 
       // 6. ACT
       const ctx = buildContext(deps.page, preState, verbose);
@@ -254,7 +298,10 @@ export async function runAgentLoop(
         plan.toolName,
         result,
         preState.domHash,
-        postState.domHash
+        postState.domHash,
+        { url: preState.url, axTreeText: preState.axTreeText },
+        { url: postState.url, axTreeText: postState.axTreeText },
+        actionHistory
       );
 
       if (failure) {

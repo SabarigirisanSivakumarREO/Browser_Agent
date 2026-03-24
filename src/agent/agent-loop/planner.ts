@@ -79,7 +79,9 @@ export async function planNextAction(
   recentActions: ActionRecord[],
   failureContext: RoutedFailure | null,
   budgetStatus: BudgetStatus,
-  confidence: number
+  confidence: number,
+  visitedUrls?: string,
+  failedCombos?: string
 ): Promise<PlannerOutput> {
   const elementsText = state.interactiveElements
     .map(
@@ -117,6 +119,8 @@ RECENT ACTIONS (last 5):
   ${actionsText}
 
 FAILURE CONTEXT: ${failureText}
+VISITED PAGES: ${visitedUrls || 'none'}
+FAILED COMBINATIONS: ${failedCombos || 'none'}
 BUDGET: Step ${budgetStatus.stepsUsed}/${budgetStatus.stepsUsed + budgetStatus.stepsRemaining} | Confidence: ${confidence.toFixed(2)}
 
 What is the single next action?`;
@@ -154,4 +158,26 @@ What is the single next action?`;
     toolParams: {},
     expectedOutcome: 'Get page text for next plan',
   };
+}
+
+/**
+ * Extract failed tool+element combinations from action history.
+ * Format: "click(elementIndex:3) failed 2x, type_text(elementIndex:5) failed 1x"
+ */
+export function formatFailedCombos(history: ActionRecord[]): string {
+  const failedMap = new Map<string, number>();
+  for (const action of history) {
+    if (!action.success) {
+      const elementIndex = (action.toolParams as Record<string, unknown>).elementIndex ??
+                          (action.toolParams as Record<string, unknown>).index;
+      const key = elementIndex !== undefined
+        ? `${action.toolName}(elementIndex:${elementIndex})`
+        : action.toolName;
+      failedMap.set(key, (failedMap.get(key) ?? 0) + 1);
+    }
+  }
+  if (failedMap.size === 0) return 'none';
+  return Array.from(failedMap.entries())
+    .map(([combo, count]) => `${combo} failed ${count}x`)
+    .join(', ');
 }
