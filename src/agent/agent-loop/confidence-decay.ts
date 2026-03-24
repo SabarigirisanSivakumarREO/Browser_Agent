@@ -35,6 +35,24 @@ export class ConfidenceDecay {
     return this.value < this.escalationThreshold;
   }
 
+  /**
+   * Adjust confidence based on critic's progress score.
+   * REPLACES decay() on steps where critique runs — never call both.
+   * Phase 33c.
+   */
+  adjustFromCritique(progressScore: number): void {
+    if (progressScore > 0.6) {
+      // Good progress — decay at half rate
+      this.value = Math.max(0, this.value - this.decayFactor * 0.5);
+    } else if (progressScore < 0.3) {
+      // Poor progress — decay at double rate
+      this.value = Math.max(0, this.value - this.decayFactor * 2);
+    } else {
+      // Normal decay
+      this.value = Math.max(0, this.value - this.decayFactor);
+    }
+  }
+
   /** Reset confidence to 1.0 (e.g. after successful goal verification) */
   reset(): void {
     this.value = 1.0;

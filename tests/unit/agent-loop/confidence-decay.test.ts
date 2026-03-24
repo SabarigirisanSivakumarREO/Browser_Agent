@@ -24,6 +24,18 @@ describe('ConfidenceDecay', () => {
     expect(cd.shouldEscalate()).toBe(true);
   });
 
+  it('adjustFromCritique with high progress decays slower than normal', () => {
+    const cd = new ConfidenceDecay(0.1, 0.3);
+    cd.adjustFromCritique(0.8); // high progress → half rate
+    expect(cd.current).toBeCloseTo(0.95); // 1.0 - 0.1*0.5 = 0.95
+  });
+
+  it('adjustFromCritique with low progress decays faster than normal', () => {
+    const cd = new ConfidenceDecay(0.1, 0.3);
+    cd.adjustFromCritique(0.1); // low progress → double rate
+    expect(cd.current).toBeCloseTo(0.8); // 1.0 - 0.1*2 = 0.8
+  });
+
   it('never drops below 0 and reset restores to 1.0', () => {
     const cd = new ConfidenceDecay(0.5);
     cd.decay(); // 0.5

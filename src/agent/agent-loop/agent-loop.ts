@@ -19,6 +19,7 @@ import { BudgetController } from './budget-controller.js';
 import { ConfidenceDecay } from './confidence-decay.js';
 import { preValidateElement } from './element-pre-validator.js';
 import { VisitedStateTracker } from './visited-state-tracker.js';
+import { critiqueAction, shouldCritique } from './self-critic.js';
 import type {
   AgentLoopConfig,
   AgentLoopResult,
@@ -27,7 +28,9 @@ import type {
   PerceivedState,
   RoutedFailure,
   SubGoal,
+  CritiqueResult,
 } from './types.js';
+import { CRITIQUE_HISTORY_SIZE } from './types.js';
 
 const SETTLE_MS = 500;
 
@@ -125,7 +128,8 @@ export async function runAgentLoop(
 ): Promise<AgentLoopResult> {
   const logger = createLogger('AgentLoop', config.verbose ?? false);
   const maxSteps = config.maxSteps ?? 20;
-  const maxTimeMs = config.maxTimeMs ?? 120000;
+  const baseMaxTimeMs = config.maxTimeMs ?? 120000;
+  const maxTimeMs = (config.enableCritique) ? Math.round(baseMaxTimeMs * 1.5) : baseMaxTimeMs;
   const verifyEveryN = config.verifyEveryNSteps ?? 3;
   const verbose = config.verbose ?? false;
 
@@ -139,6 +143,7 @@ export async function runAgentLoop(
   let failureContext: RoutedFailure | null = null;
   let consecutiveFailures = 0;
   const startTime = Date.now();
+  const critiqueHistory: CritiqueResult[] = [];
   const visitedTracker = new VisitedStateTracker();
 
   // Navigate to start URL if provided
@@ -244,7 +249,8 @@ export async function runAgentLoop(
         confidence.current,
         visitedTracker.formatForPrompt(),
         formatFailedCombos(actionHistory),
-        subGoalContext   // NEW
+        subGoalContext,
+        critiqueHistory.slice(-CRITIQUE_HISTORY_SIZE)
       );
 
       logger.info(`Step ${budget.stepsUsed + 1}: ${plan.toolName}`, {
@@ -372,8 +378,43 @@ export async function runAgentLoop(
         failureContext = null;
       }
 
-      // 10. VERIFY GOAL
-      if (shouldVerify(budget.stepsUsed + 1, verifyEveryN, preState, postState)) {
+      budget.recordStep();
+
+      // 10. SELF-CRITIQUE (Phase 33c)
+      const routerFired = failure !== null;
+      const verifierWillRun = shouldVerify(budget.stepsUsed, verifyEveryN, preState, postState);
+
+      if (shouldCritique(config.enableCritique ?? false, routerFired, verifierWillRun)) {
+        const currentSubGoalForCritique = subGoals.length > 0 && currentSubGoalIndex < subGoals.length
+          ? subGoals[currentSubGoalIndex]!
+          : null;
+        const critique = await critiqueAction(
+          deps.llm,
+          config.goal,
+          currentSubGoalForCritique,
+          record,
+          preState,
+          postState,
+          critiqueHistory.slice(-CRITIQUE_HISTORY_SIZE)
+        );
+        critiqueHistory.push(critique);
+        if (critiqueHistory.length > CRITIQUE_HISTORY_SIZE) {
+          critiqueHistory.shift();
+        }
+        record.critiqueResult = critique;
+        confidence.adjustFromCritique(critique.progressScore);
+
+        if (verbose) {
+          logger.info(`Critique: score=${critique.progressScore.toFixed(2)}, useful=${critique.actionWasUseful}`, {
+            reasoning: critique.reasoning,
+          });
+        }
+      } else {
+        confidence.decay();
+      }
+
+      // 11. VERIFY GOAL
+      if (shouldVerify(budget.stepsUsed, verifyEveryN, preState, postState)) {
         const verification = await verifyGoal(
           deps.llm,
           config.goal,
@@ -394,11 +435,7 @@ export async function runAgentLoop(
         }
       }
 
-      // 11. UPDATE
-      budget.recordStep();
-      confidence.decay();
-
-      // 12. VERBOSE OUTPUT
+      // 12. SETTLE + VERBOSE OUTPUT
       if (verbose) {
         const symbol = result.success ? '✓' : '✗';
         logger.info(

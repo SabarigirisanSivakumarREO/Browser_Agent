@@ -104,6 +104,7 @@ function parseArgs(): {
   agentMaxSteps: number;  // Max steps for agent loop (default: 20)
   agentMaxTimeMs: number;  // Max time for agent loop (default: 120000)
   agentNoSubGoals: boolean;  // Phase 33b: Disable sub-goal decomposition
+  agentSelfCritique: boolean;  // Phase 33c: Enable self-critique
   verbose: boolean;
   help: boolean;
 } {
@@ -159,6 +160,7 @@ function parseArgs(): {
   let agentMaxSteps = 20;  // Max steps for agent loop
   let agentMaxTimeMs = 120000;  // Max time for agent loop (2 minutes)
   let agentNoSubGoals = false;
+  let agentSelfCritique = false;
   let verbose = false;
   let help = false;
 
@@ -331,6 +333,8 @@ function parseArgs(): {
     } else if (arg === '--no-sub-goals') {
       // Phase 33b: Disable sub-goal decomposition
       agentNoSubGoals = true;
+    } else if (arg === '--self-critique') {
+      agentSelfCritique = true;
     } else if (arg === '--save-evidence') {
       // Phase 21h: Enable evidence saving (now default, kept for backward compatibility)
       saveEvidence = true;
@@ -517,6 +521,7 @@ function parseArgs(): {
     agentMaxSteps,
     agentMaxTimeMs,
     agentNoSubGoals,
+    agentSelfCritique,
     verbose,
     help,
   };
@@ -616,6 +621,7 @@ AGENT MODE OPTIONS (Phase 32):
   --agent-max-steps <N>     Max steps for agent loop (default: 20, max: 100)
   --agent-max-time <ms>     Max time in ms for agent loop (default: 120000)
   --no-sub-goals            Disable sub-goal decomposition (default: on)
+  --self-critique           Enable post-action LLM critique (opt-in, +1 LLM call/step)
 
 ANALYSIS OPTIMIZATION OPTIONS (Phase 26):
   --sequential-analysis     Disable parallel analysis, run categories sequentially
@@ -1565,6 +1571,7 @@ async function main(): Promise<void> {
     agentMaxSteps,
     agentMaxTimeMs,
     agentNoSubGoals,
+    agentSelfCritique,
     verbose,
     help,
   } = parseArgs();
@@ -1611,6 +1618,7 @@ async function main(): Promise<void> {
         maxTimeMs: agentMaxTimeMs,
         verbose,
         enableSubGoals: !agentNoSubGoals,
+        enableCritique: agentSelfCritique,
       };
 
       const result: AgentLoopResult = await runAgentLoop(agentConfig, {

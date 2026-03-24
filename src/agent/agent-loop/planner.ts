@@ -14,6 +14,7 @@ import type {
   ActionRecord,
   RoutedFailure,
   BudgetStatus,
+  CritiqueResult,
 } from './types.js';
 
 /** Tools available to the planner (interaction + perception, NOT CRO analysis) */
@@ -82,7 +83,8 @@ export async function planNextAction(
   confidence: number,
   visitedUrls?: string,
   failedCombos?: string,
-  currentSubGoal?: string    // NEW — Phase 33b
+  currentSubGoal?: string,    // NEW — Phase 33b
+  critiqueHistory?: CritiqueResult[]  // NEW — Phase 33c
 ): Promise<PlannerOutput> {
   const elementsText = state.interactiveElements
     .map(
@@ -104,6 +106,12 @@ export async function planNextAction(
     ? `${failureContext.failure.type}: ${failureContext.failure.details} (strategy: ${failureContext.strategy})`
     : 'none';
 
+  const critiqueText = critiqueHistory && critiqueHistory.length > 0
+    ? critiqueHistory
+        .map((c) => `score=${c.progressScore.toFixed(1)}: ${c.reasoning.slice(0, 60)}${c.suggestion ? ` → try: ${c.suggestion}` : ''}`)
+        .join('\n  ')
+    : 'none';
+
   const userMessage = `GOAL: ${goal}
 ${currentSubGoal ? `\nCURRENT SUB-GOAL: ${currentSubGoal}` : ''}
 CURRENT PAGE:
@@ -122,6 +130,7 @@ RECENT ACTIONS (last 5):
 FAILURE CONTEXT: ${failureText}
 VISITED PAGES: ${visitedUrls || 'none'}
 FAILED COMBINATIONS: ${failedCombos || 'none'}
+RECENT CRITIQUES: ${critiqueText}
 BUDGET: Step ${budgetStatus.stepsUsed}/${budgetStatus.stepsUsed + budgetStatus.stepsRemaining} | Confidence: ${confidence.toFixed(2)}
 
 What is the single next action?`;
