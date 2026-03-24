@@ -20,6 +20,7 @@ import { ConfidenceDecay } from './confidence-decay.js';
 import { preValidateElement } from './element-pre-validator.js';
 import { VisitedStateTracker } from './visited-state-tracker.js';
 import { critiqueAction, shouldCritique } from './self-critic.js';
+import { generateCandidates } from './candidate-generator.js';
 import type {
   AgentLoopConfig,
   AgentLoopResult,
@@ -29,6 +30,7 @@ import type {
   RoutedFailure,
   SubGoal,
   CritiqueResult,
+  PlannerOutput,
 } from './types.js';
 import { CRITIQUE_HISTORY_SIZE } from './types.js';
 
@@ -231,7 +233,7 @@ export async function runAgentLoop(
         continue; // re-perceive after dismissal
       }
 
-      // 5. PLAN
+      // 5. PLAN (or GENERATE CANDIDATES if multi-candidate enabled)
       const currentSubGoal = subGoals.length > 0 && currentSubGoalIndex < subGoals.length
         ? subGoals[currentSubGoalIndex]
         : null;
@@ -239,19 +241,52 @@ export async function runAgentLoop(
         ? `${currentSubGoal.description} (sub-goal ${currentSubGoalIndex + 1} of ${subGoals.length})`
         : undefined;
 
-      const plan = await planNextAction(
-        deps.llm,
-        config.goal,
-        preState,
-        actionHistory.slice(-5),
-        failureContext,
-        budget.getStatus(),
-        confidence.current,
-        visitedTracker.formatForPrompt(),
-        formatFailedCombos(actionHistory),
-        subGoalContext,
-        critiqueHistory.slice(-CRITIQUE_HISTORY_SIZE)
-      );
+      let plan: PlannerOutput;
+      let candidateScore: number | undefined;
+      let candidateRank: number | undefined;
+
+      if (config.enableMultiCandidate) {
+        const currentSubGoalForGen = subGoals.length > 0 && currentSubGoalIndex < subGoals.length
+          ? subGoals[currentSubGoalIndex]!
+          : null;
+        const candidates = await generateCandidates(
+          deps.llm,
+          config.goal,
+          currentSubGoalForGen,
+          preState,
+          actionHistory.slice(-5),
+          failureContext,
+          budget.getStatus(),
+          confidence.current,
+          critiqueHistory.slice(-CRITIQUE_HISTORY_SIZE),
+          visitedTracker.formatForPrompt()
+        );
+        plan = candidates[0]!;
+        candidateScore = candidates[0]!.selfScore;
+        candidateRank = 1;
+
+        if (verbose && candidates.length > 1) {
+          logger.info('Candidates generated', {
+            count: candidates.length,
+            selected: `${plan.toolName} (score: ${candidateScore?.toFixed(2)})`,
+            alternatives: candidates.slice(1).map((c) => `${c.toolName} (score: ${c.selfScore.toFixed(2)})`),
+          });
+        }
+      } else {
+        plan = await planNextAction(
+          deps.llm,
+          config.goal,
+          preState,
+          actionHistory.slice(-5),
+          failureContext,
+          budget.getStatus(),
+          confidence.current,
+          visitedTracker.formatForPrompt(),
+          formatFailedCombos(actionHistory),
+          subGoalContext,
+          critiqueHistory.slice(-CRITIQUE_HISTORY_SIZE)
+        );
+      }
 
       logger.info(`Step ${budget.stepsUsed + 1}: ${plan.toolName}`, {
         params: plan.toolParams,
@@ -280,6 +315,8 @@ export async function runAgentLoop(
           domHashAfter: preState.domHash,
           durationMs: 0,
           timestamp: new Date().toISOString(),
+          candidateScore,
+          candidateRank,
         };
         actionHistory.push(record);
         consecutiveFailures++;
@@ -327,6 +364,8 @@ export async function runAgentLoop(
         domHashAfter: postState.domHash,
         durationMs,
         timestamp: new Date().toISOString(),
+        candidateScore,
+        candidateRank,
       };
       actionHistory.push(record);
 

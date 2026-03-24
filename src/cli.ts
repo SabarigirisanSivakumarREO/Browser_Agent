@@ -105,6 +105,8 @@ function parseArgs(): {
   agentMaxTimeMs: number;  // Max time for agent loop (default: 120000)
   agentNoSubGoals: boolean;  // Phase 33b: Disable sub-goal decomposition
   agentSelfCritique: boolean;  // Phase 33c: Enable self-critique
+  agentMultiCandidate: boolean;  // Phase 33d: Enable multi-candidate generation
+  agentCandidateCount: number;  // Phase 33d: Candidates per step (default: 3)
   verbose: boolean;
   help: boolean;
 } {
@@ -161,6 +163,8 @@ function parseArgs(): {
   let agentMaxTimeMs = 120000;  // Max time for agent loop (2 minutes)
   let agentNoSubGoals = false;
   let agentSelfCritique = false;
+  let agentMultiCandidate = false;
+  let agentCandidateCount = 3;
   let verbose = false;
   let help = false;
 
@@ -335,6 +339,15 @@ function parseArgs(): {
       agentNoSubGoals = true;
     } else if (arg === '--self-critique') {
       agentSelfCritique = true;
+    } else if (arg === '--multi-candidate') {
+      agentMultiCandidate = true;
+    } else if (arg === '--candidates' && args[i + 1]) {
+      agentCandidateCount = parseInt(args[i + 1] ?? '3', 10);
+      if (isNaN(agentCandidateCount) || agentCandidateCount < 1 || agentCandidateCount > 5) {
+        console.error('Invalid candidates value. Must be between 1 and 5.');
+        process.exit(1);
+      }
+      i++;
     } else if (arg === '--save-evidence') {
       // Phase 21h: Enable evidence saving (now default, kept for backward compatibility)
       saveEvidence = true;
@@ -522,6 +535,8 @@ function parseArgs(): {
     agentMaxTimeMs,
     agentNoSubGoals,
     agentSelfCritique,
+    agentMultiCandidate,
+    agentCandidateCount,
     verbose,
     help,
   };
@@ -622,6 +637,8 @@ AGENT MODE OPTIONS (Phase 32):
   --agent-max-time <ms>     Max time in ms for agent loop (default: 120000)
   --no-sub-goals            Disable sub-goal decomposition (default: on)
   --self-critique           Enable post-action LLM critique (opt-in, +1 LLM call/step)
+  --multi-candidate         Enable multi-candidate action generation (opt-in)
+  --candidates <n>          Candidates per step (default: 3, max: 5)
 
 ANALYSIS OPTIMIZATION OPTIONS (Phase 26):
   --sequential-analysis     Disable parallel analysis, run categories sequentially
@@ -1572,6 +1589,8 @@ async function main(): Promise<void> {
     agentMaxTimeMs,
     agentNoSubGoals,
     agentSelfCritique,
+    agentMultiCandidate,
+    agentCandidateCount,
     verbose,
     help,
   } = parseArgs();
@@ -1619,6 +1638,8 @@ async function main(): Promise<void> {
         verbose,
         enableSubGoals: !agentNoSubGoals,
         enableCritique: agentSelfCritique,
+        enableMultiCandidate: agentMultiCandidate,
+        candidateCount: agentCandidateCount,
       };
 
       const result: AgentLoopResult = await runAgentLoop(agentConfig, {
