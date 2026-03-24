@@ -81,7 +81,8 @@ export async function planNextAction(
   budgetStatus: BudgetStatus,
   confidence: number,
   visitedUrls?: string,
-  failedCombos?: string
+  failedCombos?: string,
+  currentSubGoal?: string    // NEW — Phase 33b
 ): Promise<PlannerOutput> {
   const elementsText = state.interactiveElements
     .map(
@@ -104,7 +105,7 @@ export async function planNextAction(
     : 'none';
 
   const userMessage = `GOAL: ${goal}
-
+${currentSubGoal ? `\nCURRENT SUB-GOAL: ${currentSubGoal}` : ''}
 CURRENT PAGE:
   URL: ${state.url}
   Title: ${state.title}

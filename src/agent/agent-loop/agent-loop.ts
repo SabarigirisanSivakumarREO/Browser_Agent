@@ -12,6 +12,7 @@ import type { ExecutionContext } from '../tools/types.js';
 import { createLogger } from '../../utils/logger.js';
 import { perceivePage } from './perceiver.js';
 import { planNextAction, formatFailedCombos } from './planner.js';
+import { decomposeGoal, shouldDecompose, checkSubGoalCompletion } from './sub-goal-planner.js';
 import { verifyGoal, shouldVerify } from './verifier.js';
 import { detectFailure, routeFailure } from './failure-router.js';
 import { BudgetController } from './budget-controller.js';
@@ -25,6 +26,7 @@ import type {
   ActionRecord,
   PerceivedState,
   RoutedFailure,
+  SubGoal,
 } from './types.js';
 
 const SETTLE_MS = 500;
@@ -166,6 +168,27 @@ export async function runAgentLoop(
     hasBlocker: false,
   };
 
+  // Sub-goal decomposition (Phase 33b)
+  const enableSubGoals = config.enableSubGoals !== false; // default: true
+  let subGoals: SubGoal[] = [];
+  let currentSubGoalIndex = 0;
+  let stepsOnCurrentSubGoal = 0;
+
+  if (enableSubGoals && shouldDecompose(config.goal)) {
+    try {
+      subGoals = await decomposeGoal(deps.llm, config.goal, config.startUrl ?? deps.page.url());
+      if (verbose) {
+        logger.info('Goal decomposed into sub-goals', {
+          count: subGoals.length,
+          subGoals: subGoals.map((sg, i) => `${i + 1}. ${sg.description}`),
+        });
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      errors.push(`Sub-goal decomposition failed: ${msg}`);
+    }
+  }
+
   try {
     while (true) {
       // 1. BUDGET CHECK
@@ -204,6 +227,13 @@ export async function runAgentLoop(
       }
 
       // 5. PLAN
+      const currentSubGoal = subGoals.length > 0 && currentSubGoalIndex < subGoals.length
+        ? subGoals[currentSubGoalIndex]
+        : null;
+      const subGoalContext = currentSubGoal
+        ? `${currentSubGoal.description} (sub-goal ${currentSubGoalIndex + 1} of ${subGoals.length})`
+        : undefined;
+
       const plan = await planNextAction(
         deps.llm,
         config.goal,
@@ -213,7 +243,8 @@ export async function runAgentLoop(
         budget.getStatus(),
         confidence.current,
         visitedTracker.formatForPrompt(),
-        formatFailedCombos(actionHistory)
+        formatFailedCombos(actionHistory),
+        subGoalContext   // NEW
       );
 
       logger.info(`Step ${budget.stepsUsed + 1}: ${plan.toolName}`, {
@@ -292,6 +323,25 @@ export async function runAgentLoop(
         timestamp: new Date().toISOString(),
       };
       actionHistory.push(record);
+
+      // Check sub-goal completion (Phase 33b)
+      if (currentSubGoal && checkSubGoalCompletion(currentSubGoal, postState)) {
+        currentSubGoalIndex++;
+        stepsOnCurrentSubGoal = 0;
+        if (verbose) {
+          logger.info(`Sub-goal ${currentSubGoalIndex} completed: ${currentSubGoal.description}`);
+        }
+      } else {
+        stepsOnCurrentSubGoal++;
+        // Skip stuck sub-goal after 5 steps
+        if (currentSubGoal && stepsOnCurrentSubGoal >= 5) {
+          logger.info(`Skipping stuck sub-goal: ${currentSubGoal.description}`, {
+            stepsSpent: stepsOnCurrentSubGoal,
+          });
+          currentSubGoalIndex++;
+          stepsOnCurrentSubGoal = 0;
+        }
+      }
 
       // 9. DETECT FAILURES
       const failure = detectFailure(

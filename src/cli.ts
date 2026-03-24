@@ -103,6 +103,7 @@ function parseArgs(): {
   agentMode: string | null;  // Goal string for agent mode (null = CRO mode)
   agentMaxSteps: number;  // Max steps for agent loop (default: 20)
   agentMaxTimeMs: number;  // Max time for agent loop (default: 120000)
+  agentNoSubGoals: boolean;  // Phase 33b: Disable sub-goal decomposition
   verbose: boolean;
   help: boolean;
 } {
@@ -157,6 +158,7 @@ function parseArgs(): {
   let agentMode: string | null = null;  // Goal string for agent mode
   let agentMaxSteps = 20;  // Max steps for agent loop
   let agentMaxTimeMs = 120000;  // Max time for agent loop (2 minutes)
+  let agentNoSubGoals = false;
   let verbose = false;
   let help = false;
 
@@ -326,6 +328,9 @@ function parseArgs(): {
         process.exit(1);
       }
       i++;
+    } else if (arg === '--no-sub-goals') {
+      // Phase 33b: Disable sub-goal decomposition
+      agentNoSubGoals = true;
     } else if (arg === '--save-evidence') {
       // Phase 21h: Enable evidence saving (now default, kept for backward compatibility)
       saveEvidence = true;
@@ -511,6 +516,7 @@ function parseArgs(): {
     agentMode,
     agentMaxSteps,
     agentMaxTimeMs,
+    agentNoSubGoals,
     verbose,
     help,
   };
@@ -609,6 +615,7 @@ AGENT MODE OPTIONS (Phase 32):
                             Example: --agent-mode "Search Wikipedia for TypeScript"
   --agent-max-steps <N>     Max steps for agent loop (default: 20, max: 100)
   --agent-max-time <ms>     Max time in ms for agent loop (default: 120000)
+  --no-sub-goals            Disable sub-goal decomposition (default: on)
 
 ANALYSIS OPTIMIZATION OPTIONS (Phase 26):
   --sequential-analysis     Disable parallel analysis, run categories sequentially
@@ -1557,6 +1564,7 @@ async function main(): Promise<void> {
     agentMode,
     agentMaxSteps,
     agentMaxTimeMs,
+    agentNoSubGoals,
     verbose,
     help,
   } = parseArgs();
@@ -1602,6 +1610,7 @@ async function main(): Promise<void> {
         maxSteps: agentMaxSteps,
         maxTimeMs: agentMaxTimeMs,
         verbose,
+        enableSubGoals: !agentNoSubGoals,
       };
 
       const result: AgentLoopResult = await runAgentLoop(agentConfig, {
