@@ -1,163 +1,204 @@
-# AgentQ-Inspired Agent Loop Enhancements
+# Phase 33: Agent Loop Reliability — AgentQ-Inspired Enhancements
 
-**Date**: 2026-03-24
-**Status**: Approved design
+**Date**: 2026-03-25
+**Status**: Draft (revised after critical analysis)
 **Depends on**: Phase 32 (agent loop with plan-act-verify)
 
 ## Problem
 
-The Phase 32 agent loop uses greedy single-action planning: one LLM call produces one action per step. This works for simple 3-5 step tasks but degrades on 10-25 step tasks (e-commerce flows, multi-page form fills, complex navigation) because:
+The Phase 32 agent loop uses greedy single-action planning. It succeeded
+on a 3-step Wikipedia search but has unproven reliability on 10-25 step
+tasks (e-commerce flows, multi-page forms, complex navigation).
 
-- Bad actions aren't prevented, only detected after execution
-- The fixed linear confidence decay doesn't distinguish useful from useless actions
-- Failure recovery relies on deterministic heuristics that miss subtle failures (e.g., click succeeded but opened wrong thing)
-- The planner repeats unproductive patterns without within-run learning
+Before adding expensive LLM techniques, we must:
+1. Build concrete failing test cases that demonstrate the problem
+2. Apply zero-cost improvements (better failure detection, element
+   pre-validation, sub-goal decomposition)
+3. Only then layer on LLM-based enhancements where gaps remain
 
-## Solution
-
-Incorporate three AgentQ-inspired techniques into the existing agent loop:
-
-1. **Multi-candidate planning** — Generate 2-3 diverse candidate actions per step instead of 1
-2. **LLM action scoring** — A separate critic LLM call ranks candidates before execution
-3. **Post-execution self-critique** — LLM evaluates whether the executed action was useful, feeding back into the next step
-
-No persistent trajectory storage or model fine-tuning in this phase. Learning is within-run only via critique history.
-
-## Architecture
-
-### Modified Loop Flow
+## Phased Approach
 
 ```
-while (budget not exceeded):
-  1. BUDGET CHECK          — unchanged
-  2. CONFIDENCE CHECK      — unchanged (decay rate now dynamic)
-  3. PERCEIVE              — unchanged
-  4. HANDLE BLOCKERS       — unchanged
-
-  5. GENERATE CANDIDATES   — NEW: 2-3 candidates from LLM
-  6. SCORE CANDIDATES      — NEW: separate LLM ranks them (skip if only 1)
-  7. ACT                   — execute top-scored candidate
-  8. RE-PERCEIVE           — unchanged
-  9. RECORD                — unchanged, plus new optional fields on ActionRecord:
-                              candidateScore?: number (final combined score)
-                              candidateRank?: number (1=best, position among candidates)
-                              critiqueResult?: CritiqueResult (post-execution evaluation)
-
-  10. DETERMINISTIC ROUTER — unchanged (fast-path hard failures)
-  11. SELF-CRITIQUE        — NEW: LLM evaluates outcome (skip if router fired or verifier runs)
-  12. ADJUST CONFIDENCE    — NEW: dynamic decay from critic progressScore
-  13. UPDATE CRITIQUE HISTORY — NEW: sliding window of last 3 critiques
-
-  14. VERIFY GOAL          — unchanged
-  15. UPDATE BUDGET        — unchanged
-  16. SETTLE               — unchanged
+33a: Zero-cost reliability (no extra LLM calls)
+  ↓
+33b: Sub-goal decomposition (1 LLM call upfront, not per-step)
+  ↓
+33c: Self-critique (1 extra LLM call/step, opt-in)
+  ↓
+33d: Multi-candidate generation (opt-in, only if 33a-c insufficient)
 ```
 
-### LLM Calls Per Step
+Each sub-phase is independently valuable. Stop early if reliability
+targets are met.
 
-| Step type | Calls | When |
-|-----------|-------|------|
-| Normal | 3 | generate + score + critique |
-| Verification | 3 | generate + score + verify (skip critique) |
-| Degraded (1 candidate) | 2 | generate + critique (skip scorer) |
-| Hard failure | 1 | generate only, router handles rest |
-| **Average** | **~2.5** | **2-3x current cost** |
+---
 
-## Components
+## Phase 33a: Zero-Cost Reliability Improvements
 
-### Candidate Generator (`candidate-generator.ts`, ~120 lines)
+**Goal**: Fix the most common failure modes with zero extra LLM calls.
 
-Replaces the single-action planner. Same inputs plus critique history.
+### 33a-1: Element Pre-Validation
 
-**Interface:**
+Before executing any action that targets an element, verify the element
+exists and is interactable via a Playwright check (~5ms).
+
 ```typescript
-// Extends PlannerOutput — a candidate is a plan + self-assessed score
-interface ActionCandidate extends PlannerOutput {
-  selfScore: number;  // 0-1, LLM's own confidence
+async function preValidateElement(
+  page: Page,
+  toolName: string,
+  toolParams: Record<string, unknown>,
+  state: PerceivedState
+): Promise<{ valid: boolean; error?: string }>
+```
+
+- Check: does the target element exist in DOM and have non-zero bounding box?
+- If invalid: skip execution, return failure immediately (saves 10s timeout)
+- Only applies to element-targeting tools (click, type_text, select_option,
+  hover, drag_and_drop)
+- Uses xpath from the PerceivedState interactive elements
+
+**Impact**: Prevents the most common failure type (ELEMENT_NOT_FOUND)
+and eliminates the 10-second Playwright timeout on missing elements.
+
+### 33a-2: Enhanced Failure Detection
+
+Expand the deterministic failure router to catch more failure types
+without LLM calls:
+
+| New failure type | Detection | Strategy |
+|-----------------|-----------|----------|
+| `WRONG_PAGE` | URL changed to login/error/404 page | REPLAN |
+| `FORM_ERROR` | AX tree contains "error", "invalid", "required" near changed elements | REPLAN_WITH_DIAGNOSTIC |
+| `REDIRECT_LOOP` | Same URL visited 3+ times in action history | TERMINATE |
+| `PAGE_CRASHED` | page.url() throws or returns about:blank unexpectedly | TERMINATE |
+
+```typescript
+// Expanded failure detection
+function detectFailure(
+  toolName: string,
+  result: ToolResult,
+  domHashBefore: string,
+  domHashAfter: string,
+  preState: PerceivedState,
+  postState: PerceivedState,
+  actionHistory: ActionRecord[]
+): DetectedFailure | null
+```
+
+### 33a-3: Visited-State Tracking
+
+Prevent navigating in circles — the most common failure pattern on
+multi-page tasks.
+
+```typescript
+interface VisitedStateTracker {
+  recordVisit(url: string, domHash: string): void;
+  getVisitCount(url: string): number;
+  hasVisited(url: string): boolean;
+  getHistory(): string[];  // ordered URL list for planner context
+}
+```
+
+- Track URLs visited + visit count
+- Include visited URLs in planner prompt: "VISITED PAGES: url1 (2x),
+  url2 (1x)" so the LLM avoids revisiting
+- Trigger `REDIRECT_LOOP` failure if same URL visited 3+ times
+
+### 33a-4: Expanded Action History in Planner
+
+Currently the planner sees last 5 actions. Expand context:
+
+- Last 5 actions (unchanged)
+- Visited URLs with visit counts (new, from tracker)
+- Failed tool+element combinations (new): "click(elementIndex:3) failed
+  2x — avoid this element"
+
+Zero extra LLM calls — just richer prompt context.
+
+### 33a Tests
+
+- `element-pre-validator.test.ts` — 4 tests (valid element, missing
+  element, non-interactive element, non-element tools skipped)
+- `failure-router.test.ts` — 4 new tests (wrong page, form error,
+  redirect loop, page crashed) added to existing file
+- `visited-state-tracker.test.ts` — 3 tests (record/query, visit count,
+  redirect loop detection)
+
+---
+
+## Phase 33b: Sub-Goal Decomposition
+
+**Goal**: For complex tasks (10+ steps), decompose the goal into
+sequential sub-goals with ONE upfront LLM call.
+
+### Sub-Goal Planner
+
+```typescript
+interface SubGoal {
+  description: string;
+  successCriteria: string;  // observable condition to check
+  estimatedSteps: number;
 }
 
-// Conversion for fallback: wrap PlannerOutput as candidate
-function plannerOutputToCandidate(plan: PlannerOutput): ActionCandidate {
-  return { ...plan, selfScore: 0.5 };
-}
-
-function generateCandidates(
+function decomposeGoal(
   llm: ChatOpenAI,
   goal: string,
-  state: PerceivedState,
-  recentActions: ActionRecord[],
-  failureContext: RoutedFailure | null,
-  budgetStatus: BudgetStatus,
-  confidence: number,
-  critiqueHistory: CritiqueResult[]
-): Promise<ActionCandidate[]>
+  startUrl: string
+): Promise<SubGoal[]>
 ```
 
-**Prompt additions** (vs current planner):
-- Asks for 2-3 candidates instead of 1
-- Includes critique history (last 3) so generator avoids flagged patterns
-- Enforces diversity: "each candidate should use a DIFFERENT approach or target a DIFFERENT element"
-- Each candidate includes a self-assessed confidence score
+**Prompt**:
+```
+Break this goal into 3-7 sequential sub-goals. Each sub-goal should
+be achievable in 2-5 browser actions. Include observable success
+criteria for each (URL contains X, element Y is visible, text Z appears).
 
-**Relationship to `planNextAction`**: The existing `planNextAction` function is **retained** as the fallback. When candidate generation fails entirely (LLM error, unparseable response), the loop calls `planNextAction` to get a single action, wraps it as `ActionCandidate` with `selfScore: 0.5`, and proceeds.
-
-**Candidate count behavior**:
-- If LLM returns fewer candidates than `candidateCount` (e.g., requests 3, parses 2), proceed with however many were parsed.
-- If only 1 candidate parsed, skip the scorer (saves 1 LLM call).
-- If 2+ candidates parsed, scorer always runs.
-- If 0 candidates parsed, fall back to `planNextAction`.
-
-### Action Scorer (`action-scorer.ts`, ~100 lines)
-
-Independent critic that re-ranks candidates. The generator's self-scores are biased; the scorer provides an outside perspective.
-
-**Interface:**
-```typescript
-interface ScoredCandidate {
-  candidate: ActionCandidate;
-  score: number;        // 0-1, scorer's evaluation
-  risk: string;         // what could go wrong
-  reversibility: string; // can we undo this if it fails?
-}
-
-function scoreCandidates(
-  llm: ChatOpenAI,
-  goal: string,
-  candidates: ActionCandidate[],
-  state: PerceivedState,
-  recentActions: ActionRecord[],
-  critiqueHistory: CritiqueResult[]
-): Promise<ScoredCandidate[]>  // sorted best-first
+GOAL: {goal}
+START URL: {startUrl}
 ```
 
-**Scoring criteria** (in prompt):
-- Does this action directly advance the goal, or is it a detour?
-- Has a similar action already failed? (check recent actions)
-- Is the target element likely to exist and be interactable?
-- What's the risk if this action fails?
+**Integration with agent loop**:
+- Called ONCE before the main loop starts
+- The loop pursues sub-goals sequentially
+- After each action, check if current sub-goal's success criteria are
+  met (lightweight string/URL check, no LLM call)
+- When sub-goal met, advance to next
+- If stuck on a sub-goal for 5+ steps, skip it and try next
+- Planner prompt includes: "CURRENT SUB-GOAL: {description}
+  (sub-goal 2 of 5)"
 
-**Score combination**: `finalScore = 0.4 * selfScore + 0.6 * scorerScore`. Scorer weighted higher (less biased).
+**Cost**: 1 extra LLM call total (not per step). Negligible.
 
-**Skip optimization**: If only 1 candidate, skip scorer entirely (saves 1 LLM call).
+**When to decompose**: Only when `goal.length > 50` or goal contains
+multiple verbs (heuristic for complex tasks). Simple goals like
+"go to wikipedia" skip decomposition.
 
-**Fallback on LLM error**: If scorer LLM call fails, return candidates sorted by generator's `selfScore` (original order). Log warning but don't block execution.
+### 33b Tests
 
-### Self-Critic (`self-critic.ts`, ~90 lines)
+- `sub-goal-planner.test.ts` — 4 tests (decomposition, success criteria
+  check, sub-goal advancement, skip on stuck)
 
-Post-execution evaluation. Catches subtle failures that deterministic detection misses.
+---
 
-**Interface:**
+## Phase 33c: Self-Critique
+
+**Goal**: LLM evaluates each action's usefulness after execution.
+Opt-in via `--self-critique` (Constitution VI: cost-increasing = opt-in).
+
+### Self-Critic
+
 ```typescript
 interface CritiqueResult {
   actionWasUseful: boolean;
   progressScore: number;      // 0-1
   reasoning: string;
-  suggestion?: string;        // what to try next if not useful
+  suggestion?: string;
 }
 
 function critiqueAction(
   llm: ChatOpenAI,
   goal: string,
+  currentSubGoal: SubGoal | null,
   action: ActionRecord,
   preState: PerceivedState,
   postState: PerceivedState,
@@ -165,105 +206,238 @@ function critiqueAction(
 ): Promise<CritiqueResult>
 ```
 
-**Evaluates**: Before/after page state (URL, title, AX tree), whether the observable change advances the goal.
+**Key improvement over original spec**: The critic evaluates against
+the CURRENT SUB-GOAL (specific, observable) not the high-level goal
+(vague). This dramatically improves accuracy.
 
-**Feeds back into loop via:**
-1. **Dynamic confidence** — `adjustFromCritique(progressScore)` **replaces** the normal `decay()` call on steps where critique runs. On steps where critique is skipped (hard failure, verification step), normal `decay()` is called instead. This prevents double-decay.
-2. **Critique history** — Last `CRITIQUE_HISTORY_SIZE` (default: 3, configurable constant) critiques passed to generator and scorer so they avoid repeating unproductive patterns.
+**DOM-diff-aware evaluation**: The critic prompt includes concrete
+state changes, not just URL/title:
+```
+STATE CHANGES:
+  URL: {preUrl} → {postUrl}
+  Title: {preTitle} → {postTitle}
+  DOM hash: {changed/unchanged}
+  New elements: {elements appearing in postState but not preState}
+  Removed elements: {elements in preState but not postState}
+  Interactive element count: {pre} → {post}
+```
 
-**Coexists with deterministic router**: Router handles hard failures (element not found, budget exceeded) instantly. Critic handles soft failures. Router runs first; critic only runs if router found no failure.
+This fixes the critical flaw in the original spec where the critic
+couldn't detect form fills (typing text doesn't change URL/title).
 
-**Skip optimization**: Skip on steps where goal verifier runs (verification already evaluates progress).
-
-**Fallback on LLM error**: If critique LLM call fails, return `{ actionWasUseful: true, progressScore: 0.5, reasoning: 'Critique unavailable' }` — neutral score, normal decay.
-
-### Modified Confidence Decay
-
-Add `adjustFromCritique(progressScore: number)` method to `ConfidenceDecay` class. This **replaces** `decay()` for the current step — they are never both called on the same step.
+**Dynamic confidence**: `adjustFromCritique(progressScore)` **replaces**
+`decay()` on steps where critique runs. Never both on same step.
 
 ```typescript
 adjustFromCritique(progressScore: number): void {
   if (progressScore > 0.6) {
-    // Good progress — decay at half rate
     this.value = Math.max(0, this.value - this.decayFactor * 0.5);
   } else if (progressScore < 0.3) {
-    // Poor progress — decay at double rate
     this.value = Math.max(0, this.value - this.decayFactor * 2);
   } else {
-    // Normal decay
     this.value = Math.max(0, this.value - this.decayFactor);
   }
 }
 ```
 
+**Critique history**: Last `CRITIQUE_HISTORY_SIZE` (default: 3,
+config constant) critiques included in planner context.
+
+**Skip logic**: Skip critique when (a) deterministic router fired,
+(b) goal verifier runs this step, or (c) `enableCritique` is false.
+
+**Fallback**: LLM error → `{ actionWasUseful: true, progressScore: 0.5,
+reasoning: 'Critique unavailable' }`.
+
+**Cost**: +1 LLM call/step when enabled (~1.5x total).
+
+### 33c Tests
+
+- `self-critic.test.ts` — 4 tests (useful action, useless action,
+  confidence adjustment, DOM-diff detection)
+- `agent-loop-critique.test.ts` — 2 integration tests (critique
+  improves replanning, skip logic works)
+
+---
+
+## Phase 33d: Multi-Candidate Generation
+
+**Goal**: Generate 2-3 candidate actions and self-rank them. Only
+implement if 33a-c leave measurable gaps on target tasks.
+
+**Key change from original spec**: No separate scorer module. The
+generator self-ranks candidates. The critical analysis showed that
+asking the same model to score its own outputs from a different
+prompt persona produces correlated rankings (estimated rho > 0.85),
+making a separate scorer a wasted LLM call.
+
+### Candidate Generator
+
+```typescript
+interface ActionCandidate extends PlannerOutput {
+  selfScore: number;
+  risk: string;
+}
+
+function generateCandidates(
+  llm: ChatOpenAI,
+  goal: string,
+  currentSubGoal: SubGoal | null,
+  state: PerceivedState,
+  recentActions: ActionRecord[],
+  failureContext: RoutedFailure | null,
+  budgetStatus: BudgetStatus,
+  confidence: number,
+  critiqueHistory: CritiqueResult[],
+  visitedUrls: string[]
+): Promise<ActionCandidate[]>
+```
+
+**Prompt**: Ask for 2-3 candidates with self-assessed scores AND
+risk assessment in a single call:
+```
+Propose 2-3 candidate actions. For each, rate confidence 0-1 and
+identify what could go wrong. Each candidate MUST use a different
+approach or target a different element.
+```
+
+**Deduplication**: If two candidates have same `toolName` +
+same target `elementIndex`, keep only the higher-scored one.
+
+**Relationship to `planNextAction`**: Retained as fallback. Generator
+failure → call `planNextAction`, wrap as single candidate with
+`selfScore: 0.5`.
+
+**Cost**: Same as current planner (1 LLM call) — the prompt just
+asks for multiple outputs. Scoring is built into generation, no
+separate call.
+
+**CLI**: `--multi-candidate` enables this (opt-in). `--candidates <n>`
+sets count (default: 3, max: 5).
+
+### 33d Tests
+
+- `candidate-generator.test.ts` — 4 tests (multi-candidate parse,
+  deduplication, fallback, diversity)
+- `agent-loop-candidates.test.ts` — 2 integration tests
+
+---
+
 ## Config & CLI
 
-**New config fields:**
 ```typescript
 interface AgentLoopConfig {
-  // ... existing
-  candidateCount?: number;     // default: 3
-  enableScoring?: boolean;     // default: false (opt-in via --action-scoring)
-  enableCritique?: boolean;    // default: false (opt-in via --self-critique)
+  // ... existing Phase 32 fields
+  enableSubGoals?: boolean;       // default: true (zero extra cost per step)
+  enableCritique?: boolean;       // default: false (opt-in, +1 LLM call/step)
+  enableMultiCandidate?: boolean; // default: false (opt-in)
+  candidateCount?: number;        // default: 3 (when multi-candidate enabled)
 }
 ```
 
 **CLI flags:**
 ```
---action-scoring        Enable multi-candidate scoring (opt-in per Constitution VI)
---self-critique         Enable post-action critique (opt-in per Constitution VI)
---candidates <n>        Number of candidates per step (default: 3, max: 5)
+--no-sub-goals          Disable sub-goal decomposition (default: on)
+--self-critique         Enable post-action LLM critique (opt-in)
+--multi-candidate       Enable multi-candidate generation (opt-in)
+--candidates <n>        Candidates per step (default: 3, max: 5)
 ```
 
-**Constitution VI compliance**: Both features are **opt-in** because they increase LLM cost 2-3x per step. The `--agent-mode` flag activates the base loop; `--action-scoring` and `--self-critique` layer on the AgentQ enhancements. Users can enable both with `--action-scoring --self-critique` or individually.
+**Constitution VI compliance**: Sub-goal decomposition defaults ON
+(1 LLM call total, negligible cost). Self-critique and multi-candidate
+are opt-in (they increase per-step cost).
+
+**Time budget**: When `--self-critique` enabled, automatically increase
+`maxTimeMs` by 50% to account for extra LLM latency. Configurable
+via `--max-time` override.
+
+---
 
 ## File Structure
 
-**New files (3):**
+### New Files
+
 ```
 src/agent/agent-loop/
-├── candidate-generator.ts   ~120 lines
-├── action-scorer.ts         ~100 lines
-├── self-critic.ts           ~90 lines
+├── element-pre-validator.ts     ~60 lines   (33a)
+├── visited-state-tracker.ts     ~50 lines   (33a)
+├── sub-goal-planner.ts          ~120 lines  (33b)
+├── self-critic.ts               ~100 lines  (33c)
+├── candidate-generator.ts       ~130 lines  (33d)
 ```
 
-**Modified files (4):**
+### Modified Files
+
 ```
-├── agent-loop.ts            ~30 lines changed
-├── types.ts                 ~40 lines added
-├── confidence-decay.ts      ~15 lines added
-├── index.ts                 ~5 lines added
+├── agent-loop.ts            ~50 lines changed (all phases)
+├── failure-router.ts        ~40 lines added (33a)
+├── types.ts                 ~60 lines added (all phases)
+├── confidence-decay.ts      ~15 lines added (33c)
+├── planner.ts               ~10 lines changed (33a: richer context)
+├── index.ts                 ~10 lines added (barrel exports)
 ```
 
-**New test files (4):**
+### New Test Files
+
 ```
 tests/unit/agent-loop/
-├── candidate-generator.test.ts   4 tests
-├── action-scorer.test.ts         3 tests
-├── self-critic.test.ts           4 tests
+├── element-pre-validator.test.ts      4 tests  (33a)
+├── visited-state-tracker.test.ts      3 tests  (33a)
+├── sub-goal-planner.test.ts           4 tests  (33b)
+├── self-critic.test.ts                4 tests  (33c)
+├── candidate-generator.test.ts        4 tests  (33d)
 
 tests/integration/
-├── agent-loop-scoring.test.ts    3 tests
+├── agent-loop-critique.test.ts        2 tests  (33c)
+├── agent-loop-candidates.test.ts      2 tests  (33d)
 ```
 
-**Totals**: ~310 new lines, ~90 modified lines, 14 new tests. All files under 500-line limit.
+**Totals**: ~510 new lines, ~185 modified lines, 27 new tests.
+All files under 500-line constitution limit.
+
+---
+
+## Prerequisite: Build Failing Test Cases
+
+**Before implementing any sub-phase**, create a concrete test scenario
+that demonstrates greedy planning failure:
+
+1. **10-step e-commerce flow**: Navigate to product page → select size →
+   add to cart → go to cart → verify item. Use a real or mock e-commerce
+   site.
+2. **Multi-page form**: Fill form across 3 pages with validation errors
+   that require correction.
+3. **Search + deep navigation**: Search → click result → navigate 3
+   levels deep → extract specific info.
+
+Run each with the Phase 32 greedy agent. Document which tasks fail
+and why. This evidence drives which sub-phases are actually needed.
+
+---
 
 ## Design Decisions
 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
-| LLM-only scoring vs browser branching | LLM-only | Browser state save/restore is fragile (cookies, sessions, side effects). LLM scoring gets 80% of benefit at 20% complexity. |
-| Persistent trajectory learning | Deferred | Keeps scope tight. Within-run learning via critique history is sufficient for this phase. Trajectory store is a natural next phase. |
-| Target task complexity | 10-25 steps | Sweet spot where multi-candidate planning pays off. 5-step tasks work with greedy; 25+ needs hierarchical planning (future). |
-| Cost budget | 2-3x current | ~2.5 LLM calls/step average. gpt-4o-mini keeps absolute cost low. |
-| Scoring vs planning separation | Separate LLM calls | Generator's self-scores are biased. Independent scorer reduces overconfidence. |
-| Critique vs verification | Coexist | Critique runs per-step for subtle failures. Verification runs every N steps for goal completion. Skip critique when verifier runs. |
+| Phased approach | 33a→b→c→d | Stop early if targets met. Cheapest fixes first. |
+| No separate scorer | Dropped | Same model + same info = correlated scores (estimated rho > 0.85). Generator self-ranking is sufficient. |
+| Sub-goals before multi-candidate | Yes | 1 upfront LLM call > N per-step calls for planning horizon problems. |
+| Element pre-validation | Playwright check | 5ms vs 10s timeout. Prevents #1 failure type at zero LLM cost. |
+| Sub-goals default ON | Yes | 1 LLM call total, negligible cost. Constitution VI allows this. |
+| Critique evaluates sub-goals | Yes | Specific observable criteria > vague high-level goal. Much more accurate. |
+| DOM-diff in critic prompt | Yes | Fixes blind spot: form fills change DOM but not URL/title. |
+| Time budget adjustment | Auto +50% when critique enabled | Prevents false timeouts from extra LLM latency. |
+| Build failing tests first | Required | No speculative engineering. Evidence drives implementation. |
+
+---
 
 ## Success Criteria
 
-- Agent completes a 10-step e-commerce browse+cart task that fails with greedy planning
-- Multi-candidate scoring prevents >50% of "action had no effect" failures vs baseline
-- Self-critique correctly identifies useless actions in >80% of cases
+- Concrete failing test cases documented before implementation begins
+- 33a alone reduces ELEMENT_NOT_FOUND failures by >80% (pre-validation)
+- 33a alone eliminates redirect loop failures (visited-state tracking)
+- 33b enables completion of 10-step tasks that fail without sub-goals
+- 33c correctly identifies useless actions in >80% of cases (when enabled)
 - All 1370 existing tests pass (zero regressions)
-- Default behavior (no flags) is identical to Phase 32 greedy mode
-- `--action-scoring --self-critique` enables full AgentQ enhancements
+- Default behavior (no new flags) runs 33a+33b improvements automatically
+- Phase 32 behavior exactly preserved with `--no-sub-goals`
