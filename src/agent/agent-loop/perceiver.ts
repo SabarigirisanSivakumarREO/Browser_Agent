@@ -39,8 +39,20 @@ export function computeDomHash(content: string): string {
  * @returns Lightweight perceived state
  */
 export async function perceivePage(page: Page): Promise<PerceivedState> {
+  // Wait briefly for any in-flight navigation to settle
+  try {
+    await page.waitForLoadState('load', { timeout: 3000 });
+  } catch {
+    // May timeout on slow pages — continue with whatever state we have
+  }
+
   const url = page.url();
-  const title = await page.title();
+  let title = '';
+  try {
+    title = await page.title();
+  } catch {
+    // Title can fail during navigation — use empty string
+  }
 
   // DOM hash
   const content = await page.content();
@@ -66,29 +78,43 @@ export async function perceivePage(page: Page): Promise<PerceivedState> {
       const selectors =
         'a, button, input, select, textarea, [role="button"], [role="link"], [contenteditable]';
       const elements = Array.from(document.querySelectorAll(selectors));
-      const results: Array<{
-        index: number;
-        tag: string;
-        text: string;
-        role?: string;
-        type?: string;
-      }> = [];
+
+      const results = [];
 
       for (let i = 0; i < elements.length && results.length < 20; i++) {
-        const el = elements[i] as HTMLElement;
-        // Skip hidden elements
+        const el = elements[i];
         const rect = el.getBoundingClientRect();
         if (rect.width === 0 || rect.height === 0) continue;
 
         const text = (el.innerText || el.getAttribute('aria-label') || '')
           .trim()
           .slice(0, 50);
+
+        // Build a unique selector: prefer id, then name, then nth-of-type
+        let selector = '';
+        if (el.id) {
+          selector = `//*[@id="${el.id}"]`;
+        } else if (el.getAttribute('name')) {
+          selector = `//${el.tagName.toLowerCase()}[@name="${el.getAttribute('name')}"]`;
+        } else {
+          // Count same-tag siblings before this element
+          const parent = el.parentElement;
+          if (parent) {
+            const sameTag = Array.from(parent.children).filter(c => c.tagName === el.tagName);
+            const pos = sameTag.indexOf(el) + 1;
+            selector = `//${el.tagName.toLowerCase()}[${pos}]`;
+          } else {
+            selector = `//${el.tagName.toLowerCase()}`;
+          }
+        }
+
         results.push({
-          index: i,
+          index: results.length,
           tag: el.tagName.toLowerCase(),
           text,
           role: el.getAttribute('role') || undefined,
           type: el.getAttribute('type') || undefined,
+          selector,
         });
       }
       return results;

@@ -84,6 +84,7 @@ export interface InteractiveElement {
   text: string;
   role?: string;
   type?: string;
+  selector?: string;
 }
 
 // ---------------------------------------------------------------------------

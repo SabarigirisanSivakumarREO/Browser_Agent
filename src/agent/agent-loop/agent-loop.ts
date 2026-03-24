@@ -33,17 +33,33 @@ const SETTLE_MS = 500;
  * Agent-loop tools mostly need the page object, not the full state.
  */
 function buildMinimalPageState(state: PerceivedState): PageState {
+  // Convert interactive elements to DOMNode children so findElementByIndex works
+  const children = state.interactiveElements.map((el) => ({
+    tagName: el.tag,
+    xpath: el.selector || `//body/${el.tag}[${el.index + 1}]`,
+    index: el.index,
+    text: el.text,
+    isInteractive: true,
+    isVisible: true,
+    croType: null as never,
+    attributes: {
+      ...(el.role ? { role: el.role } : {}),
+      ...(el.type ? { type: el.type } : {}),
+    },
+    children: [],
+  }));
+
   return {
     url: state.url,
     title: state.title,
     domTree: {
       root: {
         tagName: 'html', xpath: '/html', text: '', isInteractive: false,
-        isVisible: true, croType: null, children: [],
+        isVisible: true, croType: null as never, children,
       },
-      interactiveCount: 0,
+      interactiveCount: children.length,
       croElementCount: 0,
-      totalNodeCount: 0,
+      totalNodeCount: children.length + 1,
       extractedAt: Date.now(),
     },
     viewport: { width: 1280, height: 800, deviceScaleFactor: 1, isMobile: false },
@@ -197,6 +213,10 @@ export async function runAgentLoop(
       logger.info(`Step ${budget.stepsUsed + 1}: ${plan.toolName}`, {
         params: plan.toolParams,
         reasoning: plan.reasoning,
+      });
+      logger.debug('Page state for action', {
+        interactiveElements: preState.interactiveElements.length,
+        domTreeChildren: buildMinimalPageState(preState).domTree.root.children.length,
       });
 
       // 6. ACT
