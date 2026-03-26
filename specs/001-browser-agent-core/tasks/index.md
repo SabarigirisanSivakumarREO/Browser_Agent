@@ -36,6 +36,8 @@
 | **25** | **Enhanced Extraction & Screenshot Analysis** | [phase-25.md](./phase-25.md) | ✅ Complete |
 | **26** | **LLM Analysis Optimization** | [phase-26.md](./phase-26.md) | ✅ Complete (28 tasks, 56 tests) |
 | **27** | **Analysis Quality & Annotation Fix** | [phase-27.md](./phase-27.md) | ✅ Complete (25 tasks, ~59 tests) |
+| **34** | **Navigation-Aware Agent Loop** | [phase-34.md](./phase-34.md) | ✅ Complete (18 tasks, 17 tests) |
+| **35** | **Intelligent Element Perception & Targeting** | [phase-35.md](./phase-35.md) | ✅ Complete (29 tasks, 118 tests passing) |
 
 ---
 

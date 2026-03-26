@@ -8,23 +8,28 @@
 import { z } from 'zod';
 import type { Tool, ToolContext } from '../types.js';
 import type { ToolResult, DOMNode } from '../../../models/index.js';
+import { waitForPossibleNavigation, locatorFromSelector } from './tool-utils.js';
 
 /**
- * Helper to coerce string/boolean to boolean (handles LLM passing "true"/"false")
+ * Coerce string/boolean/'auto' to the appropriate value for waitForNavigation.
+ * Accepts: true, false, 'true', 'false', 'auto' (default).
  */
-const coerceBoolean = z.preprocess((val) => {
+const coerceNavigation = z.preprocess((val) => {
+  if (val === 'auto' || val === undefined || val === null) return 'auto';
   if (typeof val === 'string') {
-    return val.toLowerCase() === 'true';
+    if (val.toLowerCase() === 'true') return true;
+    if (val.toLowerCase() === 'false') return false;
+    return 'auto';
   }
   return val;
-}, z.boolean());
+}, z.union([z.boolean(), z.literal('auto')]));
 
 /**
  * Parameter schema for click tool
  */
 export const ClickParamsSchema = z.object({
   elementIndex: z.coerce.number().int().nonnegative(),
-  waitForNavigation: coerceBoolean.optional().default(false),
+  waitForNavigation: coerceNavigation.optional().default('auto'),
 });
 
 export type ClickParams = z.infer<typeof ClickParamsSchema>;
@@ -36,6 +41,8 @@ interface ClickExtracted {
   clickedXpath: string;
   elementText: string;
   navigationOccurred: boolean;
+  /** True if clicking opened a new tab (target="_blank") */
+  newTabOpened: boolean;
 }
 
 /**
@@ -119,7 +126,7 @@ export const clickTool: Tool = {
       const previousUrl = context.page.url();
 
       // Locate element by xpath
-      const locator = context.page.locator(`xpath=${xpath}`);
+      const locator = locatorFromSelector(context.page, xpath);
 
       // Check if element exists in current DOM
       const count = await locator.count();
@@ -131,9 +138,23 @@ export const clickTool: Tool = {
         };
       }
 
-      // Perform click with optional navigation wait
-      if (waitForNavigation) {
-        // Wait for navigation with timeout
+      // Detect new tab opening: listen for 'page' event on browser context
+      const browserContext = context.page.context();
+      let newTabOpened = false;
+      let newTabPage: Awaited<ReturnType<typeof browserContext.newPage>> | null = null;
+
+      const newTabPromise = new Promise<void>((resolve) => {
+        browserContext.once('page', (p) => {
+          newTabPage = p;
+          newTabOpened = true;
+          resolve();
+        });
+        // Timeout — if no new tab after 3s, resolve anyway
+        setTimeout(resolve, 3000);
+      });
+
+      // Perform click with navigation handling
+      if (waitForNavigation === true) {
         await Promise.race([
           Promise.all([
             context.page.waitForNavigation({ timeout: 5000 }).catch(() => null),
@@ -147,14 +168,37 @@ export const clickTool: Tool = {
         await locator.click({ timeout: 5000 });
       }
 
-      // Check if navigation occurred
-      const newUrl = context.page.url();
-      const navigationOccurred = newUrl !== previousUrl;
+      // Wait briefly for new tab detection
+      await newTabPromise;
+
+      // If a new tab opened, switch to it automatically
+      if (newTabOpened && newTabPage) {
+        try {
+          await (newTabPage as { waitForLoadState: (state: string, opts: { timeout: number }) => Promise<void> })
+            .waitForLoadState('load', { timeout: 10000 });
+          // Bring new tab to front
+          await (newTabPage as { bringToFront: () => Promise<void> }).bringToFront();
+          context.logger.debug('New tab opened and switched to it');
+        } catch {
+          context.logger.debug('New tab opened but failed to wait for load');
+        }
+      }
+
+      // Auto-detect navigation on current page
+      let navigationOccurred = false;
+      if (waitForNavigation === 'auto') {
+        const navResult = await waitForPossibleNavigation(context.page, previousUrl, 5000);
+        navigationOccurred = navResult.navigated;
+      } else {
+        const newUrl = context.page.url();
+        navigationOccurred = newUrl !== previousUrl;
+      }
 
       const extracted: ClickExtracted = {
         clickedXpath: xpath,
         elementText,
         navigationOccurred,
+        newTabOpened,
       };
 
       context.logger.debug(

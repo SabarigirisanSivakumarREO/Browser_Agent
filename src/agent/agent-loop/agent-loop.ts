@@ -10,7 +10,7 @@ import type { CROActionName } from '../../models/index.js';
 import type { PageState } from '../../models/page-state.js';
 import type { ExecutionContext } from '../tools/types.js';
 import { createLogger } from '../../utils/logger.js';
-import { perceivePage } from './perceiver.js';
+import { perceivePage, NAVIGATION_PENDING_HASH } from './perceiver.js';
 import { planNextAction, formatFailedCombos } from './planner.js';
 import { decomposeGoal, shouldDecompose, checkSubGoalCompletion } from './sub-goal-planner.js';
 import { verifyGoal, shouldVerify } from './verifier.js';
@@ -215,7 +215,7 @@ export async function runAgentLoop(
       }
 
       // 3. PERCEIVE
-      const preState = await perceivePage(deps.page);
+      const preState = await perceivePage(deps.page, true);
       latestState = preState;
       visitedTracker.recordVisit(preState.url);
 
@@ -284,7 +284,8 @@ export async function runAgentLoop(
           visitedTracker.formatForPrompt(),
           formatFailedCombos(actionHistory),
           subGoalContext,
-          critiqueHistory.slice(-CRITIQUE_HISTORY_SIZE)
+          critiqueHistory.slice(-CRITIQUE_HISTORY_SIZE),
+          preState.screenshotBase64
         );
       }
 
@@ -337,21 +338,48 @@ export async function runAgentLoop(
         continue; // skip to next iteration
       }
 
-      // 6. ACT
+      // 6. ACT (with navigation detection)
       const ctx = buildContext(deps.page, preState, verbose);
       const actionStart = Date.now();
-      const result = await deps.toolExecutor.execute(
+      const { toolResult: result, navigationMeta } = await deps.toolExecutor.executeWithNavDetection(
         plan.toolName as CROActionName,
         plan.toolParams,
         ctx
       );
       const durationMs = Date.now() - actionStart;
 
-      // 7. RE-PERCEIVE
-      const postState = await perceivePage(deps.page);
+      // 7. NEW TAB DETECTION — switch to newest tab if one opened
+      const allPages = deps.page.context().pages();
+      if (allPages.length > 1) {
+        const newestPage = allPages[allPages.length - 1]!;
+        if (newestPage !== deps.page) {
+          try {
+            await newestPage.waitForLoadState('load', { timeout: 10000 });
+            deps.page = newestPage;
+            logger.info('Switched to new tab', { url: newestPage.url() });
+          } catch {
+            logger.debug('New tab detected but failed to load');
+          }
+        }
+      }
+
+      // 8. POST-ACTION SETTLE
+      // If no navigation detected by executor, apply minimal settle for DOM re-renders
+      if (!navigationMeta.navigated) {
+        await new Promise((resolve) => setTimeout(resolve, SETTLE_MS));
+      }
+      // (If navigated, executor already waited for load state)
+
+      // 9. RE-PERCEIVE (with navigation-pending retry)
+      let postState = await perceivePage(deps.page, true);
+      if (postState.domHash === NAVIGATION_PENDING_HASH) {
+        // Page still navigating — wait and retry once
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        postState = await perceivePage(deps.page, true);
+      }
       latestState = postState;
 
-      // 8. RECORD
+      // 9. RECORD
       const record: ActionRecord = {
         step: budget.stepsUsed + 1,
         toolName: plan.toolName,
@@ -388,7 +416,7 @@ export async function runAgentLoop(
         }
       }
 
-      // 9. DETECT FAILURES
+      // 10. DETECT FAILURES
       const failure = detectFailure(
         plan.toolName,
         result,
@@ -419,7 +447,7 @@ export async function runAgentLoop(
 
       budget.recordStep();
 
-      // 10. SELF-CRITIQUE (Phase 33c)
+      // 11. SELF-CRITIQUE (Phase 33c)
       const routerFired = failure !== null;
       const verifierWillRun = shouldVerify(budget.stepsUsed, verifyEveryN, preState, postState);
 
@@ -452,7 +480,7 @@ export async function runAgentLoop(
         confidence.decay();
       }
 
-      // 11. VERIFY GOAL
+      // 12. VERIFY GOAL
       if (shouldVerify(budget.stepsUsed, verifyEveryN, preState, postState)) {
         const verification = await verifyGoal(
           deps.llm,
@@ -474,16 +502,13 @@ export async function runAgentLoop(
         }
       }
 
-      // 12. SETTLE + VERBOSE OUTPUT
+      // 13. VERBOSE OUTPUT
       if (verbose) {
         const symbol = result.success ? '✓' : '✗';
         logger.info(
           `[Step ${record.step}] ${plan.toolName}(${JSON.stringify(plan.toolParams)}) → ${symbol} (${durationMs}ms) confidence: ${confidence.current.toFixed(2)}`
         );
       }
-
-      // 13. SETTLE
-      await new Promise((resolve) => setTimeout(resolve, SETTLE_MS));
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

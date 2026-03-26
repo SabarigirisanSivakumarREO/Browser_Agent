@@ -28,12 +28,29 @@ import {
   // Phase 17c - Control tools
   recordInsightTool,
   doneTool,
+  // Phase 31b - P0 Browser interaction tools
+  typeTextTool,
+  pressKeyTool,
+  selectOptionTool,
+  extractTextTool,
+  // Phase 31c - P1 Browser interaction tools
+  hoverTool,
+  goBackTool,
+  waitForTool,
+  dismissBlockerTool,
+  // Phase 31d - P2 Browser interaction tools
+  switchTabTool,
+  uploadFileTool,
+  executeJsTool,
+  // Phase 31e - P3 Browser interaction tools
+  dragAndDropTool,
+  getAxTreeTool,
 } from './cro/index.js';
 
 /**
  * Create a ToolRegistry with all CRO tools registered
  *
- * Tools registered (13 total):
+ * Tools registered (26 total):
  * - Analysis (6): analyze_ctas, analyze_forms, detect_trust_signals, assess_value_prop, check_navigation, find_friction
  * - Navigation (3): scroll_page, click, go_to_url
  * - Collection (2): capture_viewport, collection_done (CR-001-B)
@@ -64,6 +81,27 @@ export function createCRORegistry(): ToolRegistry {
   // Phase 17c - Control tools
   registry.register(recordInsightTool);
   registry.register(doneTool);
+
+  // Phase 31b - P0 Browser interaction tools
+  registry.register(typeTextTool);
+  registry.register(pressKeyTool);
+  registry.register(selectOptionTool);
+  registry.register(extractTextTool);
+
+  // Phase 31c - P1 Browser interaction tools
+  registry.register(hoverTool);
+  registry.register(goBackTool);
+  registry.register(waitForTool);
+  registry.register(dismissBlockerTool);
+
+  // Phase 31d - P2 Browser interaction tools
+  registry.register(switchTabTool);
+  registry.register(uploadFileTool);
+  registry.register(executeJsTool);
+
+  // Phase 31e - P3 Browser interaction tools
+  registry.register(dragAndDropTool);
+  registry.register(getAxTreeTool);
 
   return registry;
 }

@@ -193,9 +193,9 @@ function createMockExecutionContext(
 // ============================================================================
 
 describe('createCRORegistry', () => {
-  it('returns registry with all 13 tools', () => {
+  it('returns registry with all 26 tools', () => {
     const registry = createCRORegistry();
-    expect(registry.size).toBe(13);
+    expect(registry.size).toBe(26);
   });
 
   it('includes all analysis tools', () => {

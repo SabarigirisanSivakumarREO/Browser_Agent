@@ -9,10 +9,39 @@
 import { createHash } from 'crypto';
 import type { Page } from 'playwright';
 import { captureAccessibilityTree } from '../../browser/ax-tree-serializer.js';
-import type { PerceivedState, InteractiveElement } from './types.js';
+import { collectInteractiveElements } from './element-collector.js';
+import type { PerceivedState } from './types.js';
 
-const AX_TREE_MAX_CHARS = 8000;
-const AX_TREE_MIN_CHARS = 500;
+const AX_TREE_MAX_CHARS_DEFAULT = 8000;
+const AX_TREE_MAX_CHARS_AGENT = 16000;
+const AX_TREE_MAX_TOKENS_DEFAULT = 2000;
+const AX_TREE_MAX_TOKENS_AGENT = 4000;
+
+const CONTENT_RETRY_COUNT = 2;
+const CONTENT_RETRY_DELAY_MS = 1000;
+
+/** Navigation-pending sentinel used when page content cannot be read */
+export const NAVIGATION_PENDING_HASH = 'navigation-pending';
+
+/**
+ * Safely retrieve page HTML content with retries.
+ *
+ * If `page.content()` throws (e.g. mid-navigation), retries up to
+ * `CONTENT_RETRY_COUNT` times with a delay between attempts.
+ * Returns empty string if all retries fail (degraded state).
+ */
+async function safeGetContent(page: Page): Promise<string> {
+  for (let attempt = 0; attempt <= CONTENT_RETRY_COUNT; attempt++) {
+    try {
+      await page.waitForLoadState('load', { timeout: 3000 });
+      return await page.content();
+    } catch {
+      if (attempt === CONTENT_RETRY_COUNT) return '';
+      await new Promise((r) => setTimeout(r, CONTENT_RETRY_DELAY_MS));
+    }
+  }
+  return '';
+}
 
 const BLOCKER_PATTERNS: Array<{ pattern: RegExp; type: string }> = [
   { pattern: /accept\s*cookies?/i, type: 'cookie_consent' },
@@ -36,17 +65,17 @@ export function computeDomHash(content: string): string {
  * Perceive the current page state for the planner.
  *
  * @param page - Playwright page instance
+ * @param agentMode - When true, uses expanded AX tree budget and always captures screenshot
  * @returns Lightweight perceived state
  */
-export async function perceivePage(page: Page): Promise<PerceivedState> {
-  // Wait briefly for any in-flight navigation to settle
+export async function perceivePage(page: Page, agentMode = false): Promise<PerceivedState> {
+  let url = '';
   try {
-    await page.waitForLoadState('load', { timeout: 3000 });
+    url = page.url();
   } catch {
-    // May timeout on slow pages — continue with whatever state we have
+    url = 'about:blank';
   }
 
-  const url = page.url();
   let title = '';
   try {
     title = await page.title();
@@ -54,16 +83,18 @@ export async function perceivePage(page: Page): Promise<PerceivedState> {
     // Title can fail during navigation — use empty string
   }
 
-  // DOM hash
-  const content = await page.content();
-  const domHash = computeDomHash(content);
+  // DOM hash — resilient to mid-navigation failures
+  const content = await safeGetContent(page);
+  const domHash = content ? computeDomHash(content) : NAVIGATION_PENDING_HASH;
 
-  // AX tree (truncated)
+  // AX tree (truncated — agent mode gets 2x budget)
+  const axMaxChars = agentMode ? AX_TREE_MAX_CHARS_AGENT : AX_TREE_MAX_CHARS_DEFAULT;
+  const axMaxTokens = agentMode ? AX_TREE_MAX_TOKENS_AGENT : AX_TREE_MAX_TOKENS_DEFAULT;
   let axTreeText: string | null = null;
   try {
-    const raw = await captureAccessibilityTree(page, { maxTokens: 2000 });
-    if (raw && raw.length > AX_TREE_MAX_CHARS) {
-      axTreeText = raw.slice(0, AX_TREE_MAX_CHARS);
+    const raw = await captureAccessibilityTree(page, { maxTokens: axMaxTokens });
+    if (raw && raw.length > axMaxChars) {
+      axTreeText = raw.slice(0, axMaxChars);
     } else {
       axTreeText = raw;
     }
@@ -71,58 +102,13 @@ export async function perceivePage(page: Page): Promise<PerceivedState> {
     // AX tree capture can fail on some pages — continue without it
   }
 
-  // Interactive elements (top 20 visible)
-  let interactiveElements: InteractiveElement[] = [];
-  try {
-    interactiveElements = await page.evaluate(() => {
-      const selectors =
-        'a, button, input, select, textarea, [role="button"], [role="link"], [contenteditable]';
-      const elements = Array.from(document.querySelectorAll(selectors));
-
-      const results = [];
-
-      for (let i = 0; i < elements.length && results.length < 20; i++) {
-        const el = elements[i] as HTMLElement | undefined;
-        if (!el) continue;
-        const rect = el.getBoundingClientRect();
-        if (rect.width === 0 || rect.height === 0) continue;
-
-        const text = (el.innerText || el.getAttribute('aria-label') || '')
-          .trim()
-          .slice(0, 50);
-
-        // Build a unique selector: prefer id, then name, then nth-of-type
-        let selector = '';
-        if (el.id) {
-          selector = `//*[@id="${el.id}"]`;
-        } else if (el.getAttribute('name')) {
-          selector = `//${el.tagName.toLowerCase()}[@name="${el.getAttribute('name')}"]`;
-        } else {
-          // Count same-tag siblings before this element
-          const parent = el.parentElement;
-          if (parent) {
-            const sameTag = Array.from(parent.children).filter(c => c.tagName === el.tagName);
-            const pos = sameTag.indexOf(el) + 1;
-            selector = `//${el.tagName.toLowerCase()}[${pos}]`;
-          } else {
-            selector = `//${el.tagName.toLowerCase()}`;
-          }
-        }
-
-        results.push({
-          index: results.length,
-          tag: el.tagName.toLowerCase(),
-          text,
-          role: el.getAttribute('role') || undefined,
-          type: el.getAttribute('type') || undefined,
-          selector,
-        });
-      }
-      return results;
+  // Interactive elements — viewport-aware scoring (Phase 35A)
+  const { elements: interactiveElements, contentRegion } =
+    await collectInteractiveElements(page, {
+      maxElements: agentMode ? 50 : 20,
+      maxHeaderElements: agentMode ? 10 : 15,
+      textMaxLength: agentMode ? 80 : 50,
     });
-  } catch {
-    // Evaluate can fail if page is navigating
-  }
 
   // Blocker detection from AX tree
   let hasBlocker = false;
@@ -137,14 +123,28 @@ export async function perceivePage(page: Page): Promise<PerceivedState> {
     }
   }
 
-  // Screenshot fallback if AX tree is too short
+  // Screenshot — always capture in agent mode (Phase 35E)
   let screenshotBase64: string | undefined;
-  if (!axTreeText || axTreeText.length < AX_TREE_MIN_CHARS) {
+  if (agentMode || !axTreeText || axTreeText.length < 500) {
     try {
       const buffer = await page.screenshot({ type: 'jpeg', quality: 50 });
       screenshotBase64 = buffer.toString('base64');
     } catch {
       // Screenshot can fail on about:blank or crashed pages
+    }
+  }
+
+  // Page text — extract main content visible text (Phase 35F)
+  let pageText: string | undefined;
+  if (agentMode) {
+    try {
+      pageText = await page.evaluate(() => {
+        const main = document.querySelector('main, [role="main"]') as HTMLElement | null;
+        const text = (main || document.body).innerText || '';
+        return text.slice(0, 2000);
+      });
+    } catch {
+      // Can fail during navigation
     }
   }
 
@@ -157,5 +157,7 @@ export async function perceivePage(page: Page): Promise<PerceivedState> {
     hasBlocker,
     blockerType,
     screenshotBase64,
+    pageText,
+    contentRegion,
   };
 }

@@ -384,9 +384,9 @@ describe('CROActionNames', () => {
     expect(CROActionNames).toContain('done');
   });
 
-  it('should have exactly 13 action names', () => {
-    // 6 analysis + 3 navigation + 2 collection + 2 control = 13
-    expect(CROActionNames.length).toBe(13);
+  it('should have exactly 26 action names', () => {
+    // 6 analysis + 3 navigation + 2 collection + 2 control + 13 interaction = 26
+    expect(CROActionNames.length).toBe(26);
   });
 });
 

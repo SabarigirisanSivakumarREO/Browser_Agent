@@ -190,6 +190,14 @@ clear dependency direction.
   (e.g., `PDP-CTA-001`, `PLP-GRID-001`)
 - Deprecated API options MUST be removed after one major version;
   `@deprecated` JSDoc MUST include removal timeline
+- **Speckit artifact paths**: ALL specification, plan, and task files
+  MUST reside under `specs/{feature-name}/` (e.g.,
+  `specs/001-browser-agent-core/`). Split structure uses `spec/`,
+  `plan/`, `tasks/` subdirectories within the feature folder.
+  Artifacts MUST NEVER be created in `specs/main/`, `docs/`, or any
+  other location outside the feature directory. Running speckit
+  commands on the `main` branch requires `SPECIFY_FEATURE` env var
+  to be set to the target feature name.
 
 **Rationale**: 19 modules with 100+ files require strict boundaries.
 Barrel exports create clean public APIs. Knowledge base patterns enable

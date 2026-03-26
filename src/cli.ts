@@ -1596,7 +1596,7 @@ async function main(): Promise<void> {
   } = parseArgs();
 
   // Show help if requested or no URLs provided
-  if (help || urls.length === 0) {
+  if (help || (urls.length === 0 && !agentMode)) {
     printHelp();
     process.exit(help ? 0 : 1);
   }
@@ -1605,9 +1605,9 @@ async function main(): Promise<void> {
 
   // Phase 32: Agent mode — goal-directed browser automation
   if (agentMode) {
-    const url = urls[0];
+    const url = urls[0] ?? undefined;
     console.log(`\n🤖 Agent Mode: "${agentMode}"`);
-    console.log(`   Starting URL: ${url}`);
+    console.log(`   Starting URL: ${url ?? '(agent will navigate)'}`);
     console.log(`   Budget: ${agentMaxSteps} steps / ${agentMaxTimeMs}ms\n`);
 
     const browserManager = new BrowserManager({

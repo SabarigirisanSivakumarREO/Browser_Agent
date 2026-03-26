@@ -8,7 +8,14 @@
 import type { ToolResult, CROActionName } from '../../models/index.js';
 import type { ToolRegistry } from './tool-registry.js';
 import type { ExecutionContext, ToolContext } from './types.js';
+import type { NavigationMeta } from '../agent-loop/types.js';
 import { createLogger } from '../../utils/logger.js';
+
+/** Extended result that includes navigation metadata */
+export interface ToolExecutionResult {
+  toolResult: ToolResult;
+  navigationMeta: NavigationMeta;
+}
 
 /**
  * ToolExecutor - Executes tools with validation and instrumentation
@@ -26,6 +33,55 @@ export class ToolExecutor {
 
   constructor(registry: ToolRegistry) {
     this.registry = registry;
+  }
+
+  /**
+   * Execute a tool with navigation detection.
+   *
+   * Captures the page URL before and after execution to detect whether
+   * the action triggered a page navigation. If navigation is detected,
+   * waits for the page load state to settle.
+   *
+   * @param name - Tool name to execute
+   * @param params - Raw parameters (will be validated)
+   * @param context - Execution context (page, state)
+   * @returns Tool result plus navigation metadata
+   */
+  async executeWithNavDetection(
+    name: CROActionName,
+    params: unknown,
+    context: ExecutionContext
+  ): Promise<ToolExecutionResult> {
+    let previousUrl = '';
+    try {
+      previousUrl = context.page.url();
+    } catch {
+      // page.url() can fail if page is about:blank or crashed
+    }
+
+    const toolResult = await this.execute(name, params, context);
+
+    let currentUrl = '';
+    try {
+      currentUrl = context.page.url();
+    } catch {
+      // page.url() can fail if page is mid-navigation
+    }
+
+    const navigated = currentUrl !== previousUrl && previousUrl !== '';
+
+    if (navigated) {
+      try {
+        await context.page.waitForLoadState('load', { timeout: 10000 });
+      } catch {
+        // Timeout waiting for navigation — non-fatal
+      }
+    }
+
+    return {
+      toolResult,
+      navigationMeta: { navigated, previousUrl, currentUrl },
+    };
   }
 
   /**

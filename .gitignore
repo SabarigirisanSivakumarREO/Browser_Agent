@@ -50,6 +50,9 @@ evidence/
 llm-inputs/
 test-evidence/
 
+# Implementation reference (local-only documentation)
+implementation-reference/
+
 # Analysis markdown files
 analysisReport.md
 browser-use-cro-analysis.md

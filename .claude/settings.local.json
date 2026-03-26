@@ -40,7 +40,19 @@
       "Bash(rm:*)",
       "Bash(git fetch:*)",
       "Bash(git checkout:*)",
-      "Bash(git branch:*)"
+      "Bash(git branch:*)",
+      "Skill(claude-api)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:docs.stagehand.dev)",
+      "Bash(sort -t T -k1 -n)",
+      "Bash(SPECIFY_FEATURE=001-browser-agent-core powershell -ExecutionPolicy Bypass -File .specify/scripts/powershell/check-prerequisites.ps1 -Json -RequireTasks -IncludeTasks)",
+      "Bash(cd:*)",
+      "Bash(node -e \":*)",
+      "Bash(node --experimental-vm-modules -e \":*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(pwsh -NoProfile -Command \"./.specify/scripts/powershell/check-prerequisites.ps1 -Json -RequireTasks -IncludeTasks\")",
+      "Bash(SPECIFY_FEATURE=001-browser-agent-core powershell -NoProfile -ExecutionPolicy Bypass -File \".specify/scripts/powershell/check-prerequisites.ps1\" -Json -RequireTasks -IncludeTasks)"
     ],
     "deny": [],
     "ask": []

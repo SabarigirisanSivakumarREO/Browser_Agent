@@ -89,6 +89,10 @@ export interface PerceivedState {
   hasBlocker: boolean;
   blockerType?: string;
   screenshotBase64?: string;
+  /** Phase 35F: Visible text from main content area (≤2000 chars) */
+  pageText?: string;
+  /** Phase 35A: Content region statistics */
+  contentRegion?: ContentRegion;
 }
 
 /** Visible interactive element summary */
@@ -99,6 +103,35 @@ export interface InteractiveElement {
   role?: string;
   type?: string;
   selector?: string;
+  /** Phase 35A: Which page region this element belongs to */
+  region?: 'header' | 'main' | 'footer' | 'unknown';
+  /** Phase 35A: Relevance score (higher = more relevant to goal) */
+  score?: number;
+  /** Phase 35C: Full accessible name from aria-label or innerText */
+  accessibleName?: string;
+  /** Placeholder text for input/textarea elements */
+  placeholder?: string;
+  /** Group label for related elements (e.g. "search-bar", "login-form") */
+  group?: string;
+}
+
+/** Phase 35A: Summary of interactive elements by page region */
+export interface ContentRegion {
+  hasMainLandmark: boolean;
+  mainContentLinks: number;
+  mainContentButtons: number;
+  headerElements: number;
+  totalInteractive: number;
+}
+
+/** Phase 35A: Configuration for element collection */
+export interface ElementCollectionConfig {
+  /** Max total elements to collect (default: 50) */
+  maxElements?: number;
+  /** Max header/nav elements to include (default: 10) */
+  maxHeaderElements?: number;
+  /** Max chars for element text (default: 80) */
+  textMaxLength?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -213,6 +246,17 @@ export interface ActionCandidate extends PlannerOutput {
 // ---------------------------------------------------------------------------
 // Phase 33: Constants
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Phase 34: Navigation Detection
+// ---------------------------------------------------------------------------
+
+/** Metadata about navigation that occurred during tool execution */
+export interface NavigationMeta {
+  navigated: boolean;
+  previousUrl: string;
+  currentUrl: string;
+}
 
 /** Number of recent critique results to retain in context */
 export const CRITIQUE_HISTORY_SIZE = 3;

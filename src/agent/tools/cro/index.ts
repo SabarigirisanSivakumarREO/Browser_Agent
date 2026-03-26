@@ -30,3 +30,27 @@ export { collectionDoneTool, CollectionDoneParamsSchema, type CollectionDonePara
 // Control tools (Phase 17c)
 export { recordInsightTool, RecordInsightParamsSchema, type RecordInsightParams } from './record-insight-tool.js';
 export { doneTool, DoneParamsSchema, type DoneParams } from './done-tool.js';
+
+// Shared utilities (Phase 31, Phase 34)
+export { findElementByIndex, coerceBoolean, waitForPossibleNavigation } from './tool-utils.js';
+
+// Browser interaction tools — P0 (Phase 31b)
+export { typeTextTool, TypeTextParamsSchema, type TypeTextParams } from './type-text-tool.js';
+export { pressKeyTool, PressKeyParamsSchema, type PressKeyParams } from './press-key-tool.js';
+export { selectOptionTool, SelectOptionParamsSchema, type SelectOptionParams } from './select-option-tool.js';
+export { extractTextTool, ExtractTextParamsSchema, type ExtractTextParams } from './extract-text-tool.js';
+
+// Browser interaction tools — P1 (Phase 31c)
+export { hoverTool, HoverParamsSchema, type HoverParams } from './hover-tool.js';
+export { goBackTool, GoBackParamsSchema, type GoBackParams } from './go-back-tool.js';
+export { waitForTool, WaitForParamsSchema, type WaitForParams } from './wait-for-tool.js';
+export { dismissBlockerTool, DismissBlockerParamsSchema, type DismissBlockerParams } from './dismiss-blocker-tool.js';
+
+// Browser interaction tools — P2 (Phase 31d)
+export { switchTabTool, SwitchTabParamsSchema, type SwitchTabParams } from './switch-tab-tool.js';
+export { uploadFileTool, UploadFileParamsSchema, type UploadFileParams } from './upload-file-tool.js';
+export { executeJsTool, ExecuteJsParamsSchema, type ExecuteJsParams } from './execute-js-tool.js';
+
+// Browser interaction tools — P3 (Phase 31e)
+export { dragAndDropTool, DragAndDropParamsSchema, type DragAndDropParams } from './drag-and-drop-tool.js';
+export { getAxTreeTool, GetAxTreeParamsSchema, type GetAxTreeParams } from './get-ax-tree-tool.js';

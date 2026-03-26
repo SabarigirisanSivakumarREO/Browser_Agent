@@ -8,7 +8,8 @@
 export { runAgentLoop } from './agent-loop.js';
 
 // Sub-modules
-export { perceivePage, computeDomHash } from './perceiver.js';
+export { perceivePage, computeDomHash, NAVIGATION_PENDING_HASH } from './perceiver.js';
+export { collectInteractiveElements } from './element-collector.js';
 export { planNextAction, PLANNER_SYSTEM_PROMPT, formatFailedCombos } from './planner.js';
 export { verifyGoal, shouldVerify, VERIFIER_SYSTEM_PROMPT } from './verifier.js';
 export { detectFailure, routeFailure, READ_ONLY_TOOLS } from './failure-router.js';
@@ -47,6 +48,9 @@ export type {
   SubGoal,
   CritiqueResult,
   ActionCandidate,
+  NavigationMeta,
+  ContentRegion,
+  ElementCollectionConfig,
 } from './types.js';
 
 // Constants

@@ -46,6 +46,20 @@ export const CROActionNames = [
   // Control tools
   'record_insight', // Added Phase 17
   'done',
+  // Phase 31: Browser interaction tools
+  'type_text',
+  'press_key',
+  'select_option',
+  'extract_text',
+  'hover',
+  'go_back',
+  'wait_for',
+  'dismiss_blocker',
+  'switch_tab',
+  'upload_file',
+  'execute_js',
+  'drag_and_drop',
+  'get_ax_tree',
 ] as const;
 
 /**

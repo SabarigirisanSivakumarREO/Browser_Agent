@@ -37,11 +37,17 @@ const AVAILABLE_TOOLS = [
   'go_to_url',
 ] as const;
 
-export const PLANNER_SYSTEM_PROMPT = `You are a browser automation agent. You observe the current page state and decide the SINGLE next action to take toward the user's goal.
+export const PLANNER_SYSTEM_PROMPT = `You are a browser automation agent. You observe the current page state — including a screenshot, accessibility tree, page text, and interactive elements — and decide the SINGLE next action to take toward the user's goal.
 
 RULES:
 - Take ONE action at a time. Never plan multiple steps.
 - Always specify the expected observable outcome.
+- You can see a screenshot of the current page. Use it to identify visual elements, product listings, prices, and ratings.
+- Prefer elements in the MAIN CONTENT area (region: "main") for goal-relevant actions like clicking products, links, or search results.
+- Match element text with what you see in the screenshot and PAGE TEXT to confirm the right target before clicking.
+- For type_text, ONLY target <input> or <textarea> elements — NEVER <select> (use select_option for dropdowns). Search boxes are <input> with type=text. Look for the element with tag=input and a search-related aria-label or placeholder.
+- Some links open in new tabs. The system auto-switches to new tabs after clicking. If the page doesn't change after a click, the link may have opened in a new tab — the next perception will show the new tab's content.
+- If no suitable element is in the list, use scroll_page to reveal more content or get_ax_tree for full page structure.
 - If the page has a blocker (cookie banner, modal), dismiss it first using dismiss_blocker.
 - If an element wasn't found, try a different reference or scroll.
 - If your last action had no effect, try a completely different approach.
@@ -83,14 +89,21 @@ export async function planNextAction(
   confidence: number,
   visitedUrls?: string,
   failedCombos?: string,
-  currentSubGoal?: string,    // NEW — Phase 33b
-  critiqueHistory?: CritiqueResult[]  // NEW — Phase 33c
+  currentSubGoal?: string,    // Phase 33b
+  critiqueHistory?: CritiqueResult[],  // Phase 33c
+  screenshotBase64?: string   // Phase 35E
 ): Promise<PlannerOutput> {
   const elementsText = state.interactiveElements
-    .map(
-      (e) =>
-        `[${e.index}] <${e.tag}> "${e.text}"${e.role ? ` role=${e.role}` : ''}${e.type ? ` type=${e.type}` : ''}`
-    )
+    .map((e) => {
+      let line = `[${e.index}] <${e.tag}> "${e.text}"`;
+      if (e.role) line += ` role=${e.role}`;
+      if (e.type) line += ` type=${e.type}`;
+      if (e.placeholder) line += ` placeholder="${e.placeholder}"`;
+      if (e.group) line += ` [group: ${e.group}]`;
+      if (e.region) line += ` (region: ${e.region}${e.score !== undefined ? `, score: ${e.score}` : ''})`;
+      if (e.accessibleName && e.accessibleName !== e.text) line += ` — AX: "${e.accessibleName}"`;
+      return line;
+    })
     .join('\n  ');
 
   const actionsText = recentActions.length > 0
@@ -112,16 +125,26 @@ export async function planNextAction(
         .join('\n  ')
     : 'none';
 
+  const contentRegionText = state.contentRegion
+    ? `\nCONTENT REGION: ${state.contentRegion.mainContentLinks} links, ${state.contentRegion.mainContentButtons} buttons in main content | ${state.contentRegion.headerElements} header elements | ${state.contentRegion.totalInteractive} total${state.contentRegion.hasMainLandmark ? ' | <main> landmark found' : ''}`
+    : '';
+
+  const pageTextSection = state.pageText
+    ? `\nPAGE TEXT (main content):\n${state.pageText}`
+    : '';
+
   const userMessage = `GOAL: ${goal}
 ${currentSubGoal ? `\nCURRENT SUB-GOAL: ${currentSubGoal}` : ''}
 CURRENT PAGE:
   URL: ${state.url}
   Title: ${state.title}
+${contentRegionText}
 
 ACCESSIBILITY TREE:
 ${state.axTreeText || '(not available)'}
+${pageTextSection}
 
-INTERACTIVE ELEMENTS (top 20):
+INTERACTIVE ELEMENTS (top ${state.interactiveElements.length}):
   ${elementsText || '(none found)'}
 
 RECENT ACTIONS (last 5):
@@ -136,9 +159,16 @@ BUDGET: Step ${budgetStatus.stepsUsed}/${budgetStatus.stepsUsed + budgetStatus.s
 What is the single next action?`;
 
   try {
+    // Build multimodal message when screenshot is available (Phase 35E)
+    const humanContent = screenshotBase64
+      ? [
+          { type: 'text' as const, text: userMessage },
+          { type: 'image_url' as const, image_url: { url: `data:image/jpeg;base64,${screenshotBase64}` } },
+        ]
+      : userMessage;
     const response = await llm.invoke([
       new SystemMessage(PLANNER_SYSTEM_PROMPT),
-      new HumanMessage(userMessage),
+      new HumanMessage({ content: humanContent }),
     ]);
 
     const content =

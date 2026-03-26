@@ -54,8 +54,9 @@ function Get-CurrentBranch {
         }
     }
     
-    # Final fallback
-    return "main"
+    # No feature context available — error out instead of silently using "main"
+    Write-Error "[specify] ERROR: Cannot determine feature context. You are on the 'main' branch and SPECIFY_FEATURE is not set. Either: (1) checkout a feature branch (e.g. 001-browser-agent-core), or (2) set SPECIFY_FEATURE=001-browser-agent-core"
+    return $null
 }
 
 function Test-HasGit {
@@ -95,6 +96,10 @@ function Get-FeatureDir {
 function Get-FeaturePathsEnv {
     $repoRoot = Get-RepoRoot
     $currentBranch = Get-CurrentBranch
+    if (-not $currentBranch) {
+        Write-Error "[specify] ERROR: No feature context. Set SPECIFY_FEATURE or checkout a feature branch."
+        exit 1
+    }
     $hasGit = Test-HasGit
     $featureDir = Get-FeatureDir -RepoRoot $repoRoot -Branch $currentBranch
     

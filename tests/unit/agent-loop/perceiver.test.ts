@@ -6,6 +6,20 @@ vi.mock('../../../src/browser/ax-tree-serializer.js', () => ({
   captureAccessibilityTree: vi.fn(),
 }));
 
+// Mock element-collector (Phase 35A)
+vi.mock('../../../src/agent/agent-loop/element-collector.js', () => ({
+  collectInteractiveElements: vi.fn().mockResolvedValue({
+    elements: [],
+    contentRegion: {
+      hasMainLandmark: false,
+      mainContentLinks: 0,
+      mainContentButtons: 0,
+      headerElements: 0,
+      totalInteractive: 0,
+    },
+  }),
+}));
+
 import { captureAccessibilityTree } from '../../../src/browser/ax-tree-serializer.js';
 
 const mockCaptureAx = vi.mocked(captureAccessibilityTree);
@@ -15,14 +29,12 @@ function createMockPage(overrides: {
   title?: string;
   content?: string;
   axTree?: string | null;
-  elements?: Array<{ tag: string; text: string; role?: string; type?: string }>;
   screenshotBuffer?: Buffer;
 } = {}): unknown {
   const {
     url = 'https://example.com',
     title = 'Example',
     content = '<html><body>Hello</body></html>',
-    elements = [],
     screenshotBuffer = Buffer.from('fake-image'),
   } = overrides;
 
@@ -30,15 +42,8 @@ function createMockPage(overrides: {
     url: () => url,
     title: () => Promise.resolve(title),
     content: () => Promise.resolve(content),
-    evaluate: vi.fn().mockResolvedValue(
-      elements.map((e, i) => ({
-        index: i,
-        tag: e.tag,
-        text: e.text,
-        role: e.role,
-        type: e.type,
-      }))
-    ),
+    waitForLoadState: vi.fn().mockResolvedValue(undefined),
+    evaluate: vi.fn().mockResolvedValue(''),
     screenshot: vi.fn().mockResolvedValue(screenshotBuffer),
   };
 }
@@ -83,12 +88,41 @@ describe('perceivePage', () => {
     expect(state.screenshotBase64).toBe(Buffer.from('fake-image').toString('base64'));
   });
 
-  it('does not include screenshot when AX tree is long enough', async () => {
+  it('does not include screenshot when AX tree is long enough (non-agent mode)', async () => {
+    const page = createMockPage();
+    mockCaptureAx.mockResolvedValue('x'.repeat(600));
+
+    const state = await perceivePage(page as never, false);
+
+    expect(state.screenshotBase64).toBeUndefined();
+  });
+
+  it('always includes screenshot in agent mode', async () => {
+    const page = createMockPage();
+    mockCaptureAx.mockResolvedValue('x'.repeat(600));
+
+    const state = await perceivePage(page as never, true);
+
+    expect(state.screenshotBase64).toBeTruthy();
+  });
+
+  it('extracts page text in agent mode', async () => {
+    const page = createMockPage();
+    // Mock evaluate to return page text
+    (page as { evaluate: ReturnType<typeof vi.fn> }).evaluate.mockResolvedValue('Product 1 - $99.99\nProduct 2 - $149.99');
+    mockCaptureAx.mockResolvedValue('x'.repeat(600));
+
+    const state = await perceivePage(page as never, true);
+
+    expect(state.pageText).toBeTruthy();
+  });
+
+  it('includes contentRegion in result', async () => {
     const page = createMockPage();
     mockCaptureAx.mockResolvedValue('x'.repeat(600));
 
     const state = await perceivePage(page as never);
 
-    expect(state.screenshotBase64).toBeUndefined();
+    expect(state.contentRegion).toBeDefined();
   });
 });

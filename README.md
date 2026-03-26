@@ -1,31 +1,49 @@
 # Browser Agent
 
-A TypeScript-based CRO (Conversion Rate Optimization) browser automation agent that analyzes web pages and generates AI-powered insights, hypotheses, and optimization recommendations.
+A TypeScript-based browser automation agent with two modes: **CRO Analysis** (Conversion Rate Optimization auditing) and **Agent Mode** (goal-directed browser automation). Powered by Playwright + GPT-4o-mini.
 
 ## Overview
 
-Browser Agent is a CLI tool that autonomously navigates web pages, extracts CRO-relevant DOM elements, and processes them through a vision-based LLM analysis pipeline using OpenAI's GPT-4o-mini to identify conversion optimization opportunities. It uses a three-phase approach: **Data Collection** (DOM + screenshots), **Category-Based Analysis** (parallel LLM evaluation against heuristic knowledge bases), and **Output Generation** (insights, hypotheses, reports).
+Browser Agent is a CLI tool with two distinct modes:
+
+- **CRO Analysis** (default): Autonomously navigates web pages, extracts CRO-relevant DOM elements, and processes them through a vision-based LLM analysis pipeline to identify conversion optimization opportunities. Uses a three-phase approach: **Data Collection** (DOM + screenshots + AX tree) → **Category-Based Analysis** (parallel LLM evaluation against heuristic knowledge bases) → **Output Generation** (insights, hypotheses, reports).
+
+- **Agent Mode** (`--agent-mode`): Goal-directed browser automation that can perform multi-step tasks like searching, form filling, and data extraction. Uses a **Perceive → Plan → Act → Verify** loop with LLM-powered planning, multimodal vision (screenshot + text), viewport-aware element scoring, and automatic new-tab handling.
 
 ## Features
 
+### Agent Mode (Goal-Directed Browser Automation)
+- **Perceive-Plan-Act-Verify Loop** - LLM-driven multi-step browser automation with goal verification
+- **Multimodal Vision** - Planner receives viewport screenshots alongside text context (AX tree, page text, element list)
+- **Viewport-Aware Element Scoring** - 50 interactive elements scored by relevance: main content (+8), viewport visibility (+10), search inputs (+15), form elements (+6)
+- **Scoped CSS Selectors** - Unique selectors via id → aria-label → data-testid → scoped CSS path (replaces broken global XPath)
+- **Element Grouping** - Related elements grouped by semantic container (search-bar, form, dialog)
+- **Navigation Resilience** - Survives mid-navigation page state changes with retry logic and degraded state fallback
+- **New Tab Auto-Switch** - Detects when clicks open new tabs (target="_blank") and automatically switches to them
+- **Sub-Goal Decomposition** - Complex goals decomposed into 3-7 sequential sub-goals with progress tracking
+- **Self-Critique** - Optional post-action LLM critique with 0-1 progress scoring
+- **Multi-Candidate Planning** - Optional generation of 2-3 diverse candidate actions per step
+- **6 Failure Types** - Element not found, action had no effect, wrong page, form error, redirect loop, page crashed
+- **Budget & Confidence Control** - Step/time budgets with linear confidence decay and escalation threshold
+- **26 Browser Tools** - 6 CRO analysis + 3 navigation + 2 collection + 2 control + 13 interaction tools
+
+### CRO Analysis Mode (Default)
 - **Vision-Based CRO Analysis** - Unified DOM + screenshot + accessibility tree analysis across CTAs, forms, trust signals, value props, navigation, and friction points
 - **Three-Phase Pipeline** - Collection → Analysis → Output with deterministic data capture
 - **Hybrid Page Type Detection** - Three-tier detection: Playwright DOM analysis → URL/selector heuristics → LLM fallback
 - **Parallel LLM Analysis** - Category-based evaluation with p-limit concurrency control (3-4x speedup)
-- **Accessibility Tree Context** - Captures ARIA roles, computed names, and element states (disabled, checked, expanded, required) for semantic understanding
-- **Category-Aware Auto-Cropping** - Crops screenshots to CRO-relevant regions per category before LLM submission, reducing image tokens by 30-50%
-- **Token-Aware Image Pipeline** - Compresses images to fit OpenAI's tile-based token budget (default: 300 tokens/image) with adaptive quality
-- **Evidence Capture** - Full-resolution screenshots with bounding box annotations, element coordinate mapping, evidence JSON export
+- **Accessibility Tree Context** - Captures ARIA roles, computed names, and element states for semantic understanding
+- **Category-Aware Auto-Cropping** - Crops screenshots to CRO-relevant regions per category, reducing image tokens by 30-50%
+- **Token-Aware Image Pipeline** - Compresses images to fit OpenAI's tile-based token budget (default: 300 tokens/image)
+- **Evidence Capture** - Full-resolution screenshots with bounding box annotations and evidence JSON export
 - **Page Type Knowledge Bases** - Heuristic rules per page type (PDP, PLP, with Homepage/Cart/Checkout planned)
 - **Hypothesis Generation** - Creates testable A/B test hypotheses with expected impact
+
+### Shared
 - **Browser Automation** - Powered by Playwright (1280x800 viewport) with cookie consent handling and full-page coverage
 - **DOM Extraction** - CRO-relevant elements with enhanced selectors (price, variant, stock, shipping, gallery)
-- **Structured Data Extraction** - JSON-LD Product schema parsing
-- **Screenshot Modes** - Viewport, tiled, or hybrid capture strategies
-- **Collection QA** - Cheap validator + conditional LLM QA for data quality
-- **Confidence Filtering** - Configurable minimum confidence threshold for displayed results
 - **Multiple Output Formats** - Console, Markdown reports, JSON export, and evidence packages
-- **Batch Processing** - Process multiple URLs sequentially with aggregated results
+- **1399+ Tests** - Unit, integration, and E2E tests with Vitest
 
 ## Tech Stack
 
@@ -103,9 +121,40 @@ npm run start -- https://www.example.com --output-format markdown --output-file 
 npm run start -- https://www.example.com --output-format json --output-file analysis.json
 ```
 
+### Agent Mode (Goal-Directed Automation)
+
+```bash
+# Basic agent mode — agent infers the URL from the goal
+npm run start -- --agent-mode "Go to Amazon India, search for best rated mechanical keyboard, fetch its details"
+
+# Agent mode with explicit start URL
+npm run start -- --agent-mode "Search for TypeScript" https://wikipedia.org
+
+# With sub-goal decomposition disabled
+npm run start -- --agent-mode "Fill out the contact form" https://example.com --no-sub-goals
+
+# With self-critique enabled (1.5x time budget)
+npm run start -- --agent-mode "Find cheapest flight to London" --self-critique
+
+# With multi-candidate planning
+npm run start -- --agent-mode "Add item to cart" https://shop.example.com --multi-candidate --candidates 3
+
+# Verbose output with step details
+npm run start -- --agent-mode "Download the PDF report" https://example.com --verbose
+```
+
 ### CLI Options
 
 ```bash
+# Agent Mode Options
+--agent-mode <goal>           Run goal-directed browser automation (URL optional)
+--agent-max-steps <n>         Maximum steps for agent loop (default: 20)
+--agent-max-time <ms>         Maximum time for agent loop in ms (default: 120000)
+--no-sub-goals                Disable sub-goal decomposition (default: enabled)
+--self-critique               Enable post-action self-critique (default: disabled)
+--multi-candidate             Enable multi-candidate planning (default: disabled)
+--candidates <n>              Number of candidate actions per step (default: 3)
+
 # Browser Options
 --headless                    Run browser in headless mode (default: visible)
 --timeout <ms>                Page load timeout in milliseconds (default: 60000)
@@ -242,35 +291,98 @@ console.log(visionResult.runId);                // Deterministic run ID
 ### System Overview
 
 ```
-┌─────────────┐     ┌──────────────────────┐     ┌──────────────────┐
-│    CLI      │────▶│      CROAgent        │────▶│   Output Layer   │
-│   Input     │     │   (Orchestrator)     │     │(Console/MD/JSON) │
-└─────────────┘     └──────────────────────┘     └──────────────────┘
-                              │
-         ┌────────────────────┼────────────────────┐
-         │                    │                    │
-         ▼                    ▼                    ▼
-  ┌──────────────┐   ┌───────────────┐   ┌─────────────────────┐
-  │   Browser    │   │   Analysis    │   │    Post-Processing  │
-  │   Module     │   │  Orchestrator │   │      Pipeline       │
-  └──────────────┘   └───────────────┘   └─────────────────────┘
-         │                    │                    │
-         ▼                    ▼                    ▼
-  ┌──────────────┐   ┌───────────────┐   ┌─────────────────────┐
-  │  Playwright  │   │ Category      │   │ Dedup + Prioritize  │
-  │  + DOM Ext.  │   │ Analyzer      │   │ + Hypotheses        │
-  │  + AX Tree   │   │ + Auto-Crop   │   │ + Scoring           │
-  │  + Evidence  │   │ + Knowledge   │   │                     │
-  └──────────────┘   └───────────────┘   └─────────────────────┘
+                              ┌─────────────┐
+                              │    CLI      │
+                              │   Input     │
+                              └──────┬──────┘
+                                     │
+                    ┌────────────────┼────────────────┐
+                    │ --agent-mode   │   default      │
+                    ▼                ▼                 │
+          ┌─────────────────┐  ┌──────────────────┐   │
+          │   Agent Loop    │  │    CROAgent      │   │
+          │ Perceive→Plan   │  │  Collection →    │   │
+          │ →Act→Verify     │  │  Analysis →      │   │
+          │                 │  │  Output          │   │
+          └────────┬────────┘  └────────┬─────────┘   │
+                   │                    │              │
+          ┌────────▼────────────────────▼──────────┐  │
+          │         Shared Infrastructure           │  │
+          │  Browser (Playwright) | Tool System (26)│  │
+          │  AX Tree | DOM Extraction | Evidence    │  │
+          └─────────────────────────────────────────┘  │
 ```
 
-### Three-Phase Data Flow
+### Agent Mode Architecture (11 Layers)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ L10: ORCHESTRATION — runAgentLoop() perceive→plan→act→verify │
+├────────────┬────────────┬──────────────┬────────────────────┤
+│ L3: PERCEI │ L4: PLANNI │ L7: VERIFY   │ L6: FAILURE DETECT │
+│ perceivePa │ planNextAc │ verifyGoal() │ detectFailure()    │
+│ element-co │ sub-goal   │ shouldVerify │ routeFailure()     │
+│ AX tree    │ candidates │              │ 6 types→3 strats   │
+│ screenshot │ multimodal │              │                    │
+│ page text  │ vision     │              │                    │
+├────────────┴────────────┴──────────────┴────────────────────┤
+│ L5: RELIABILITY          │ L8: BUDGET & CONFIDENCE          │
+│ self-critic (critique)   │ BudgetController (steps/time)    │
+│ pre-validator (5ms)      │ ConfidenceDecay (linear decay)   │
+├──────────────────────────┴──────────────────────────────────┤
+│ L9: STATE TRACKING — VisitedStateTracker (URL dedup)         │
+├──────────────────────────────────────────────────────────────┤
+│ L2: TOOL SYSTEM — 26 tools, Zod validation, nav detection    │
+├──────────────────────────────────────────────────────────────┤
+│ L1: BROWSER — Playwright, AX Tree, DOM, Cookie Handler       │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### Agent Loop Step-by-Step
+
+```
+1. PERCEIVE    → URL, title, DOM hash, AX tree (16K), 50 scored elements,
+                 screenshot (JPEG), page text (2K), blocker detection
+2. BLOCKER     → Auto-dismiss cookie banners / modals
+3. PLAN        → LLM picks single action from 16 tools (with vision)
+4. PRE-VALID   → Check element exists in DOM (5ms vs 10s timeout)
+5. ACT         → Execute tool with navigation detection
+6. TAB DETECT  → Auto-switch to new tab if opened
+7. SETTLE      → Wait for navigation or DOM re-render
+8. RE-PERCEIVE → Capture post-action state (with retry on navigation-pending)
+9. FAILURE     → Detect 6 failure types → replan or terminate
+10. CRITIQUE   → Optional LLM critique (progress score 0-1)
+11. VERIFY     → LLM goal check every N steps → SUCCESS if confidence > 0.7
+12. BUDGET     → Check step/time limits → BUDGET_EXCEEDED if over
+```
+
+### CRO Mode Data Flow
 
 1. **Collection Phase** - Browser loads page (1280x800 viewport), deterministic scroll + capture loop collects DOM, full-resolution screenshots, and accessibility tree at each viewport position. Cookie consent auto-dismissed, UI noise suppressed. Cheap validator checks data quality, LLM QA escalates if needed.
 2. **Analysis Phase** - Hybrid page type detection (Playwright → heuristics → LLM fallback). Category-based LLM analysis runs in parallel. Per-category auto-cropping extracts relevant regions from screenshots, then token-aware compression fits images within budget. LLM receives cropped images + DOM + AX tree + element positions for each category.
 3. **Output Phase** - Insights deduplicated, prioritized by severity + business type. A/B test hypotheses generated. CRO scores calculated. Reports exported. Evidence screenshots (full-resolution) annotated with bounding boxes.
 
 ### Module Structure
+
+#### Agent Loop Modules (Agent Mode)
+
+| Module | File | Responsibility |
+|--------|------|----------------|
+| `runAgentLoop` | `agent-loop/agent-loop.ts` | Main perceive-plan-act-verify orchestrator |
+| `perceivePage` | `agent-loop/perceiver.ts` | Page state extraction (URL, AX tree, elements, screenshot, text) |
+| `collectInteractiveElements` | `agent-loop/element-collector.ts` | Viewport-aware scored element collection with region detection |
+| `planNextAction` | `agent-loop/planner.ts` | LLM single-action planning with multimodal vision |
+| `decomposeGoal` | `agent-loop/sub-goal-planner.ts` | Goal decomposition into sub-goals |
+| `generateCandidates` | `agent-loop/candidate-generator.ts` | Multi-candidate action generation |
+| `verifyGoal` | `agent-loop/verifier.ts` | LLM goal verification |
+| `detectFailure` | `agent-loop/failure-router.ts` | 6 failure types → 3 recovery strategies |
+| `critiqueAction` | `agent-loop/self-critic.ts` | Post-action LLM critique |
+| `preValidateElement` | `agent-loop/element-pre-validator.ts` | Element existence check (5ms) |
+| `BudgetController` | `agent-loop/budget-controller.ts` | Step/time budget tracking |
+| `ConfidenceDecay` | `agent-loop/confidence-decay.ts` | Linear confidence decay with escalation |
+| `VisitedStateTracker` | `agent-loop/visited-state-tracker.ts` | URL visit tracking |
+
+#### CRO Analysis Modules
 
 | Module | Responsibility |
 |--------|----------------|
@@ -287,7 +399,7 @@ console.log(visionResult.runId);                // Deterministic run ID
 | `MessageManager` | Handles LLM conversation history |
 | `PromptBuilder` | Constructs prompts for LLM analysis |
 | `CoverageTracker` | Tracks page segment scanning for full-page coverage |
-| `ToolRegistry` | Registers and manages 11 CRO analysis tools |
+| `ToolRegistry` | Registers and manages 26 tools |
 | `ToolExecutor` | Executes CRO tools with page context |
 | `BusinessTypeDetector` | Detects website business type |
 | `SeverityScorer` | Calculates insight severity scores |
@@ -312,18 +424,34 @@ browser-agent/
 ├── src/
 │   ├── index.ts                  # Main exports
 │   ├── cli.ts                    # CLI entry point
-│   ├── agent/                    # CRO Agent core
-│   │   ├── cro-agent.ts          # Main orchestrator (collection + analysis + output)
-│   │   ├── state-manager.ts      # Agent state management
+│   ├── agent/                    # Agent core
+│   │   ├── cro-agent.ts          # CRO pipeline orchestrator (collection + analysis + output)
+│   │   ├── state-manager.ts      # CRO phase state management
 │   │   ├── message-manager.ts    # LLM conversation handling
-│   │   ├── prompt-builder.ts     # LLM prompt construction
+│   │   ├── prompt-builder.ts     # CRO prompt construction
 │   │   ├── score-calculator.ts   # CRO score calculation
 │   │   ├── coverage-tracker.ts   # Page coverage tracking
+│   │   ├── agent-loop/           # Goal-directed agent loop (Phase 32-35)
+│   │   │   ├── agent-loop.ts     # Main perceive→plan→act→verify orchestrator
+│   │   │   ├── perceiver.ts      # Page state extraction (7 data sources)
+│   │   │   ├── element-collector.ts  # Viewport-aware scored element collection
+│   │   │   ├── planner.ts        # LLM single-action planning with vision
+│   │   │   ├── verifier.ts       # LLM goal verification
+│   │   │   ├── failure-router.ts # 6 failure types → 3 recovery strategies
+│   │   │   ├── budget-controller.ts  # Step/time budget tracking
+│   │   │   ├── confidence-decay.ts   # Linear confidence decay
+│   │   │   ├── sub-goal-planner.ts   # Goal decomposition
+│   │   │   ├── self-critic.ts    # Post-action LLM critique
+│   │   │   ├── candidate-generator.ts # Multi-candidate planning
+│   │   │   ├── element-pre-validator.ts # DOM element pre-check (5ms)
+│   │   │   ├── visited-state-tracker.ts # URL visit tracking
+│   │   │   ├── json-utils.ts     # LLM JSON extraction
+│   │   │   └── types.ts          # All agent-loop interfaces
 │   │   └── tools/                # Tool system
 │   │       ├── tool-registry.ts
 │   │       ├── tool-executor.ts
 │   │       ├── create-cro-registry.ts
-│   │       └── cro/              # 12 CRO tools
+│   │       └── cro/              # 26 tool implementations
 │   │           ├── analyze-ctas.ts
 │   │           ├── analyze-forms-tool.ts
 │   │           ├── analyze-trust-tool.ts
@@ -431,9 +559,11 @@ browser-agent/
 │       ├── discrepancy-classifier.ts # Discrepancy severity classification
 │       └── quality-validator.ts      # Quality validation orchestrator (CI use)
 ├── tests/
-│   ├── unit/                     # 55 unit test files
-│   ├── integration/              # 23 integration test files
-│   └── e2e/                      # 9 E2E test files
+│   ├── unit/                     # 55+ unit test files
+│   │   ├── agent-loop/           # Agent loop tests (perceiver, planner, verifier, etc.)
+│   │   └── tools/                # Tool tests (interaction, navigation)
+│   ├── integration/              # 23+ integration test files
+│   └── e2e/                      # 9 E2E test files (gated behind RUN_E2E_TESTS)
 ├── design/                       # Architecture diagrams
 │   ├── architecture-overview.svg
 │   ├── component-details.svg
@@ -587,6 +717,99 @@ interface Hypothesis {
 }
 
 type CROCategory = 'cta' | 'forms' | 'trust' | 'value_prop' | 'navigation' | 'friction';
+```
+
+### Core Types (Agent Mode)
+
+```typescript
+// Agent Loop Configuration
+interface AgentLoopConfig {
+  goal: string;                    // Natural language goal
+  startUrl?: string;               // Optional start URL (agent can infer from goal)
+  maxSteps?: number;               // Step budget (default: 20)
+  maxTimeMs?: number;              // Time budget in ms (default: 120000)
+  enableSubGoals?: boolean;        // Sub-goal decomposition (default: true)
+  enableCritique?: boolean;        // Post-action self-critique (default: false)
+  enableMultiCandidate?: boolean;  // Multi-candidate planning (default: false)
+  candidateCount?: number;         // Candidates per step (default: 3)
+  verbose?: boolean;
+}
+
+// Agent Loop Result
+interface AgentLoopResult {
+  status: 'SUCCESS' | 'BUDGET_EXCEEDED' | 'CONFIDENCE_LOW' | 'UNRECOVERABLE_FAILURE' | 'RUNNER_ERROR';
+  goalSatisfied: boolean;
+  stepsUsed: number;
+  totalTimeMs: number;
+  actionHistory: ActionRecord[];
+  terminationReason: string;
+  errors: string[];
+  finalUrl: string;
+  finalTitle: string;
+}
+
+// Perceived Page State (what the planner sees)
+interface PerceivedState {
+  url: string;
+  title: string;
+  domHash: string;                          // 16-char SHA-256 hash
+  axTreeText: string | null;                // Accessibility tree (8K/16K chars)
+  interactiveElements: InteractiveElement[]; // Scored elements (20/50)
+  hasBlocker: boolean;                      // Cookie banner / captcha
+  screenshotBase64?: string;                // JPEG viewport screenshot
+  pageText?: string;                        // Main content text (2K chars)
+  contentRegion?: ContentRegion;            // Element counts by region
+}
+
+// Interactive Element (scored, with region and group)
+interface InteractiveElement {
+  index: number;           // Sequential index for planner
+  tag: string;             // HTML tag (a, button, input, etc.)
+  text: string;            // Visible text
+  type?: string;           // Input type (text, submit, etc.)
+  role?: string;           // ARIA role
+  selector?: string;       // Unique CSS/XPath selector
+  region?: string;         // 'header' | 'main' | 'footer' | 'unknown'
+  score?: number;          // Relevance score (higher = more relevant)
+  accessibleName?: string; // Full accessible name
+  placeholder?: string;    // Input placeholder text
+  group?: string;          // Semantic group (search-bar, form, dialog)
+}
+```
+
+### Programmatic Agent Mode Usage
+
+```typescript
+import { runAgentLoop } from './src/agent/agent-loop';
+import { ToolExecutor } from './src/agent/tools/tool-executor';
+import { createCRORegistry } from './src/agent/tools/create-cro-registry';
+import { BrowserManager } from './src/browser';
+import { ChatOpenAI } from '@langchain/openai';
+
+const browser = new BrowserManager({ headless: false, timeout: 60000 });
+await browser.launch();
+
+const result = await runAgentLoop(
+  {
+    goal: 'Go to Amazon India, search for mechanical keyboard, fetch its details',
+    maxSteps: 20,
+    maxTimeMs: 120000,
+    enableSubGoals: true,
+  },
+  {
+    llm: new ChatOpenAI({ modelName: 'gpt-4o-mini', temperature: 0 }),
+    page: browser.getPage(),
+    toolExecutor: new ToolExecutor(createCRORegistry()),
+  }
+);
+
+console.log(result.status);          // 'SUCCESS'
+console.log(result.goalSatisfied);   // true
+console.log(result.stepsUsed);       // 4
+console.log(result.finalUrl);        // https://www.amazon.in/product/...
+console.log(result.actionHistory);   // Step-by-step action log
+
+await browser.close();
 ```
 
 ## Design Documentation
